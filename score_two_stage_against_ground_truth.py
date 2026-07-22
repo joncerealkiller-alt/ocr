@@ -90,17 +90,19 @@ def main():
         results = json.load(f)
 
     # results is a list of RowExtractionResult.model_dump() dicts - build
-    # a (row_index, column) -> predicted value lookup, one entry per
-    # field actually present (a field can be legitimately absent if
-    # stage 2 dropped/never produced it - see "missing" counts below,
-    # do not treat an absent field as an empty-string match).
-    predicted_by_row_col: dict[tuple[int, str], str] = {}
+    # a (row_index, column) -> (predicted value, predicted confidence)
+    # lookup, one entry per field actually present (a field can be
+    # legitimately absent if stage 2 dropped/never produced it - see
+    # "missing" counts below, do not treat an absent field as an
+    # empty-string match).
+    predicted_by_row_col: dict[tuple[int, str], tuple[str, str]] = {}
     schema_pass_by_row: dict[int, bool] = {}
     for row_result in results:
         row_index = row_result["row_index"]
         schema_pass_by_row[row_index] = row_result.get("schema_pass", False)
         for column, field in (row_result.get("fields") or {}).items():
-            predicted_by_row_col[(row_index, column)] = field.get("value", "")
+            predicted_by_row_col[(row_index, column)] = (
+                field.get("value", ""), field.get("confidence", ""))
 
     ground_truth_path = Path(args.ground_truth_log)
     if not ground_truth_path.exists():
@@ -125,6 +127,18 @@ def main():
     per_column = defaultdict(lambda: {"correct": 0, "total": 0, "missing": 0})
     per_status = defaultdict(lambda: {"correct": 0, "total": 0, "missing": 0})
     mismatches = []
+    # False-confidence (2026-07-22, found via a real 6-row test): the
+    # two-stage prompt explicitly tells stage 2 to use the row image to
+    # check/correct stage 1's reading rather than blindly copy it - but
+    # real output showed stage 2 producing a full "confirmed"-confidence
+    # record from a COMPLETELY EMPTY stage-1 reading, with the image
+    # available and unused for actual correction. This is a materially
+    # worse failure than an ordinary wrong answer: a downstream consumer
+    # has no signal to distrust a "confirmed" value the way they would a
+    # "partial" or "uncertain" one. Tracked as its own category so a
+    # candidate model pairing that's merely wrong sometimes doesn't get
+    # confused with one that's wrong AND confidently lying about it.
+    false_confidence = []
 
     for record in page_records:
         expected = _record_to_expected(record)
@@ -142,7 +156,7 @@ def main():
             per_status[status]["missing"] += 1
             continue
 
-        predicted = predicted_by_row_col[key]
+        predicted, predicted_confidence = predicted_by_row_col[key]
         is_correct = _normalize(predicted) == _normalize(expected)
 
         per_column[column]["total"] += 1
@@ -151,10 +165,14 @@ def main():
             per_column[column]["correct"] += 1
             per_status[status]["correct"] += 1
         else:
-            mismatches.append({
+            entry = {
                 "row": row_index, "column": column, "status": status,
                 "predicted": predicted, "expected": expected,
-            })
+                "predicted_confidence": predicted_confidence,
+            }
+            mismatches.append(entry)
+            if predicted_confidence == "confirmed":
+                false_confidence.append(entry)
 
     total_rows_in_results = len(schema_pass_by_row)
     schema_failed = sum(1 for v in schema_pass_by_row.values() if not v)
@@ -185,10 +203,28 @@ def main():
     print()
     print(f"OVERALL: {overall_correct}/{overall_total} ({overall_acc:.0%})")
 
+    # Always shown (not gated behind --show-mismatches) - this is a
+    # distinct risk signal from ordinary accuracy, worth seeing by
+    # default: a pairing that's 70% accurate but has a high false-
+    # confidence rate is more dangerous downstream than one that's 60%
+    # accurate but honestly flags its uncertain guesses as such.
+    print()
+    if false_confidence:
+        pct_of_mismatches = len(false_confidence) / len(mismatches) if mismatches else 0.0
+        print(f"FALSE CONFIDENCE: {len(false_confidence)}/{len(mismatches)} wrong answers "
+              f"({pct_of_mismatches:.0%}) were tagged 'confirmed' - wrong AND falsely certain, "
+              f"not just wrong. This is a materially worse failure mode than an ordinary "
+              f"mismatch (see this script's module docstring).")
+    else:
+        print("FALSE CONFIDENCE: none - every wrong answer was tagged with a lower "
+              "confidence than 'confirmed' (or there were no wrong answers).")
+
     if args.show_mismatches and mismatches:
         print(f"\n{len(mismatches)} mismatch(es):")
         for m in mismatches:
-            print(f"  row {m['row']} [{m['column']}] ({m['status']}): "
+            flag = " [FALSE CONFIDENCE]" if m["predicted_confidence"] == "confirmed" else ""
+            print(f"  row {m['row']} [{m['column']}] ({m['status']}, predicted "
+                  f"confidence={m['predicted_confidence']!r}){flag}: "
                   f"predicted {m['predicted']!r} vs expected {m['expected']!r}")
 
 
