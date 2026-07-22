@@ -1,0 +1,39 @@
+model_name: pixtral_12b
+repo_id: mistral-community/pixtral-12b
+loader_class: PixtralLoader
+
+# UNTESTED in this project. Real, external VRAM claim (~10GB in 4-bit)
+# confirmed via a genuine HF discussion report before building this -
+# see pixtral_loader.py's module docstring for the full verification
+# trail, including why "mistral-community/pixtral-12b" is the correct
+# repo (not the official mistralai/Pixtral-12B-2409, which needs vLLM,
+# not standard transformers).
+do_sample: false
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+
+# Applied PROACTIVELY, not discovered via a failure this time - every
+# single model tested this session (Qwen3-VL, SmolVLM2, Granite, Gemma)
+# eventually showed the same repetition-loop degeneration without this,
+# usually on the first or second real test. Starting with the proven
+# stable values directly rather than waiting to rediscover the same
+# problem a fifth time.
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+# Left unset (transformers' own default attention implementation).
+attn_implementation: null
+
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

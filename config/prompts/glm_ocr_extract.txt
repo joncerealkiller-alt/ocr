@@ -1,0 +1,21 @@
+请按下列JSON格式输出图中信息:
+{
+    "document_type": "",
+    "personal_names": [
+        {"value": "", "confidence": ""}
+    ],
+    "place_names": [
+        {"value": "", "confidence": ""}
+    ],
+    "visible_dates": [
+        {"value": "", "confidence": ""}
+    ],
+    "subject_keywords": [""]
+}
+
+confidence must be exactly one of: confirmed, partial, unclear
+- confirmed: every character is clearly readable with no doubt
+- partial: mostly readable, some uncertainty
+- unclear: not legible enough to read with confidence
+
+Add as many entries to each array as are actually visible in the image - do not limit to one entry per field. Do not invent values that are not visible. If nothing is visible for a field, leave its array empty.

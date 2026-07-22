@@ -1,0 +1,37 @@
+model_name: got_ocr2
+repo_id: stepfun-ai/GOT-OCR-2.0-hf
+loader_class: GotOcr2Loader
+
+# UNTESTED in this project. Fixed-task pure OCR engine (see
+# got_ocr2_loader.py's module docstring) - do_sample/temperature/top_p/
+# top_k/repetition_penalty/no_repeat_ngram_size are passed through but
+# this model's whole design point is NOT being an instruction-following
+# chat model, so behavior under these knobs is less proven than for
+# every other loader. Genuinely tiny (580M params, corrected from the
+# original "1.3B" claim - see loader docstring) - VRAM cost is trivial
+# regardless of settings here.
+do_sample: false
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+attn_implementation: null
+
+# "<|im_end|>" is the official example's stop string - used as the
+# GotOcr2Loader default if this is left null, not hardcoded in the
+# loader so it stays overridable per the project's normal config
+# pattern.
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

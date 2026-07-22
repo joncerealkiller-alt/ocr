@@ -1,0 +1,29 @@
+model_name: florence_large
+repo_id: florence-community/Florence-2-large
+loader_class: FlorenceLoader
+
+# UNTESTED in this project. Beam search (num_beams=3), not greedy/sampling
+# - matches the model card's official recommended example exactly. This
+# is architecturally different from every other loader in this project.
+do_sample: false
+num_beams: 3
+max_new_tokens: 1024
+
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

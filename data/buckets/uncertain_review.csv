@@ -1,0 +1,4 @@
+file_path,category,confidence,text_density,handwriting,table_layout,faces,map_like,reason,model,prompt_version
+data/_test_fixtures/fake_test_doc.png,printed_document,0.58,0.7,False,True,False,False,"Contains printed paragraphs and typed text with some tabular structure.",gemma,v1
+data/_test_fixtures/fake_test_doc_2.png,genealogy_chart,0.51,0.3,False,False,False,False,"Circular/branching layout suggests a family tree diagram, but low confidence due to unusual structure.",gemma,v1
+data/_test_fixtures/fake_test_doc_3.png,portrait_photo,0.62,0.1,False,False,True,False,"Single centered face-like shape detected, minimal surrounding text.",gemma,v1

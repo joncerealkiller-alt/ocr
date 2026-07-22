@@ -1,0 +1,43 @@
+model_name: gemma
+repo_id: google/gemma-4-E2B-it   # -it = instruction-tuned, required for prompted tasks
+loader_class: GemmaLoader
+
+# Deliberately NOT using the model card's suggested sampling defaults
+# (temperature=1.0, top_p=0.95, top_k=64) - those are tuned for
+# open-ended generation, not the conservative/deterministic behavior
+# this pipeline needs. See gemma_loader.py _run_generate for the
+# reasoning. Revisit only after real A/B testing shows greedy
+# underperforms for classification specifically.
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0   # model card doesn't recommend a value; leave neutral until tested
+no_repeat_ngram_size: null
+max_new_tokens: 256
+
+min_pixels: null
+max_pixels: null
+
+# Confirmed mechanism: <|think|> token prepended to the system prompt
+# turns reasoning on. Absence of the token = reasoning off. This is a
+# system_prompt-level toggle, correcting the earlier "param" placeholder.
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+# Gemma-4-specific: image_seq_length / visual token budget. Supported
+# values per model card: 70, 140, 280, 560, 1120. Low budget appropriate
+# here since this is the classifier role only (no OCR/fine text reading
+# required) - model card explicitly recommends lower budgets for
+# classification tasks. If Gemma is ever assigned an OCR/extraction
+# role, this needs raising to 560 or 1120 in a separate config, since
+# extraction is the opposite use case the model card describes.
+extra:
+  image_token_budget: 140
+
+# System RAM ceiling for CPU offload if VRAM budget is exceeded.
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

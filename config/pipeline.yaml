@@ -1,0 +1,111 @@
+# Top-level pipeline routing. Edit this to change which model handles
+# which bucket without touching any code.
+#
+# IMPORTANT: model assignments below are PLACEHOLDERS pending re-testing
+# in this pipeline. Do not trust prior VectorDB-Plugin-era assumptions
+# about which model is "conservative" — several were contradicted by
+# actual test evidence (see project notes). Re-run the core document
+# set (2x census, 1x clean copperplate register, 1x passenger manifest)
+# against every candidate loaded in THIS pipeline before finalizing.
+
+classifier:
+  model: gemma
+  prompt_file: config/prompts/classify_v1.txt
+  # Confidence threshold below which a classification result is routed
+  # to uncertain_review regardless of what category it picked.
+  min_confidence: 0.6
+
+buckets:
+  # dense_tabular_rows is NOT a single model+prompt_file bucket like every
+  # other entry below - it's a multi-stage workflow (deskew/bounds
+  # confirmed via row_segmentation_ui.py -> sidecar JSON -> per-row
+  # extraction via run_row_extraction.py), built 2026-07-13 after
+  # whole-page extraction on this document type caused a real, silent
+  # fabrication failure (olmOCR replaced an entire census household with
+  # invented entries - see project history). Confirmed as the only two
+  # document types in this project needing this: census pages and
+  # passenger manifests (both have many repeated similar rows; every
+  # other bucket's documents are single-entity/prose, safely handled by
+  # one whole-page call). See classify_v1.txt for the exact routing
+  # criterion (row repetition, not "has a table-like layout").
+  dense_tabular_rows:
+    workflow: row_segmentation   # not "single_call" like every bucket below
+    extraction_model: qwen3vl2b  # placeholder - re-verify per-row (different
+                                   # cost/quality profile than whole-page calls)
+    # row_count is NOT a single fixed value across this bucket - census
+    # forms (50 lines) and passenger manifests (variable length) differ.
+    # Needs per-source-series configuration once manifest testing starts,
+    # not a bucket-wide constant - left unset deliberately rather than
+    # hardcoding the census-only value here.
+    row_count: null
+    columns_config_dir: config/columns/   # one file per form type, e.g.
+                                            # census_standard.txt - see
+                                            # core/row_extraction.py
+    requires_manual_segmentation_review: true  # deskew/bounds must be
+      # confirmed via row_segmentation_ui.py before extraction runs -
+      # NOT a fully automated bucket, by design (see project history:
+      # auto-estimated table_top alone produced a wrong 49/50 result
+      # before manual correction).
+
+  handwritten_ledger:
+    model: qwen3b             # placeholder - re-verify
+    prompt_file: config/prompts/extract_ledger_v1.txt
+
+  printed_document:
+    model: qwen3b              # placeholder - re-verify
+    prompt_file: config/prompts/extract_printed_v1.txt
+
+  portrait_photo:
+    model: qwen3b               # placeholder - descriptive-only prompt, no name/date extraction
+    prompt_file: config/prompts/describe_portrait_v1.txt
+
+  map_land_record:
+    model: qwen3b                # placeholder
+    prompt_file: config/prompts/extract_map_v1.txt
+
+  mixed_text_image:
+    model: qwen3b                 # placeholder
+    prompt_file: config/prompts/extract_mixed_v1.txt
+
+  genealogy_chart:
+    model: qwen3b                  # placeholder - needs its own extraction prompt:
+                                     # extract name+date+relationship-label per node,
+                                     # NOT free-text description of the whole chart
+    prompt_file: config/prompts/extract_genealogy_chart_v1.txt
+
+  uncertain_review:
+    model: null   # no automated pass - human review queue only
+    prompt_file: null
+
+# Anomaly detection pass, run across each bucket's output after
+# extraction completes, before anything is written to the vector DB.
+anomaly_checks:
+  - name: no_ngram_overlap
+    description: >
+      Flags records where extracted personal names share zero character
+      n-grams with any other name in the same batch/document run -
+      catches the "confident invented list" pattern (e.g. InternVL3-8b
+      generating alphabetically-ordered common surnames unconnected to
+      the source image).
+    enabled: true
+
+  - name: length_outlier
+    description: >
+      Flags records whose raw_model_output_len deviates > 2 std dev
+      from the batch mean for that bucket/model pair - catches loop
+      degeneration before it reaches the archive.
+    enabled: true
+
+  - name: repeated_entry
+    description: >
+      Flags records containing the same personal_name value 3+ times -
+      direct signature of repetition-loop failure.
+    enabled: true
+
+# Human-audit sampling, per project design decision: full manual
+# verification of large batches isn't realistic, so a stratified
+# random sample is checked against source and logged per
+# model/config version to track measured fabrication rate over time.
+audit_sampling:
+  rate: 0.05
+  log_file: data/audit_log.csv

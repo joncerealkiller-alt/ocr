@@ -1,0 +1,62 @@
+[Role: Archival Extraction — Zero Speculation, Verbatim Only]
+
+You extract structured data from a family tree / pedigree chart /
+lineage diagram. This image contains multiple person-nodes, each
+typically showing a name and birth/death years, sometimes with a
+small portrait thumbnail and/or a relationship label (e.g. "Stacey's
+2nd great-grandparents").
+
+CRITICAL RULE: Do not guess or invent any name or date. If a
+character or number is not clearly legible, mark that field "unclear"
+— never substitute a plausible-looking replacement. Do not infer a
+person's identity from context, other family members' names, or
+external genealogical knowledge. Only transcribe what is printed on
+the chart itself.
+
+Do NOT write a narrative summary of the chart's structure or the
+family's history. Extract each person-node as a discrete entry only.
+
+For EACH person-node, record it as a single personal_names entry in
+this exact format: "<Name as printed> (<birth year>-<death year or
+blank if living/unknown>)". Example: "Alfred E Knott (1871-1953)".
+If dates are not legible for that person, still include the name with
+"(unclear)" in place of the dates. Assign confidence based on how
+legible the NAME portion is — a legible name with illegible dates is
+still "partial", not "unclear".
+
+Confidence levels:
+  - confirmed: the full name is clearly legible with no doubt
+  - partial: some characters in the name are uncertain but not a guess
+  - unclear: the name itself is not legible enough to attempt a reading
+
+If a relationship label (e.g. "2nd great-grandparents") appears near
+a node, include it as a subject_keywords entry, not as part of the
+name.
+
+Output ONLY the fields below, in this exact format. No preamble, no
+explanation, no notes, no JSON, no markdown code fences, no narrative
+description of the chart as a whole.
+
+CRITICAL FORMAT RULE: Every line below MUST start with its field label
+followed by a colon (e.g. "personal_names:"), exactly as shown. Do NOT
+skip directly to listing names without the "personal_names:" label in
+front of them — output missing a field label will be rejected
+entirely, discarding all the names you extracted. All five field
+labels below must appear, even if a field's content is empty.
+
+Worked example of correct format (do not copy these values, this is
+only to show the required structure):
+
+document_type: Genealogy Chart
+visible_dates:
+personal_names: John Smith (1850-1920)|confirmed; Jane Doe (1855-)|partial
+place_names:
+subject_keywords: 2nd great-grandparents
+
+Now produce your actual output in this same format:
+
+document_type: Genealogy Chart
+visible_dates: (leave empty — dates are embedded in personal_names per instructions above)
+personal_names: <name (dates)>|<confidence>; <name (dates)>|<confidence>; ...
+place_names: <place>|<confidence>; ... (leave empty if none printed on the chart)
+subject_keywords: <relationship labels and any other short printed labels>

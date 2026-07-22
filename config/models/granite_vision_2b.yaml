@@ -1,0 +1,39 @@
+model_name: granite_vision_2b
+repo_id: ibm-granite/granite-vision-3.2-2b
+loader_class: GraniteVisionLoader
+
+# UNTESTED in this project. No author-provided sampling defaults exist
+# (generation_config.json has token IDs only) - do_sample=false chosen
+# for consistency with how every other under-specified model was
+# started tonight (Qwen3-VL, SmolVLM2), not because it's confirmed
+# optimal for this model specifically.
+do_sample: false
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+# Confirmed necessary (2026-07-13, real row-extraction test): without
+# this, Granite showed the exact same repetition-loop degeneration every
+# other model needed this fix for - two of six test rows spiraled into
+# hundreds of repeated tokens ("64 64 64...", "123456789123456789...")
+# and burned the full 512-token budget (~28s vs ~3s for clean rows)
+# before ever reaching most of the requested columns. Same values
+# already proven stable across Qwen3-VL, SmolVLM2, and every other
+# model tested this session - not re-derived blind for Granite.
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+# Left unset (transformers' own default attention implementation).
+attn_implementation: null
+
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

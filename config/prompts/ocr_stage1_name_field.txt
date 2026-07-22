@@ -1,0 +1,11 @@
+This image shows a single handwritten name (surname and/or given name). Transcribe exactly what is written.
+
+On this type of form, the surname is often written once for the head of a household, then marked with a ditto mark or a repeat-symbol (") for other members of the same household, with only the given name written fresh each row. If you see this pattern - a repeat-symbol where a surname would be, followed by a given name - output "DITTO, [given name]" (e.g. "DITTO, James") rather than guessing what the repeated surname actually is, since it is not visible in this image.
+
+If a full name (surname and given name) is written out, transcribe it exactly, preserving the order as written.
+
+If individual letters are illegible, mark just those letters with ? and keep the rest of the name as written (e.g. "Ha?kins" if one letter cannot be read). If the entire name is illegible, output ? alone.
+
+Do not guess a common/likely name if you are not confident - mark uncertain letters with ? instead of silently substituting a more familiar-looking name.
+
+Output ONLY the name itself - no commentary.

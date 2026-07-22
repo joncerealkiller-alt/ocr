@@ -1,0 +1,40 @@
+model_name: olmocr_2_7b
+repo_id: allenai/olmOCR-2-7B-1025-FP8
+processor_repo_id: Qwen/Qwen2.5-VL-7B-Instruct
+loader_class: OlmOcrLoader
+
+# Blind AllenAI playground test (2026-07-11) produced the strongest raw
+# result of the whole session on this project's test document - see
+# GROUND_TRUTH_Knott_marriage_cert.md. Starting conservative (greedy)
+# despite that strong result, since these settings haven't been tested
+# through THIS pipeline yet, only via AllenAI's own hosted playground
+# (unknown decoding settings on their end).
+do_sample: false
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+
+# olmOCR-mix training data included pages with real repetition problems
+# in earlier olmOCR versions (per AllenAI's own public writeup, GRPO
+# training in v2 specifically targeted this) - if repetition surfaces
+# despite that, this is the first lever to reach for, consistent with
+# every other model tested this session.
+max_new_tokens: 4096
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+num_beams: 1
+length_penalty: 1.0
+early_stopping: false
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

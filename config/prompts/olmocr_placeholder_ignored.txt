@@ -1,0 +1,12 @@
+This file's content is IGNORED by OlmOcrLoader.
+
+The actual prompt used is always build_no_anchoring_v4_yaml_prompt()
+from the official `olmocr` package - this model was RL-trained against
+that specific structured prompt, and OlmOcrLoader deliberately does not
+let it be varied via prompt files, the same way every other loader's
+prompt can be. See core/loaders/olmocr_loader.py's module docstring.
+
+Any prompt file selected in the UI (including edits in the override
+box) has no effect when the model profile is olmocr_2_7b - this file
+exists only so the dropdown has something to select, satisfying the
+assessment tool's UI requirement that a prompt file be chosen.

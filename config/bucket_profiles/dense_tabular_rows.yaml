@@ -1,0 +1,20 @@
+# Bucket-level generation overrides for dense_tabular_rows.
+#
+# RENAMED 2026-07-13 from census_or_form_text (see classify_v1.txt for
+# the sharpened routing criterion - row repetition, not "has a table
+# layout"). The WORKFLOW behind this bucket changed at the same time:
+# this bucket no longer does whole-page extraction at all - it's
+# row_segmentation_ui.py (deskew/bounds, human-confirmed) -> sidecar
+# JSON -> run_row_extraction.py (one call PER ROW, via
+# core/row_extraction.py). These settings were originally tuned against
+# whole-page runaway/repetition failures (dense form/certificate
+# content tested 2026-07-10) - that specific failure mode is
+# structurally less likely at the row level (a single row has none of
+# the repeated-similar-content structure that drove it), but mild
+# anti-repetition settings are still a reasonable, low-risk starting
+# default for per-row calls too. Worth re-evaluating once real per-row
+# test results exist, not assumed to transfer unchanged.
+
+do_sample: false
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5

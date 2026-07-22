@@ -1,0 +1,31 @@
+model_name: qwen25_vl_7b
+repo_id: Qwen/Qwen2.5-VL-7B-Instruct
+loader_class: QwenLoader
+
+# Same architecture/loader as the original qwen3b.yaml (Qwen2.5-VL-3B),
+# just a larger checkpoint - handover report flagged this size as
+# worth re-testing under the new pipeline (old plugin's shared
+# repetition_penalty caused looping; per-model tuning may fix it).
+# No new loader code needed - QwenLoader already proven working.
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+# Official model card default range: 4-16384 visual tokens, recommended
+# tuning example ~200k-1M px - same values already proven for the 3B
+# config (qwen3b.yaml), not re-derived blind for this size.
+min_pixels: 200704    # 256*28*28
+max_pixels: 1003520   # 1280*28*28
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

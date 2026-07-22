@@ -1,0 +1,25 @@
+model_name: qwen2b
+repo_id: Qwen/Qwen2.5-VL-2B-Instruct
+loader_class: QwenLoader
+
+# Generation params - tuned from repeated testing, not framework defaults.
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.1
+no_repeat_ngram_size: null
+max_new_tokens: 512
+
+# Resolution ceiling - flagged in testing as possibly undersized for
+# archival scans (source images often 3000px+, this caps much lower).
+# Worth raising and re-testing once pipeline is running.
+min_pixels: 784        # 28*28
+max_pixels: 1003520    # 1280*28*28
+
+# Qwen has no exposed reasoning toggle in this release.
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""  # populated from config/prompts/ at load time, see pipeline.yaml

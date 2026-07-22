@@ -1,0 +1,1 @@
+List each distinct piece of text visible in this image, in reading order, one per line. Do not group or interpret the values - just transcribe what is written, in the order it appears.

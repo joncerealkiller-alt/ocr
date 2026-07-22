@@ -1,0 +1,21 @@
+# Bucket-level generation overrides for printed_document.
+#
+# Applied in precedence order: model defaults (config/models/*.yaml)
+# -> this file -> assessment UI overrides. Only fields listed here
+# override the model's own defaults; anything omitted falls through
+# unchanged. Unknown field names are ignored with a console warning,
+# not silently dropped.
+#
+# Values below reflect actual test evidence from Qwen3-VL-2B-Instruct
+# sessions against dense marriage-certificate/form content (2026-07-10):
+# greedy decoding + repetition_penalty=1.15 + no_repeat_ngram_size=5 was
+# the last configuration that kept personal_names/place_names clean on
+# the core fields, before further tuning attempts (ngram=7, sampling)
+# made things worse rather than better. NOT yet confirmed to generalize
+# across models - this is Qwen-specific evidence being used as a
+# starting point for any model routed through this bucket, not a
+# validated universal setting.
+
+do_sample: false
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5

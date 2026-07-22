@@ -1,0 +1,25 @@
+请按下列JSON格式输出图中信息:
+{
+    "document_type": "",
+    "personal_names": [],
+    "personal_names_confidence": [],
+    "place_names": [],
+    "place_names_confidence": [],
+    "visible_dates": [],
+    "visible_dates_confidence": [],
+    "subject_keywords": []
+}
+
+Rules:
+- personal_names must contain ONLY people's names - never addresses, occupations, religions, or any other detail.
+- place_names must contain ONLY place names (cities, counties, provinces, streets, institutions) - never people's names or full sentences.
+- subject_keywords must contain ONLY short individual words or short phrases - never a full sentence copied from the document.
+- personal_names_confidence must have exactly the same number of entries as personal_names, in the same order - one confidence value per name.
+- place_names_confidence must have exactly the same number of entries as place_names, in the same order.
+- visible_dates_confidence must have exactly the same number of entries as visible_dates, in the same order.
+- Each confidence value must be exactly one of: confirmed, partial, unclear
+  - confirmed: every character is clearly readable with no doubt
+  - partial: mostly readable, some uncertainty
+  - unclear: not legible enough to read with confidence
+- Add as many entries as are actually visible in the image - do not limit to one entry per field.
+- Do not invent values that are not visible. If nothing is visible for a field, leave its array empty.

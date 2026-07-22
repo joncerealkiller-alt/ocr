@@ -1,0 +1,46 @@
+model_name: gemma_extract
+repo_id: google/gemma-4-E2B-it   # -it = instruction-tuned, required for prompted tasks
+loader_class: GemmaLoader
+
+# Separate from gemma.yaml (2026-07-13) - that config is actively used
+# for classification in the real pipeline.yaml and deliberately uses a
+# LOW image_token_budget (140), appropriate for classification but
+# explicitly flagged in that file's own comment as wrong for extraction:
+# "If Gemma is ever assigned an OCR/extraction role, this needs raising
+# to 560 or 1120 in a separate config, since extraction is the opposite
+# use case the model card describes." This is that separate config -
+# built for testing Gemma on row-level extraction specifically, not for
+# touching the classifier's proven settings.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15   # applying the same stable value proven
+no_repeat_ngram_size: 5    # across every other model this session,
+                            # rather than starting neutral and
+                            # potentially rediscovering the same
+                            # degeneration issue Granite just showed
+max_new_tokens: 512   # raised from 256 (classification's short-answer
+                        # budget) - row extraction needs room for 5+
+                        # confidence-tagged lines, not a single category
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+# Raised from 140 (classification) to 560 - the model card's own
+# recommended step up for tasks needing real text-reading detail, not
+# just coarse layout/content-type judgment. 1120 (the max) is available
+# if 560 proves insufficient, not chosen as the default to avoid
+# unnecessarily inflating cost before knowing 560 isn't enough.
+extra:
+  image_token_budget: 560
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

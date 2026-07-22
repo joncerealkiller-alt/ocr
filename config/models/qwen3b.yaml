@@ -1,0 +1,37 @@
+model_name: qwen3b
+repo_id: Qwen/Qwen2.5-VL-3B-Instruct
+loader_class: QwenLoader
+
+# NOTE: switched from 2B to 3B per official model card availability.
+# 2B was the empirically-tested candidate throughout project testing
+# (best abstain-without-fabricate track record across 6+ documents).
+# 3B is architecturally identical but UNTESTED in this project - re-run
+# the core validation document set (2x census, clean copperplate
+# register, passenger manifest) against this model before trusting it
+# the way 2B earned trust. Do not assume "same family, smaller card
+# gap" means equivalent behavior.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.1
+no_repeat_ngram_size: null
+max_new_tokens: 512
+
+# Official model card default range: 4-16384 visual tokens.
+# Their own tuning example uses 256*28*28-1280*28*28 (~200k-1M px).
+# Previous config used 28*28-1280*28*28 (min far too low). Raising
+# min_pixels to match the card's own suggested floor.
+min_pixels: 200704    # 256*28*28
+max_pixels: 1003520   # 1280*28*28
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+# System RAM ceiling for CPU offload if VRAM budget is exceeded.
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

@@ -1,0 +1,7 @@
+This image shows a single handwritten age value. Transcribe exactly what is written, digit by digit.
+
+Ages are normally recorded in years, but sometimes in months for infants - if there is a letter "m" (or "mo") written next to the number, that means MONTHS, not years. In that case, output the digits followed by a single "m" with no space (e.g. "4m") - do not strip the "m" or treat it as a stray character. If there is no "m", output digits only.
+
+If a specific digit is illegible - genuinely impossible to read, not just slightly unclear - output "?" in its place rather than guessing (e.g. "1?" if the first digit is clear but the second is not).
+
+Output ONLY the digits (plus "m" if present, plus "?" for any illegible digit) - no decimal points, no other extra characters. Ages are normally 1 to 3 digits long (e.g. 0, 7, 18, 44, 100, or 4m) - do not pad, duplicate, or add digits beyond what is actually written. If part of the number has been corrected or overwritten and is genuinely ambiguous, give your best reading as digits only.

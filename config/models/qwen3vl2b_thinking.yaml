@@ -1,0 +1,56 @@
+model_name: qwen3vl2b_thinking
+repo_id: Qwen/Qwen3-VL-2B-Thinking
+loader_class: Qwen3VLLoader
+
+# Separate checkpoint from qwen3vl2b.yaml (Instruct), not a runtime toggle -
+# Qwen3-VL splits reasoning into distinct weights rather than an
+# enable_thinking parameter (unlike some Qwen3 text models).
+# UNTESTED in this project. Every value below is a first-pass guess based
+# on official model card guidance - expect to need adjustment after the
+# first real run, especially max_new_tokens and keywords_max_new_tokens.
+
+# "VL" thinking hyperparameters from the Qwen3-VL-2B-Thinking model card.
+do_sample: true
+temperature: 1.0
+top_p: 0.95
+top_k: 20
+repetition_penalty: 1.0
+# presence_penalty: confirmed via live test that generate() rejects this
+# kwarg on this transformers build (raises a TypeError) - not just an
+# untested guess anymore. Left null (disabled) rather than 0.0, since any
+# non-null value causes the loader to attempt passing it and hit the
+# same fallback-retry path every single call. See Qwen3VLLoader.
+# _generate_once's presence_penalty TypeError handler for the fallback
+# logic, though avoiding the failed call entirely here is cheaper.
+presence_penalty: null
+no_repeat_ngram_size: null
+
+# Model card recommends out_seq_length=40960 for thinking-mode VL tasks -
+# that's a full-context recommendation, not tuned for a short structured
+# extraction task. Starting conservative to keep single-test runtime sane;
+# if _strip_thinking's "no </think> found" warning fires, this is too low
+# and the reasoning phase is being cut off before completion - raise it.
+max_new_tokens: 4096
+
+# UNTESTED GUESS: raised well above the Instruct profile's 80, since the
+# isolated keyword call still has to complete a full reasoning phase
+# before producing an answer - 80 would almost certainly truncate mid-
+# reasoning for a thinking checkpoint. Watch for the same warning here.
+keywords_max_new_tokens: 1024
+
+stop_string: "<END>"
+
+min_pixels: null
+max_pixels: null
+
+# "checkpoint" (not "unsupported"/"param"/"system_prompt"): reasoning is
+# baked into this repo_id's weights, not toggled at runtime. Recognized
+# explicitly by Qwen3VLLoader._build_prompt - see that method's docstring.
+reasoning_toggle_mechanism: checkpoint
+reasoning_enabled: true
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

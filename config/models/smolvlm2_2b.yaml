@@ -1,0 +1,50 @@
+model_name: smolvlm2_2b
+repo_id: HuggingFaceTB/SmolVLM2-2.2B-Instruct
+loader_class: SmolVLM2Loader
+
+# UNTESTED in this project. do_sample=false matches the model card's own
+# demonstrated example call (a real authored signal, unlike some other
+# cards where this was never shown either way) - generation_config.json
+# itself carries no sampling defaults beyond token IDs, so there's no
+# other guidance to start from.
+do_sample: false
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+max_new_tokens: 512
+
+# Left unset (transformers' own default attention implementation) rather
+# than the card's hardcoded flash_attention_2, since that's not guaranteed
+# installed. Set to "flash_attention_2" here explicitly if confirmed
+# available and you want the acceleration.
+attn_implementation: null
+
+# Resolution note, corrected after reviewing preprocessor_config.json:
+# do_image_splitting=true means this model resizes the full image to a
+# 1536px longest-edge cap (size.longest_edge), then splits THAT into
+# multiple 384px tiles for the vision encoder (max_image_size is the
+# per-tile size, not the overall ceiling) - similar in spirit to Qwen's
+# dynamic tiling, just with a lower overall cap. Effective resolution
+# ceiling is ~1536px, not 384px as an earlier note here incorrectly
+# suggested. Still lower than Qwen3-VL's resolution handling, so a mild
+# watch-item for very large/high-DPI scans, not a hard ceiling.
+#
+# min_pixels/max_pixels (Qwen-style naming) do NOT apply to this
+# processor - SmolVLMImageProcessor uses size.longest_edge /
+# max_image_size.longest_edge instead, and SmolVLM2Loader does not
+# currently expose that as a config-driven override (untested whether
+# tuning it would help - not building ahead of evidence).
+
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

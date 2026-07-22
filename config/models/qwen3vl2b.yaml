@@ -1,0 +1,52 @@
+model_name: qwen3vl2b
+repo_id: Qwen/Qwen3-VL-2B-Instruct
+loader_class: Qwen3VLLoader
+
+# NOTE: Qwen3-VL is a new model series (distinct from Qwen2.5-VL).
+# Uses Qwen3VLForConditionalGeneration, not Qwen2_5_VLForConditionalGeneration.
+# Untested in this project - treat as experimental candidate for assessment.
+# Re-run core validation docs (2x census, register, manifest) before
+# committing to a bucket in pipeline.yaml.
+
+# VL hyperparameters from official Qwen3-VL model card.
+# Text task defaults (temperature=1.0, top_p=1.0, top_k=40) are different;
+# these are tuned for vision+language extraction.
+do_sample: false
+temperature: 0.7
+top_p: 0.8
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+# Explicit stop condition, paired with extract_census_v3.txt's instruction
+# to emit this token immediately after subject_keywords and stop. Added
+# after two rounds of penalty tuning (no_repeat_ngram_size 5 -> 7) failed
+# to fix unbounded subject_keywords drift - round 2 just relocated the
+# same failure into personal_names as confident fabrication, which is
+# worse. Penalty knobs discourage repeats but give no positive reason to
+# stop; this gives generate() a hard structural terminator instead.
+stop_string: "<END>"
+
+# Dedicated ceiling for the isolated subject_keywords call (two-call split,
+# see Qwen3VLLoader._run_generate). This field alone drove 44/128/282
+# keywords at 250/512/1024 tokens respectively across testing - unbounded
+# regardless of budget given. 80 tokens is enough for ~10 short grounded
+# keywords, nowhere near enough to run away.
+keywords_max_new_tokens: 80
+
+# VL task-specific pixel range. Qwen3-VL model card does not specify
+# min/max_pixels the way Qwen2.5 does. Leaving null for now - model will
+# use its processor defaults. Can be tuned if memory/quality issues arise.
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+# System RAM ceiling for CPU offload if VRAM budget is exceeded.
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

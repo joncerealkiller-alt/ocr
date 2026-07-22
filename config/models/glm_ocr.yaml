@@ -1,0 +1,37 @@
+model_name: glm_ocr
+repo_id: zai-org/GLM-OCR
+loader_class: GlmOcrLoader
+
+# UNTESTED in this project. do_sample=false as the conservative starting
+# point consistent with every other under-specified model this session -
+# GLM-OCR's card shows no explicit sampling recommendation either way.
+do_sample: false
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+
+# 8192, matching the official card's own example exactly - not an
+# arbitrary high value. This model does full-document JSON extraction
+# in one pass (document_type + all names + all places + all dates +
+# keywords), which plausibly needs real room, unlike the 512 that
+# sufficed for other loaders' shorter per-field-block text convention.
+max_new_tokens: 8192
+
+num_beams: 1
+length_penalty: 1.0
+early_stopping: false
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

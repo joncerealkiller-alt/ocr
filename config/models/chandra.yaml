@@ -1,0 +1,51 @@
+model_name: chandra
+repo_id: datalab-to/chandra-ocr-2
+loader_class: ChandraLoader
+
+# UPDATED 2026-07-13 after a real test showed row 2 of a live run
+# producing 24,737 chars (vs. 128 for row 1) - the same repetition/
+# degeneration signature every other model needed a fix for tonight.
+# Fixed-task OCR engine (prompt_type="ocr_layout"), not instruction-
+# following - repetition_penalty/no_repeat_ngram_size/do_sample/
+# temperature/top_p/top_k/num_beams/length_penalty below remain
+# genuinely inert (no evidence found of a fine-grained repetition
+# control at chandra's generate_hf() level, despite searching official
+# docs/examples) - kept populated for structural consistency with every
+# other config, not because they do anything for this loader.
+#
+# max_new_tokens is DIFFERENT - it now genuinely does something: 
+# ChandraLoader sets it as the MAX_OUTPUT_TOKENS environment variable
+# before any chandra import (chandra-ocr's own confirmed, documented
+# lever, via env var or --max-output-tokens CLI flag). This bounds the
+# COST of a repetition loop without fixing the underlying tendency to
+# loop at all - best-effort mitigation, not a real fix, same category
+# as the max_new_tokens cap used for GLM-OCR's degeneration earlier
+# this session.
+do_sample: false
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+
+# Lowered from 8192 (whole-page scale) - a single row crop legitimately
+# needs a small fraction of that. Capping low makes a future loop cheap
+# and fast (bounded cost) instead of burning the full whole-page-scale
+# budget on one degenerate row.
+max_new_tokens: 1024
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+num_beams: 1
+length_penalty: 1.0
+early_stopping: false
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

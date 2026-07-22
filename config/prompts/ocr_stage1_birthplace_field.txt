@@ -1,0 +1,9 @@
+This image shows a single handwritten place name: where a person was born. Transcribe exactly what is written.
+
+This is usually a country or province name (e.g. Ontario, Manitoba, England, Canada). Transcribe it exactly as written - do not expand abbreviations unless the expansion is clearly and fully written out, and do not correct spelling.
+
+If what is written is a ditto mark or similar repeat-symbol (indicating "same as the row above") rather than an actual place name, output exactly the word "DITTO" - do not attempt to guess what the repeated value actually is, since that value is not visible in this image. This is important: a ditto mark should always be reported as DITTO, never left blank and never guessed at.
+
+If part of the place name is illegible, mark just that part with ? and keep the rest as written. If entirely illegible, output ? alone.
+
+Output ONLY the place name (or DITTO, or ?) - no commentary.

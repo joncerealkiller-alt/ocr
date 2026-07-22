@@ -1,0 +1,21 @@
+This image shows one row from the 1931 Canadian census form. The printed form has numbered columns - extract ONLY these five, using the exact column numbers and names given:
+
+Column 3: Name
+Column 14: Age
+Column 12: Sex
+Column 11: Relationship to Head
+Column 15: Birthplace
+
+For each one, write the field name (not the column number), a colon, then exactly what is written in that column for this row. Here is a complete worked example using invented data (not from your image - just showing the format):
+
+Name: John Smith
+Age: 45
+Sex: M
+Relationship to Head: Head
+Birthplace: Ontario
+
+Now do the same for the REAL columns of the row in the image, using the labels above (Name, Age, Sex, Relationship to Head, Birthplace) - not the column numbers, and not the example values.
+
+If a column is genuinely blank for this row, still write its label followed by a colon with nothing after it.
+
+Do not invent a value that is not visible. Do not add commentary. Output ONLY 5 lines, one per field listed above, then stop.

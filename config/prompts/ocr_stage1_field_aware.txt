@@ -1,0 +1,1 @@
+This image shows one row from a form with multiple labeled fields. Transcribe the text, keeping each field's value separate from its neighbors - do not merge adjacent fields together, even if you don't know what each field is called.

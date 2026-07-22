@@ -1,0 +1,6 @@
+Name
+Age
+Sex
+Relationship to Head
+Birthplace
+Occupation

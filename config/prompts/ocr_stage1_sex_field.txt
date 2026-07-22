@@ -1,0 +1,5 @@
+This image shows a single handwritten letter: a person's sex. Transcribe exactly what is written.
+
+The only valid values are M (male) or F (female). Output exactly one of: M, F, or ? if the letter is genuinely illegible or is not clearly M or F.
+
+Do not output anything else - no words, no punctuation, no explanation. If you see a letter that looks like it could be something other than M or F (for example, a marital-status letter like W or S bleeding in from a neighboring column), still output your best single-letter reading of THIS column specifically, or ? if you cannot tell.

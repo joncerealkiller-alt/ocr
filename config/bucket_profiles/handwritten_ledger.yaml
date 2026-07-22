@@ -1,0 +1,7 @@
+# Bucket-level generation overrides for handwritten_ledger.
+# No overrides yet - zero test evidence for this bucket as of
+# 2026-07-10. Left empty (pure model defaults pass through unchanged)
+# rather than guessing at settings from the printed_document/
+# census_or_form_text evidence, since that evidence is specific to
+# dense form content and may not transfer to this bucket's actual
+# characteristics.

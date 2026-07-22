@@ -1,0 +1,32 @@
+model_name: internvl3_8b
+repo_id: OpenGVLab/InternVL3-8B-hf
+loader_class: InternVLLoader
+
+# UNTESTED in this project. Same starting point as internvl3_2b.yaml -
+# no author-provided sampling defaults found, greedy for consistency.
+# Only repo_id differs meaningfully from the 2B config; larger model
+# means longer runtime and higher VRAM, watch for OOM given your
+# ~14.4GB usable budget observed across every model tonight.
+do_sample: false
+temperature: 0.7
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+max_new_tokens: 512
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+num_beams: 1
+length_penalty: 1.0
+early_stopping: false
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0
