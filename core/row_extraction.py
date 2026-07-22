@@ -259,7 +259,51 @@ def parse_row_output(raw_output: str, column_names: list[str]) -> dict[str, RowF
             continue
         result[real_column] = RowFieldValue(value=value_part.strip(), confidence=confidence)
 
-    return result
+    return _scrub_example_leakage(result)
+
+
+def _scrub_example_leakage(fields: dict[str, RowFieldValue]) -> dict[str, RowFieldValue]:
+    """
+    Deterministic safety net (2026-07-22) - added after real evidence
+    showed prompt wording ALONE isn't reliable enough to stop this:
+    a genuine 6-row test with the (already-fixed, deliberately absurd)
+    worked example still came back with EVERY non-empty row a 100%
+    byte-exact match to _EXAMPLE_VALUES, across different real rows.
+    Two separate prompt-content changes (plausible values, then absurd
+    values) both failed to suppress the underlying behavior - the
+    model copies the worked example verbatim under low confidence
+    regardless of what that example's content actually IS. That's a
+    model-level tendency prompt wording alone hasn't been able to
+    override, so this catches it in code instead: if a field's value
+    is an EXACT match to what that column's worked-example value would
+    have been, it's forced back to "?"/unclear rather than trusted -
+    100% reliable regardless of model, prompt, or how convincing future
+    leaked content might look, unlike relying on the model to follow an
+    instruction.
+
+    This does NOT fix why the leakage happens (still worth continued
+    prompt iteration - see build_structuring_prompt's template_override)
+    - it's a backstop that guarantees a leaked value can never silently
+    reach saved output as if it were a real reading, layered on top of
+    whatever prompt-level mitigation is in place, not a replacement for
+    it.
+
+    Deliberately exact-match only (not fuzzy/substring) - a real value
+    that happens to legitimately match by coincidence (someone actually
+    named "Zzyx Q. Bleeth" is not a real risk given these are
+    deliberately absurd/fictional; a real Age of "999" or Birthplace of
+    "Atlantis" is not realistically possible on a real census record) -
+    so this has effectively zero false-positive risk against genuine
+    data.
+    """
+    for column, field_value in list(fields.items()):
+        expected_leak_value = _EXAMPLE_VALUES.get(column, "Zzyx")
+        if field_value.value == expected_leak_value:
+            print(f"WARNING: {column!r} value exactly matched the worked-example "
+                  f"placeholder ({expected_leak_value!r}) - this is prompt-example "
+                  f"leakage, not a real reading. Forcing to unclear.")
+            fields[column] = RowFieldValue(value="?", confidence=ConfidenceLevel.UNCLEAR)
+    return fields
 
 
 def _compute_scoped_masks(sidecar: dict) -> tuple[list, list]:
