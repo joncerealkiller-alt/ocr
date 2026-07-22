@@ -1292,6 +1292,18 @@ def update_sidecar(path, column_name: str, patch: dict, column_order: list[str] 
     if sidecar["columns"][column_name].get("status") == "done" and \
        sidecar.get("active_column") == column_name:
         sidecar["active_column"] = _first_incomplete(sidecar)
+    elif sidecar.get("active_column") is None:
+        # Self-heal (2026-07-22, found via a real sidecar): active_column
+        # can go stale-None even with incomplete columns remaining - e.g.
+        # every column reaches "done" (active_column correctly becomes
+        # None), then one is reopened and re-saved via Save (not Next/
+        # Extract), setting its status back to "in_progress" without
+        # ever going through the "mark done" branch above that would
+        # normally recompute active_column. Nothing else in this
+        # function's contract depends on active_column staying None once
+        # real incomplete work exists, so recomputing it here is always
+        # safe - None while incomplete is never a meaningful state.
+        sidecar["active_column"] = _first_incomplete(sidecar)
 
     save_sidecar(sidecar, path)
     return sidecar
