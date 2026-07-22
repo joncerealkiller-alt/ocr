@@ -125,8 +125,8 @@ class LabelingApp:
         self.image_label.pack(anchor="w")
 
         # -- status radio buttons --------------------------------------------
-        status_frame = Frame(root, padx=12, pady=(10, 4))
-        status_frame.pack(fill="x")
+        status_frame = Frame(root, padx=12)
+        status_frame.pack(fill="x", pady=(10, 4))
         Label(status_frame, text="What can you actually read here?",
               font=("Segoe UI", 9, "bold")).pack(anchor="w")
         for value, label in STATUS_OPTIONS:
@@ -136,8 +136,8 @@ class LabelingApp:
             ).pack(anchor="w")
 
         # -- value entry ---------------------------------------------------
-        entry_frame = Frame(root, padx=12, pady=(6, 4))
-        entry_frame.pack(fill="x")
+        entry_frame = Frame(root, padx=12)
+        entry_frame.pack(fill="x", pady=(6, 4))
         Label(entry_frame, text="Exact value (leave blank if illegible/blank above):",
               font=("Segoe UI", 9, "bold")).pack(anchor="w")
         self.value_var = StringVar(value="")
@@ -149,8 +149,8 @@ class LabelingApp:
               font=("Segoe UI", 8), fg="#666").pack(anchor="w", pady=(2, 0))
 
         # -- notes -----------------------------------------------------------
-        notes_frame = Frame(root, padx=12, pady=(6, 4))
-        notes_frame.pack(fill="x")
+        notes_frame = Frame(root, padx=12)
+        notes_frame.pack(fill="x", pady=(6, 4))
         Label(notes_frame, text="Notes (optional — e.g. \"ditto mark\", \"crossed out\", "
                                  "\"stray mark, not a real character\"):").pack(anchor="w")
         self.notes_var = StringVar(value="")
@@ -271,15 +271,25 @@ class LabelingApp:
         source_path = self.sidecar["source_image_path"]
         deskew_angle = self.sidecar["deskew_angle"]
 
-        # Same mask logic as core.row_extraction._compute_scoped_masks -
-        # the crop shown here must match what the model actually sees,
-        # or a label built against a differently-masked crop isn't a
-        # valid comparison point.
-        keep_ranges = [tuple(k) for k in self.sidecar.get("mask_keep_ranges", [])]
+        # Same mask logic core.row_extraction.run_single_column_extraction
+        # actually uses (2026-07-22 sidecar redesign: masks now live per-
+        # column under sidecar["columns"][name], not as one global top-
+        # level field) - the crop shown here must match what the model
+        # actually saw for THIS column, or a label built against a
+        # differently-masked crop isn't a valid comparison point. Falls
+        # back to the old top-level mask_keep_ranges/mask_apply_rows only
+        # for a legacy sidecar that predates the per-column redesign and
+        # has no "columns" entry at all.
+        column_state = self.sidecar.get("columns", {}).get(column)
+        if column_state is not None:
+            keep_ranges = [tuple(k) for k in column_state.get("mask_keep_ranges", [])]
+            apply_rows = column_state.get("mask_apply_rows", True)
+        else:
+            keep_ranges = [tuple(k) for k in self.sidecar.get("mask_keep_ranges", [])]
+            apply_rows = self.sidecar.get("mask_apply_rows", False)
         width = self.sidecar["deskewed_image_size"][0]
         row_masks = (
-            compute_exclude_ranges(keep_ranges, width)
-            if keep_ranges and self.sidecar.get("mask_apply_rows", False) else []
+            compute_exclude_ranges(keep_ranges, width) if keep_ranges and apply_rows else []
         )
 
         try:
