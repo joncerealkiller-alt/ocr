@@ -1348,6 +1348,21 @@ class RowSegmentationApp:
         self._refresh_column_progress_display(sidecar_path)
 
         if next_name is None:
+            # BUG FIX (2026-07-22, found via a real reverted column):
+            # previously left self.active_column_var showing whatever
+            # column had JUST been completed. A stray extra click on
+            # Save afterward would then silently re-patch that column
+            # with status: "in_progress", reverting it - confirmed
+            # exactly this sequence happened on a real sidecar (Next
+            # completed the last column -> Save clicked again out of
+            # habit -> that column's status flipped back). Clearing the
+            # field is enough to make that impossible: every write
+            # handler (save_result/next_column/extract_active_column)
+            # already warns-and-refuses on an empty active column name,
+            # so this alone closes the gap without needing to disable
+            # the buttons - typing a column name back in to
+            # intentionally redo one still works exactly as before.
+            self.active_column_var.set("")
             self.status_label.config(text="All configured columns are done.")
             messagebox.showinfo("Processing complete",
                                  "Every configured column for this image is marked done.")
