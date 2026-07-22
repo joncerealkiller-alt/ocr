@@ -385,7 +385,9 @@ class RowSegmentationApp:
         self.active_column_entry = Entry(mask_row, textvariable=self.active_column_var, width=16)
         self.active_column_entry.pack(side="left", padx=(2, 4))
         Button(mask_row, text="Load columns file...",
-               command=self.load_columns_file).pack(side="left", padx=(0, 8))
+               command=self.load_columns_file).pack(side="left", padx=(0, 4))
+        Button(mask_row, text="Use two-stage mask (__multi__)",
+               command=self.use_multi_mask).pack(side="left", padx=(0, 8))
         self.mask_mode_var = BooleanVar(value=False)
         Checkbutton(mask_row, text="Select column to keep", variable=self.mask_mode_var,
                     command=self._on_mask_mode_toggle).pack(side="left")
@@ -1117,6 +1119,54 @@ class RowSegmentationApp:
                  f"'Save sidecar JSON' once you're happy with this result."
         )
 
+    def _safe_column_order_seed(self, active_name: str) -> list[str]:
+        """
+        What to pass as update_sidecar()'s column_order= argument.
+
+        Normally self.column_order (the real loaded list) if available,
+        else [active_name] - a reasonable seed for a genuinely new
+        sidecar's first-ever column.
+
+        CRITICAL EXCEPTION for "__multi__" (2026-07-22): that name is a
+        pseudo-column, a mask-definition scratchpad for two-stage/
+        legacy multi-column extraction - it is NEVER a real progression
+        step. If self.column_order were empty and this fell through to
+        [active_name] = ["__multi__"], update_sidecar()'s
+        init_column_state() would overwrite the sidecar's REAL
+        column_order (if one already exists on disk from a prior
+        session that this UI session just hasn't reloaded) down to
+        that single bogus entry - a real, silent, destructive bug
+        distinct from the one this whole __multi__ feature exists to
+        fix. Returning [] here instead means update_sidecar() only
+        touches columns["__multi__"] itself (via its own setdefault)
+        without ever touching column_order - safe regardless of
+        whether the real column list happens to be loaded in THIS
+        session or not. If the sidecar has no "columns" scaffold at
+        all yet (a truly brand-new sidecar), update_sidecar() will
+        raise a clear error asking for a real column_order first -
+        correct behavior, since there's no real progression list to
+        infer from a mask-only pseudo-column on a sidecar with nothing
+        else in it yet.
+        """
+        if active_name == "__multi__":
+            return self.column_order or []
+        return self.column_order or [active_name]
+
+    def use_multi_mask(self):
+        """Convenience for the two-stage/legacy multi-column mask -
+        sets the active column name to the reserved "__multi__"
+        pseudo-column rather than requiring it to be typed by hand
+        (a typo here, e.g. "__muti__", would silently create a
+        pointless new real-looking column instead of touching the
+        one core.row_extraction._compute_scoped_masks() actually
+        looks for)."""
+        self.active_column_var.set("__multi__")
+        name = self._active_column_name()
+        if name and name not in self.column_masks:
+            self.column_masks[name] = []
+        self._refresh_mask_count_label()
+        self.update_preview()
+
     def _write_sidecar_state(self, active_name: str | None) -> Path | None:
         """
         Shared by save_result()/next_column()/extract_active_column().
@@ -1175,7 +1225,7 @@ class RowSegmentationApp:
                         "mask_apply_header": self.mask_apply_header_var.get(),
                         "mask_apply_rows": self.mask_apply_rows_var.get(),
                     },
-                    column_order=self.column_order or [active_name],
+                    column_order=self._safe_column_order_seed(active_name),
                 )
             return sidecar_path
 
@@ -1275,7 +1325,7 @@ class RowSegmentationApp:
                 # somewhere real to go); fall back to just this one
                 # name if no columns file was ever loaded for this
                 # session.
-                column_order=self.column_order or [active_name],
+                column_order=self._safe_column_order_seed(active_name),
             )
 
         return sidecar_path
@@ -1318,6 +1368,14 @@ class RowSegmentationApp:
             messagebox.showwarning(
                 "No active column selected",
                 "Type the column name you're currently masking before advancing.")
+            return
+        if active_name == "__multi__":
+            messagebox.showwarning(
+                "Not a real column",
+                "\"__multi__\" is the mask-definition slot for two-stage/legacy "
+                "multi-column extraction, not a real extraction target - it has no "
+                "place in the column progression. Use 'Save sidecar JSON' to save "
+                "its mask, then switch back to a real column name to continue.")
             return
         if not self.column_masks.get(active_name):
             proceed = messagebox.askyesno(
@@ -1400,6 +1458,16 @@ class RowSegmentationApp:
         if active_name is None:
             messagebox.showwarning("No active column selected",
                                     "Type/select the column to extract first.")
+            return
+        if active_name == "__multi__":
+            messagebox.showwarning(
+                "Not a real column",
+                "\"__multi__\" is a mask-definition slot, not a real extraction "
+                "target - run_single_column_extraction would ask the model for a "
+                "field literally named '__multi__', which doesn't exist. Use "
+                "run_two_stage_extraction.py (or workflow_gui.py's Two-Stage "
+                "Extraction panel) to actually run multi-column extraction using "
+                "this mask.")
             return
         model_name = self.model_profile_var.get().strip()
         if not model_name:

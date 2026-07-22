@@ -264,24 +264,54 @@ def parse_row_output(raw_output: str, column_names: list[str]) -> dict[str, RowF
 def _compute_scoped_masks(sidecar: dict) -> tuple[list, list]:
     """
     Computes the actual paint-white exclude ranges separately for row
-    crops and the header crop, from the sidecar's stored keep_ranges +
-    scope flags (2026-07-15, per Jon's corrected design: click the
-    column to KEEP, everything else masked; header and row columns
-    don't share the same layout, so scope is independent per region).
+    crops and the header crop.
+
+    2026-07-22: prefers sidecar["columns"]["__multi__"] - a dedicated
+    pseudo-column reserved specifically for the two-stage/legacy
+    multi-column extraction mask, added after discovering the per-
+    column sidecar redesign had silently broken masking for this path
+    entirely. row_segmentation_ui.py's _write_sidecar_state() stopped
+    writing to the top-level mask_keep_ranges field once per-column
+    masks existed (columns[name]["mask_keep_ranges"]) - but this
+    function still only read that now-permanently-empty top-level
+    field, so run_two_stage_extraction/run_row_extraction's legacy
+    multi-column mode/extract_page_header were ALWAYS running fully
+    unmasked with no way for the operator to change that, a real
+    regression Jon confirmed mattered (both for output quality AND
+    compute time - the whole point of masking is not sending the model
+    pixels it doesn't need to look at).
+
+    __multi__ is NOT part of column_order (it isn't a real extraction
+    target, just a mask definition scratchpad) and is never touched by
+    the single-column auto-advance/Extract flow - see
+    row_segmentation_ui.py's set_multi_mask_mode()/_write_sidecar_state()
+    for how it's populated.
+
+    Falls back to the legacy top-level fields when no __multi__ entry
+    exists (a sidecar that predates this, or genuinely has no mask
+    defined for either path) - same convention as every other per-
+    column-with-legacy-fallback fix made this session.
 
     Returns (row_mask_ranges, header_mask_ranges) - either may be []
     if no keep_ranges are set, or if that particular scope's checkbox
-    was off when the sidecar was saved.
+    was off when the mask was saved.
     """
-    keep_ranges = [tuple(k) for k in sidecar.get("mask_keep_ranges", [])]
+    multi_state = sidecar.get("columns", {}).get("__multi__")
+    if multi_state is not None:
+        keep_ranges = [tuple(k) for k in multi_state.get("mask_keep_ranges", [])]
+        apply_rows = multi_state.get("mask_apply_rows", False)
+        apply_header = multi_state.get("mask_apply_header", False)
+    else:
+        keep_ranges = [tuple(k) for k in sidecar.get("mask_keep_ranges", [])]
+        apply_rows = sidecar.get("mask_apply_rows", False)
+        apply_header = sidecar.get("mask_apply_header", False)
+
     width = sidecar["deskewed_image_size"][0]
     row_masks = (
-        compute_exclude_ranges(keep_ranges, width)
-        if keep_ranges and sidecar.get("mask_apply_rows", False) else []
+        compute_exclude_ranges(keep_ranges, width) if keep_ranges and apply_rows else []
     )
     header_masks = (
-        compute_exclude_ranges(keep_ranges, width)
-        if keep_ranges and sidecar.get("mask_apply_header", False) else []
+        compute_exclude_ranges(keep_ranges, width) if keep_ranges and apply_header else []
     )
     return row_masks, header_masks
 
