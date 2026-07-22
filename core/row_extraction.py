@@ -130,7 +130,7 @@ def build_row_prompt(column_names: list[str]) -> str:
     """
     columns_str = ", ".join(column_names)
     example_lines = "\n".join(
-        f"{name}: {_EXAMPLE_VALUES.get(name, 'Smith')}|confirmed"
+        f"{name}: {_EXAMPLE_VALUES.get(name, 'Zzyx')}|confirmed"
         for name in column_names
     )
     return f"""This is ONE ROW from a census/tabular record. Copy exactly what is written in this row.
@@ -154,27 +154,28 @@ Do not invent a value that is not visible. Do not add commentary, brackets, or a
 
 
 _EXAMPLE_VALUES = {
-    "Name": "John Smith", "Age": "45", "Sex": "M",
-    # "Relationship to Head" FIXED 2026-07-16 (real bug, found via a
-    # second-model handoff report + confirmed by inspecting this dict
-    # directly): was "Head" - the field's own NAME doubling as its own
-    # worked-example VALUE, meaning every single stage-2 prompt for
-    # this column literally showed the model "Relationship to Head:
-    # Head|confirmed" as the example to follow. Directly explains a
-    # real, reproduced-across-multiple-stage-1-models pattern: stage 2
-    # defaulting to "Head" whenever stage 1's reading was ambiguous,
-    # a list, or garbage (e.g. got_ocr2 row 6: stage1_raw_output was
-    # "29.44", a number with zero relationship-word content, and stage
-    # 2 still output "Head" - coincidentally correct for that specific
-    # row, but not earned, and would silently mask bad stage-1 output
-    # as a correct extraction on any row where it wasn't). Replaced
-    # with "Boarder" - a real value but NOT the modal/most-common
-    # answer on real census pages (unlike "Son", which would just make
-    # a future version of the same bias less visible by blending into
-    # an already-frequently-correct guess instead of eliminating the
-    # self-reference problem).
-    "Relationship to Head": "Boarder", "Birthplace": "Ontario",
-    "Occupation": "Farmer", "Province": "Manitoba",
+    # REPLACED 2026-07-22 (real, conclusive evidence): every non-empty
+    # row across a genuine 6-row masked test (glm_ocr+smolvlm2_2b) came
+    # back a 100% byte-exact match to this dict's OLD values (John
+    # Smith/45/M/Boarder/Ontario), across 5 DIFFERENT real people on
+    # the actual census page. Not "the model guessed a plausible
+    # record" - it was echoing the worked example verbatim whenever its
+    # real reading confidence was low, exactly the same failure
+    # mechanism as the earlier "Head" self-reference bug below, just
+    # not fully eliminated by that fix - swapping which specific wrong
+    # value leaks isn't the same as stopping the leak.
+    #
+    # These are now DELIBERATELY ABSURD/IMPOSSIBLE - still a complete,
+    # concrete, fully-filled-in example (preserving the original fix
+    # that stopped BRACKET/PLACEHOLDER echoing - see build_row_prompt's
+    # docstring), but an echoed value can no longer pass as real data
+    # to a scorer OR a human reviewer. "Boarder"/"Ontario" were real,
+    # plausible values, so a leak was invisible unless you happened to
+    # already know the true answer; "Interstellar Cousin"/"Atlantis"
+    # cannot be mistaken for a genuine reading under any circumstance.
+    "Name": "Zzyx Q. Bleeth", "Age": "999", "Sex": "X",
+    "Relationship to Head": "Interstellar Cousin", "Birthplace": "Atlantis",
+    "Occupation": "Dragon Tamer", "Province": "Narnia",
 }
 
 
@@ -439,7 +440,7 @@ def build_structuring_prompt(raw_ocr_text: str, column_names: list[str]) -> str:
     """
     columns_str = ", ".join(column_names)
     example_lines = "\n".join(
-        f"{name}: {_EXAMPLE_VALUES.get(name, 'Smith')}|confirmed"
+        f"{name}: {_EXAMPLE_VALUES.get(name, 'Zzyx')}|confirmed"
         for name in column_names
     )
     return f"""Below is a raw OCR reading of ONE ROW from a census/tabular record, produced by a different tool. The image of that same row is also provided to you directly.
