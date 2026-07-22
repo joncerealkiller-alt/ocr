@@ -65,6 +65,33 @@ def _normalize(s: str) -> str:
     return s.strip().casefold()
 
 
+def _is_correct(predicted: str, expected: str) -> bool:
+    """
+    Exact match after normalization, EXCEPT for a real convention
+    mismatch found 2026-07-22: _record_to_expected() (above) returns
+    the literal words "blank"/"illegible" - correct for comparing
+    against export_lora_dataset.py's LoRA training targets, matching
+    that tool's own STATUS_TO_TARGET convention exactly (see this
+    script's module docstring). But the LIVE extraction prompts
+    (build_row_prompt/build_structuring_prompt) use a DIFFERENT,
+    equally legitimate convention for the same two concepts: an EMPTY
+    value string for "genuinely blank" (prompt rule: "write the column
+    name and colon followed immediately by the pipe... with nothing in
+    between"), and a literal "?" character for "cannot read" - never
+    the words "blank"/"illegible" themselves. Comparing a correctly-
+    behaving live-extraction result against the LoRA-target words
+    directly was scoring genuinely correct abstention as wrong -
+    caught when a real epistemically-strict prompt test came back a
+    reported 0% despite every value being an honest "" or "?" against
+    ground-truth blank/illegible rows.
+    """
+    if expected == "blank":
+        return predicted.strip() == "" or _normalize(predicted) == "blank"
+    if expected == "illegible":
+        return predicted.strip() == "?" or _normalize(predicted) == "illegible"
+    return _normalize(predicted) == _normalize(expected)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                       formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -157,7 +184,7 @@ def main():
             continue
 
         predicted, predicted_confidence = predicted_by_row_col[key]
-        is_correct = _normalize(predicted) == _normalize(expected)
+        is_correct = _is_correct(predicted, expected)
 
         per_column[column]["total"] += 1
         per_status[status]["total"] += 1
