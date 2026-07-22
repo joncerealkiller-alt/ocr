@@ -299,15 +299,40 @@ class LabelingApp:
             return
 
         preview = crop.copy()
-        # Image.thumbnail() only ever SHRINKS - a real row/column crop
-        # is typically far smaller than PREVIEW_SIZE (a masked single-
-        # column crop can be well under 50px tall), so thumbnail() left
-        # it essentially unchanged, rendering as a barely-visible sliver
-        # instead of filling the preview area. Scale UP to fill the
-        # budget (capped so an extremely tiny crop doesn't blow up into
-        # a blurry mess) whenever the crop is smaller than the target in
-        # both dimensions; only fall back to shrinking for a crop that's
-        # actually larger than the budget.
+        # apply_column_mask() PAINTS everything outside the kept
+        # range(s) white - it does NOT narrow the image's actual pixel
+        # dimensions. So a masked column crop is still the FULL row
+        # width (often 3000-4000px), with only a narrow sliver of real
+        # content and the rest blank. Scaling that whole thing to fit
+        # the preview budget made the sliver nearly invisible (confirmed
+        # via real screenshots, 2026-07-22) - upscaling alone couldn't
+        # fix this because the problem wasn't that the crop was small,
+        # it was that 90%+ of it is blank margin.
+        #
+        # For DISPLAY ONLY, tighten to a padded region around the union
+        # of kept ranges (converted from full-image x-coordinates to
+        # this crop's LOCAL coordinates by subtracting the row bbox's
+        # x0). This does NOT change what's sent to the model - that
+        # extraction path uses the untouched `crop` from
+        # crop_region_from_source() above, exactly as before. Falls
+        # back to the full crop unchanged when there's no mask (nothing
+        # to tighten around).
+        if keep_ranges:
+            crop_x0 = row["bbox"][0]
+            local_ranges = [(x0 - crop_x0, x1 - crop_x0) for x0, x1 in keep_ranges]
+            pad = 20
+            left = max(0, min(r[0] for r in local_ranges) - pad)
+            right = min(preview.width, max(r[1] for r in local_ranges) + pad)
+            if right > left:
+                preview = preview.crop((left, 0, right, preview.height))
+
+        # Image.thumbnail() only ever SHRINKS - now that preview is
+        # tightened to roughly the actual content (not a huge mostly-
+        # blank row), it's typically far smaller than PREVIEW_SIZE, so
+        # scale UP to fill the budget (capped so an extremely tiny crop
+        # doesn't blow up into a blurry mess); only fall back to
+        # shrinking for a crop that's still larger than the budget (an
+        # unmasked full row, or a very wide kept range).
         MAX_UPSCALE = 6.0
         scale = min(PREVIEW_SIZE[0] / preview.width, PREVIEW_SIZE[1] / preview.height)
         if scale > 1.0:
