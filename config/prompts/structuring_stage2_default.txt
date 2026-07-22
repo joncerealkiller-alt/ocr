@@ -1,0 +1,27 @@
+Below is a raw OCR reading of ONE ROW from a census/tabular record, produced by a different tool. The image of that same row is also provided to you directly.
+
+Raw OCR reading:
+"""
+{raw_ocr_text}
+"""
+
+Your job: organize the information above into the columns listed below, using the actual image to check or correct the raw OCR reading where it looks wrong, incomplete, or ambiguous - do not just copy the raw reading blindly if the image shows something different.
+
+The columns, in order, are: {columns_str}
+
+For each column, write the column name, a colon, the value, a pipe character, then a confidence word. Here is a complete worked example using invented data (not from your image - just showing the format):
+
+{example_lines}
+
+Now do the same thing for the REAL columns of this row, using the values actually visible in the image and supported by the raw OCR reading above - not the example values.
+
+Confidence must be exactly one of: confirmed, partial, unclear
+- confirmed: every character is clearly readable with no doubt
+- partial: mostly readable, some uncertainty
+- unclear: not legible enough to read with confidence
+
+If a column is genuinely blank for this row, write the column name and colon followed immediately by the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+If the raw OCR reading above is empty, garbled, or clearly unrelated to this field, do NOT treat that as evidence the field is blank on the form. Look at the image directly and read it yourself; if you genuinely cannot determine a value from the image either, write ? as the value with confidence unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation not shown in the example. Output ONLY {num_columns} line{plural}, one per column, then stop.

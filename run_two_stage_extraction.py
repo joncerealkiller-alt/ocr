@@ -65,6 +65,17 @@ def main():
                               "following stage-1 models - fixed-task engines like "
                               "chandra ignore this regardless. See "
                               "config/prompts/ocr_stage1_*.txt for starting options.")
+    parser.add_argument("--structuring-prompt-file", type=str, default=None,
+                         help="Template file for stage 2's structuring prompt. "
+                              "Default: none (uses the built-in default template, "
+                              "identical to config/prompts/structuring_stage2_"
+                              "default.txt). Must be a str.format()-style template "
+                              "using {raw_ocr_text}, {columns_str}, {example_lines} "
+                              "(and optionally {num_columns}, {plural}) - copy "
+                              "structuring_stage2_default.txt as a starting point. "
+                              "Added 2026-07-22 so stage 2's instructional wording "
+                              "can be iterated on without editing core/"
+                              "row_extraction.py.")
     parser.add_argument("--out", type=str, default=None,
                          help="Output directory. Default: same directory as the sidecar.")
     args = parser.parse_args()
@@ -84,6 +95,14 @@ def main():
             sys.exit(1)
         ocr_prompt = ocr_prompt_path.read_text(encoding="utf-8").strip()
 
+    structuring_prompt_template = None
+    if args.structuring_prompt_file:
+        structuring_prompt_path = Path(args.structuring_prompt_file)
+        if not structuring_prompt_path.exists():
+            print(f"ERROR: structuring prompt file not found: {structuring_prompt_path}")
+            sys.exit(1)
+        structuring_prompt_template = structuring_prompt_path.read_text(encoding="utf-8")
+
     out_dir = Path(args.out) if args.out else sidecar_path.parent
     out_dir.mkdir(parents=True, exist_ok=True)
     name = sidecar_path.stem.replace("_sidecar", "")
@@ -93,11 +112,13 @@ def main():
     print(f"Stage 1 (OCR): {args.ocr_model}")
     print(f"Stage 1 prompt: {args.ocr_prompt_file or '(none - empty)'}")
     print(f"Stage 2 (structure): {args.structure_model}")
+    print(f"Stage 2 prompt template: {args.structuring_prompt_file or '(none - built-in default)'}")
     print(f"{'='*60}")
 
     results = run_two_stage_extraction(
         str(sidecar_path), args.ocr_model, args.structure_model,
         column_names, max_rows=args.max_rows, ocr_prompt=ocr_prompt,
+        structuring_prompt_template=structuring_prompt_template,
     )
 
     csv_path = out_dir / f"{name}_twostage_extraction.csv"

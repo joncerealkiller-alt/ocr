@@ -574,17 +574,23 @@ class TwoStageTab(CommandTab):
                      values=[""] + _scan(PROMPTS_DIR, "ocr_stage1_*.txt"))
         self.ocr_prompt_combo.grid(row=4, column=1, sticky="w", pady=(6, 0))
 
-        Label(f, text="Max rows (blank = all):").grid(row=5, column=0, sticky="w", pady=(6, 0))
-        self.max_rows_var = StringVar(value="")
-        Entry(f, textvariable=self.max_rows_var, width=8).grid(row=5, column=1, sticky="w", pady=(6, 0))
+        Label(f, text="Stage 2 prompt template (optional):").grid(row=5, column=0, sticky="w", pady=(6, 0))
+        self.structuring_prompt_var = StringVar(value="")
+        self.structuring_prompt_combo = ttk.Combobox(f, textvariable=self.structuring_prompt_var, width=47,
+                     values=[""] + _scan(PROMPTS_DIR, "structuring_stage2_*.txt"))
+        self.structuring_prompt_combo.grid(row=5, column=1, sticky="w", pady=(6, 0))
 
-        Label(f, text="Output dir (blank = sidecar's folder):").grid(row=6, column=0, sticky="w", pady=(6, 0))
+        Label(f, text="Max rows (blank = all):").grid(row=6, column=0, sticky="w", pady=(6, 0))
+        self.max_rows_var = StringVar(value="")
+        Entry(f, textvariable=self.max_rows_var, width=8).grid(row=6, column=1, sticky="w", pady=(6, 0))
+
+        Label(f, text="Output dir (blank = sidecar's folder):").grid(row=7, column=0, sticky="w", pady=(6, 0))
         self.out_var = StringVar(value="")
-        Entry(f, textvariable=self.out_var, width=47).grid(row=6, column=1, sticky="w", pady=(6, 0))
+        Entry(f, textvariable=self.out_var, width=47).grid(row=7, column=1, sticky="w", pady=(6, 0))
 
         for var in [self.sidecar_var, self.columns_var, self.ocr_model_var,
-                    self.structure_model_var, self.ocr_prompt_var, self.max_rows_var,
-                    self.out_var]:
+                    self.structure_model_var, self.ocr_prompt_var, self.structuring_prompt_var,
+                    self.max_rows_var, self.out_var]:
             var.trace_add("write", self.update_preview)
         self.update_preview()
 
@@ -602,6 +608,7 @@ class TwoStageTab(CommandTab):
         self.ocr_model_combo["values"] = _scan_stems(MODELS_DIR, "*.yaml")
         self.structure_model_combo["values"] = _scan_stems(MODELS_DIR, "*.yaml")
         self.ocr_prompt_combo["values"] = [""] + _scan(PROMPTS_DIR, "ocr_stage1_*.txt")
+        self.structuring_prompt_combo["values"] = [""] + _scan(PROMPTS_DIR, "structuring_stage2_*.txt")
 
     def _sidecar_path(self) -> str:
         v = self.sidecar_var.get().strip()
@@ -636,6 +643,11 @@ class TwoStageTab(CommandTab):
             op_path = _relative_or_absolute(PROMPTS_DIR, ocr_prompt)
             if op_path:
                 cmd.extend(["--ocr-prompt-file", op_path])
+        structuring_prompt = self.structuring_prompt_var.get().strip()
+        if structuring_prompt:
+            sp_path = _relative_or_absolute(PROMPTS_DIR, structuring_prompt)
+            if sp_path:
+                cmd.extend(["--structuring-prompt-file", sp_path])
         out = self.out_var.get().strip()
         if out:
             cmd.extend(["--out", out])
@@ -652,6 +664,7 @@ class TwoStageTab(CommandTab):
         return {"ocr_model": self.ocr_model_var.get(),
                 "structure_model": self.structure_model_var.get(),
                 "ocr_prompt": self.ocr_prompt_var.get(),
+                "structuring_prompt": self.structuring_prompt_var.get(),
                 "max_rows": self.max_rows_var.get()}
 
     def restore_state(self, values: dict) -> None:
@@ -661,6 +674,8 @@ class TwoStageTab(CommandTab):
             self.structure_model_var.set(values["structure_model"])
         if "ocr_prompt" in values:
             self.ocr_prompt_var.set(values["ocr_prompt"])
+        if "structuring_prompt" in values:
+            self.structuring_prompt_var.set(values["structuring_prompt"])
         if "max_rows" in values:
             self.max_rows_var.set(values["max_rows"])
 

@@ -422,28 +422,7 @@ def _release_model(loader) -> None:
         torch.cuda.empty_cache()
 
 
-def build_structuring_prompt(raw_ocr_text: str, column_names: list[str]) -> str:
-    """
-    Stage 2 of the two-stage pipeline (2026-07-13): takes a raw OCR
-    reading (from a fixed-task engine like Chandra, which can't produce
-    our column schema natively) and asks an instruction-following model
-    to organize it into our actual columns. The row IMAGE is passed
-    alongside this prompt too (not text-only) - see run_two_stage_
-    extraction() - so this stage can cross-reference the source
-    directly if the raw OCR reading looks incomplete or ambiguous,
-    rather than being blind to everything except stage 1's text.
-
-    Uses the same concrete-worked-example format proven necessary for
-    single-stage extraction (see build_row_prompt's docstring - two
-    separate real failures with abstract bracket-placeholder templates
-    established this, not re-derived here).
-    """
-    columns_str = ", ".join(column_names)
-    example_lines = "\n".join(
-        f"{name}: {_EXAMPLE_VALUES.get(name, 'Zzyx')}|confirmed"
-        for name in column_names
-    )
-    return f"""Below is a raw OCR reading of ONE ROW from a census/tabular record, produced by a different tool. The image of that same row is also provided to you directly.
+_DEFAULT_STRUCTURING_TEMPLATE = """Below is a raw OCR reading of ONE ROW from a census/tabular record, produced by a different tool. The image of that same row is also provided to you directly.
 
 Raw OCR reading:
 \"\"\"
@@ -469,7 +448,67 @@ If a column is genuinely blank for this row, write the column name and colon fol
 
 If the raw OCR reading above is empty, garbled, or clearly unrelated to this field, do NOT treat that as evidence the field is blank on the form. Look at the image directly and read it yourself; if you genuinely cannot determine a value from the image either, write ? as the value with confidence unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
 
-Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation not shown in the example. Output ONLY {len(column_names)} line{'s' if len(column_names) != 1 else ''}, one per column, then stop."""
+Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation not shown in the example. Output ONLY {num_columns} line{plural}, one per column, then stop."""
+
+
+def build_structuring_prompt(
+    raw_ocr_text: str, column_names: list[str], template_override: str | None = None
+) -> str:
+    """
+    Stage 2 of the two-stage pipeline (2026-07-13): takes a raw OCR
+    reading (from a fixed-task engine like Chandra, which can't produce
+    our column schema natively) and asks an instruction-following model
+    to organize it into our actual columns. The row IMAGE is passed
+    alongside this prompt too (not text-only) - see run_two_stage_
+    extraction() - so this stage can cross-reference the source
+    directly if the raw OCR reading looks incomplete or ambiguous,
+    rather than being blind to everything except stage 1's text.
+
+    Uses the same concrete-worked-example format proven necessary for
+    single-stage extraction (see build_row_prompt's docstring - two
+    separate real failures with abstract bracket-placeholder templates
+    established this, not re-derived here).
+
+    template_override (2026-07-22): lets an operator swap the
+    INSTRUCTIONAL wording without editing this file's Python source -
+    added directly in response to the prompt-example-leakage bug this
+    same session, which required a code edit + redeploy just to test a
+    wording change. If given, must be a str.format()-style template
+    containing at minimum {raw_ocr_text}, {columns_str}, and
+    {example_lines} placeholders (num_columns and plural are also
+    available, matching the default template's own usage) - see
+    config/prompts/structuring_stage2_default.txt for a real, working
+    starting point (the exact template below, extracted to a file so
+    editing it doesn't require touching this module). Falls back to
+    the hardcoded default when None (unchanged behavior from before
+    this parameter existed).
+
+    A malformed template (missing a required placeholder, or a stray
+    single brace) raises a clear ValueError naming the problem rather
+    than a bare KeyError/IndexError from str.format() - the operator
+    testing a new template mid-iteration needs to know WHAT broke, not
+    just that something did.
+    """
+    columns_str = ", ".join(column_names)
+    example_lines = "\n".join(
+        f"{name}: {_EXAMPLE_VALUES.get(name, 'Zzyx')}|confirmed"
+        for name in column_names
+    )
+    template = template_override if template_override is not None else _DEFAULT_STRUCTURING_TEMPLATE
+    try:
+        return template.format(
+            raw_ocr_text=raw_ocr_text, columns_str=columns_str, example_lines=example_lines,
+            num_columns=len(column_names), plural="s" if len(column_names) != 1 else "",
+        )
+    except KeyError as e:
+        raise ValueError(
+            f"Structuring prompt template references an unknown placeholder {e} - "
+            f"available placeholders are: raw_ocr_text, columns_str, example_lines, "
+            f"num_columns, plural.") from e
+    except (IndexError, ValueError) as e:
+        raise ValueError(
+            f"Structuring prompt template has malformed {{}} syntax (a stray single "
+            f"brace? use {{{{ and }}}} for a literal brace): {e}") from e
 
 
 def run_two_stage_extraction(
@@ -479,6 +518,7 @@ def run_two_stage_extraction(
     column_names: list[str],
     max_rows: int | None = None,
     ocr_prompt: str = "",
+    structuring_prompt_template: str | None = None,
 ) -> list[RowExtractionResult]:
     """
     Two-stage pipeline (2026-07-13, per Jon's direction): stage 1 runs
@@ -499,6 +539,12 @@ def run_two_stage_extraction(
     (see that loader's _build_prompt docstring) - this parameter only
     has an effect when ocr_model_profile_name points to a genuine
     instruction-following loader.
+
+    structuring_prompt_template (2026-07-22): passed straight through
+    to build_structuring_prompt()'s template_override - see that
+    function's docstring. Lets stage 2's INSTRUCTIONAL wording be
+    swapped per-run without editing this module, mirroring ocr_prompt's
+    existing swappability for stage 1.
 
     Loads BOTH models for the duration of the run (not one at a time
     per row) - stage 1 processes every row first, then stage 1's model
@@ -554,7 +600,9 @@ def run_two_stage_extraction(
             if row_image.mode != "RGB":
                 row_image = row_image.convert("RGB")
 
-            prompt = build_structuring_prompt(raw_readings[row["index"]], column_names)
+            prompt = build_structuring_prompt(
+                raw_readings[row["index"]], column_names,
+                template_override=structuring_prompt_template)
             try:
                 raw_output = struct_loader._run_generate(row_image, prompt)
                 fields = parse_row_output(raw_output, column_names)
