@@ -278,6 +278,31 @@ document-classification pipeline above.
 Keep brief entries here when dependencies or major structure change,
 so it's clear why a version was pinned/changed later.
 
+- Fixed a serious bug affecting both real extraction AND LoRA training
+  data: apply_column_mask() only PAINTS outside a kept column range
+  white, it never narrows the image - so every single-column
+  extraction and every exported training image was still the FULL row
+  width (~3800px on a real census page), with real content in as
+  little as ~9% of it. Worse in export_lora_dataset.py specifically:
+  it was reading the sidecar's legacy top-level mask fields (empty
+  under the per-column architecture), so masking was never applied to
+  exported images AT ALL - confirmed via a real export where two
+  different columns' images for the same row were byte-identical,
+  meaning the same image was being paired with contradictory target
+  texts depending on which column a label came from. Added
+  core.row_segmentation.tight_crop_to_ranges() (opt-in, backward
+  compatible - existing callers see zero behavior change) and wired it
+  into run_single_column_extraction and export_lora_dataset.py, with
+  configurable padding (--tight-crop-padding-px / --tight-crop-
+  padding-pct) and a regression test (test_tight_crop.py). Sidecar row
+  geometry is untouched - only the in-memory image actually sent to
+  the model/exporter is tightened. Extraction results now record
+  columns[name].extraction_meta.tight_crop_applied so pre-fix and
+  post-fix results are distinguishable: the FIRST smolvlm2 quality
+  test batch (Name/Age columns, 2026-07-22 early session) predates
+  this fix and should be treated as baseline-only, not compared
+  directly against later results without checking this flag
+
 - Initial scaffold: pydantic schema, base loader, Gemma classifier
 - Added Qwen extraction loader (initially 2B, switched to 3B —
   official model card only exists for 3B/other sizes at time of

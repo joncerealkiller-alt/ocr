@@ -291,6 +291,9 @@ def _extract_region(
     field_names: list[str], row_index: int, model_profile_name: str,
     mask_ranges: list[tuple[int, int]] | None = None,
     stage1_raw_output: str | None = None,
+    tight_crop_keep_ranges: list[tuple[int, int]] | None = None,
+    tight_crop_padding_px: int = 20,
+    tight_crop_padding_pct: float | None = None,
 ) -> RowExtractionResult:
     """
     Shared extraction logic for ONE region (a person row OR the page
@@ -310,6 +313,17 @@ def _extract_region(
     boundary can't isolate when the wanted column sits between two
     different unwanted ones, not at either edge.
 
+    tight_crop_keep_ranges (2026-07-22): defaults to None, meaning NO
+    behavior change for existing callers (run_row_extraction's
+    multi-column pass, extract_page_header) - neither passes this, so
+    both keep sending the model the FULL row width with unwanted
+    columns painted white, unchanged. Only run_single_column_extraction
+    passes this, since tightening to one column's kept range is only
+    correct when exactly one column is being isolated - the legacy
+    multi-column path can have SEVERAL kept ranges spread across one
+    row, and tightening to their combined span would still be mostly
+    blank, or could cut off ranges depending on padding.
+
     stage1_raw_output (2026-07-16, real gap found by Jon): the two-
     stage pipeline previously only ever printed a CHARACTER COUNT for
     stage 1's reading ("Stage 1 (OCR) row 1: 99 chars"), never the
@@ -321,7 +335,12 @@ def _extract_region(
     """
     start = time.time()
     prompt = build_row_prompt(field_names)
-    region_image = crop_region_from_source(source_path, bbox, deskew_angle, mask_ranges)
+    region_image = crop_region_from_source(
+        source_path, bbox, deskew_angle, mask_ranges,
+        tight_crop_keep_ranges=tight_crop_keep_ranges,
+        tight_crop_padding_px=tight_crop_padding_px,
+        tight_crop_padding_pct=tight_crop_padding_pct,
+    )
     if region_image.mode != "RGB":
         region_image = region_image.convert("RGB")
 
@@ -661,6 +680,8 @@ def run_single_column_extraction(
     column_name: str | None = None,
     max_rows: int | None = None,
     mark_done: bool = True,
+    tight_crop_padding_px: int = 20,
+    tight_crop_padding_pct: float | None = None,
 ) -> list[RowExtractionResult]:
     """
     Extracts ONE column (using that column's OWN stored mask, not a
@@ -686,6 +707,18 @@ def run_single_column_extraction(
     state as doing it by hand). Set False for a quick test pass you
     don't want counted as final.
 
+    tight_crop_padding_px / tight_crop_padding_pct (2026-07-22): the
+    image actually sent to the model is tightened to a padded box
+    around this column's kept mask range - see
+    core.row_segmentation.tight_crop_to_ranges()'s docstring for why
+    (the untightened crop was the FULL row width, ~90% blank, for
+    every single-column extraction before this fix). padding_pct, if
+    given, overrides padding_px with a percentage of the kept range's
+    own width instead of a fixed pixel margin. Only applied when the
+    column actually has an active mask (mask_apply_rows AND a non-
+    empty mask_keep_ranges) - a column with no mask has no range to
+    tighten to, and sends the full unmasked row as before.
+
     Still writes a CSV/JSON alongside (via save_results_csv/json in the
     caller, same as run_row_extraction) for tooling that reads those
     directly - this doesn't replace that, it adds the sidecar as a
@@ -710,10 +743,12 @@ def run_single_column_extraction(
 
     width = sidecar["deskewed_image_size"][0]
     keep_ranges = [tuple(k) for k in column_state.get("mask_keep_ranges", [])]
-    row_masks = (
-        compute_exclude_ranges(keep_ranges, width)
-        if keep_ranges and column_state.get("mask_apply_rows", True) else []
-    )
+    mask_active = bool(keep_ranges) and column_state.get("mask_apply_rows", True)
+    row_masks = compute_exclude_ranges(keep_ranges, width) if mask_active else []
+    # Only tighten when a mask is actually active - with no mask, the
+    # whole row is the intended input and there's nothing to tighten to.
+    tight_crop_ranges = keep_ranges if mask_active else None
+
 
     config = load_model_config(model_profile_name)
     loader_cls = LOADER_REGISTRY.get(config.loader_class)
@@ -730,6 +765,9 @@ def run_single_column_extraction(
                 loader, source_path, deskew_angle, row["bbox"], [column_name],
                 row_index=row["index"], model_profile_name=model_profile_name,
                 mask_ranges=row_masks,
+                tight_crop_keep_ranges=tight_crop_ranges,
+                tight_crop_padding_px=tight_crop_padding_px,
+                tight_crop_padding_pct=tight_crop_padding_pct,
             )
             results.append(result)
             field = result.fields.get(column_name)
@@ -755,6 +793,14 @@ def run_single_column_extraction(
             "model": model_profile_name,
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "row_count": len(results),
+            # 2026-07-22: distinguishes results extracted with the
+            # tight-crop fix active from earlier "baseline" runs that
+            # sent the model a full-row-width, mostly-blank image
+            # (Name/Age from the first smolvlm2 test batch predate
+            # this). Compare model-quality results across runs only
+            # when this flag matches - the input distribution genuinely
+            # changed, not just the model or column.
+            "tight_crop_applied": tight_crop_ranges is not None,
         },
     }
     if mark_done:

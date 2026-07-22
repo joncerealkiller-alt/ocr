@@ -94,6 +94,17 @@ def main():
                          help="Single-column mode only: don't flip the column's "
                               "status to 'done' after this run (e.g. a quick "
                               "--max-rows test pass you don't want counted as final).")
+    parser.add_argument("--tight-crop-padding-px", type=int, default=20,
+                         help="Single-column mode only: fixed pixel padding around "
+                              "the kept mask range for the image actually sent to "
+                              "the model (default: 20). Ignored if --tight-crop-"
+                              "padding-pct is given.")
+    parser.add_argument("--tight-crop-padding-pct", type=float, default=None,
+                         help="Single-column mode only: padding as a fraction of "
+                              "the kept range's own width (e.g. 0.1 = 10%%), instead "
+                              "of a fixed pixel margin - useful when column widths "
+                              "vary a lot across the page. Overrides --tight-crop-"
+                              "padding-px if given.")
     parser.add_argument("--model", type=str, required=True,
                          help="Model profile name (e.g. qwen3vl2b) - must exist in "
                               "config/models/")
@@ -138,6 +149,8 @@ def main():
         results = run_single_column_extraction(
             str(sidecar_path), args.model, column_name=column_name,
             max_rows=args.max_rows, mark_done=not args.no_mark_done,
+            tight_crop_padding_px=args.tight_crop_padding_px,
+            tight_crop_padding_pct=args.tight_crop_padding_pct,
         )
 
         csv_path = out_dir / f"{name}_{column_name}_extraction.csv"

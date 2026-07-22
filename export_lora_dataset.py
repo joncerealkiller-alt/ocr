@@ -107,7 +107,10 @@ def _sidecar_cache_get(cache: dict, sidecar_path: str) -> dict | None:
     return cache[sidecar_path]
 
 
-def export(log_path: Path, out_dir: Path, min_examples_per_status: int = 0) -> None:
+def export(
+    log_path: Path, out_dir: Path, min_examples_per_status: int = 0,
+    tight_crop_padding_px: int = 20, tight_crop_padding_pct: float | None = None,
+) -> None:
     records = _load_records(log_path)
     if not records:
         print(f"No records found in {log_path}. Nothing to export.")
@@ -148,15 +151,41 @@ def export(log_path: Path, out_dir: Path, min_examples_per_status: int = 0) -> N
 
             source_path = sidecar["source_image_path"]
             deskew_angle = sidecar["deskew_angle"]
-            keep_ranges = [tuple(k) for k in sidecar.get("mask_keep_ranges", [])]
+            # BUG FIX (2026-07-22): this used to read the sidecar's
+            # LEGACY top-level mask_keep_ranges/mask_apply_rows fields -
+            # which are empty/unused for any sidecar created under the
+            # per-column architecture. That meant EVERY exported
+            # training image was the same unmasked full row, regardless
+            # of which column the label was for - confirmed via a real
+            # export where Name's and Age's images for the same row
+            # were byte-identical. Now reads the per-column mask that
+            # was ACTUALLY used at extraction time, matching
+            # core.row_extraction.run_single_column_extraction exactly.
+            column_state = sidecar.get("columns", {}).get(record.get("column"))
+            if column_state is not None:
+                keep_ranges = [tuple(k) for k in column_state.get("mask_keep_ranges", [])]
+                apply_rows = column_state.get("mask_apply_rows", True)
+            else:
+                keep_ranges = [tuple(k) for k in sidecar.get("mask_keep_ranges", [])]
+                apply_rows = sidecar.get("mask_apply_rows", False)
             width = sidecar["deskewed_image_size"][0]
-            row_masks = (
-                compute_exclude_ranges(keep_ranges, width)
-                if keep_ranges and sidecar.get("mask_apply_rows", False) else []
-            )
+            mask_active = bool(keep_ranges) and apply_rows
+            row_masks = compute_exclude_ranges(keep_ranges, width) if mask_active else []
 
             try:
-                crop = crop_region_from_source(source_path, row["bbox"], deskew_angle, row_masks)
+                crop = crop_region_from_source(
+                    source_path, row["bbox"], deskew_angle, row_masks,
+                    # Tight-crop (2026-07-22): the mask above only PAINTS
+                    # outside the kept range white, it doesn't narrow the
+                    # image - without this, a masked crop was still the
+                    # FULL row width (~3800px) with real content in maybe
+                    # 9% of it. Only tightens when a mask is actually
+                    # active; a column with no mask exports the full row
+                    # as before (nothing to tighten to).
+                    tight_crop_keep_ranges=keep_ranges if mask_active else None,
+                    tight_crop_padding_px=tight_crop_padding_px,
+                    tight_crop_padding_pct=tight_crop_padding_pct,
+                )
             except Exception as e:
                 print(f"WARNING: could not crop row {row_index} from {source_path}: {e} - skipping.")
                 skipped_bad_row += 1
@@ -242,6 +271,15 @@ def main():
                               "Default: 15 (arbitrary starting floor, not evidence-"
                               "based - adjust once you have a sense of real class "
                               "balance in a first batch).")
+    parser.add_argument("--tight-crop-padding-px", type=int, default=20,
+                         help="Fixed pixel padding around each column's kept mask "
+                              "range for the exported training image (default: 20). "
+                              "Ignored if --tight-crop-padding-pct is given.")
+    parser.add_argument("--tight-crop-padding-pct", type=float, default=None,
+                         help="Padding as a fraction of the kept range's own width "
+                              "(e.g. 0.1 = 10%%), instead of a fixed pixel margin - "
+                              "useful when column widths vary a lot across the page. "
+                              "Overrides --tight-crop-padding-px if given.")
     args = parser.parse_args()
 
     log_path = Path(args.log_file)
@@ -249,7 +287,9 @@ def main():
         print(f"ERROR: log file not found: {log_path}")
         return
 
-    export(log_path, Path(args.out_dir), args.min_examples_per_status)
+    export(log_path, Path(args.out_dir), args.min_examples_per_status,
+           tight_crop_padding_px=args.tight_crop_padding_px,
+           tight_crop_padding_pct=args.tight_crop_padding_pct)
 
 
 if __name__ == "__main__":

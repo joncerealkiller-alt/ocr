@@ -1353,6 +1353,68 @@ def compute_exclude_ranges(
     return exclude
 
 
+def tight_crop_to_ranges(
+    image: Image.Image,
+    keep_ranges: list[tuple[int, int]],
+    crop_x0: int = 0,
+    padding_px: int = 20,
+    padding_pct: float | None = None,
+) -> Image.Image:
+    """
+    Crops DOWN to a padded region around the union of keep_ranges -
+    added 2026-07-22 after discovering that apply_column_mask() (above)
+    only ever PAINTS outside the kept range white, it never narrows the
+    image's actual pixel dimensions. A masked single-column crop was
+    still the FULL row width (often 3000-4000px for a wide census
+    table) with the real content occupying as little as ~9% of that
+    width - every extraction call and every LoRA training image was
+    sending a mostly-blank image to the model, with the real
+    handwriting compressed to a sliver by whatever downsampling the
+    model's own image preprocessor does before its vision encoder.
+
+    keep_ranges are in FULL-IMAGE coordinates (same convention as every
+    other range/bbox in this module) - crop_x0 (the already-cropped
+    region's own x0 origin, e.g. the row bbox's left edge) translates
+    them into `image`'s local coordinate space, same convention as
+    apply_column_mask().
+
+    padding_pct, if given, overrides padding_px with a padding equal to
+    that fraction of the kept-range width (e.g. 0.1 = 10% of the
+    range's own width added to each side) - useful when column widths
+    vary a lot across a page and a single fixed pixel padding would be
+    proportionally huge on a narrow column and negligible on a wide
+    one. padding_px is the simpler default: a fixed margin regardless
+    of column width.
+
+    Clamps the final box to `image`'s own bounds - a keep_range that
+    falls partially or fully outside this particular crop (e.g. a
+    stale mask from a different row width) never produces a crop
+    request outside the source image, which PIL would raise on.
+
+    Returns `image` UNCHANGED if keep_ranges is empty (nothing to crop
+    to) or the computed box is degenerate (zero or negative width),
+    since a caller with no real mask has nothing to tighten around -
+    matches apply_column_mask()'s existing no-op-on-empty convention.
+    """
+    if not keep_ranges:
+        return image
+    width, height = image.size
+    local_ranges = [(x0 - crop_x0, x1 - crop_x0) for x0, x1 in keep_ranges]
+    range_left = min(r[0] for r in local_ranges)
+    range_right = max(r[1] for r in local_ranges)
+
+    if padding_pct is not None:
+        pad = (range_right - range_left) * padding_pct
+    else:
+        pad = padding_px
+
+    left = max(0, round(range_left - pad))
+    right = min(width, round(range_right + pad))
+    if right <= left:
+        return image
+    return image.crop((left, 0, right, height))
+
+
 def apply_column_mask(
     image: Image.Image,
     mask_ranges: list[tuple[int, int]],
@@ -1377,6 +1439,13 @@ def apply_column_mask(
     outside the crop are silently skipped (nothing to paint); ranges
     that partially overlap are clamped to the crop's own width.
 
+    NOTE this only paints - it does NOT narrow image dimensions. See
+    tight_crop_to_ranges() above for that (a deliberately separate
+    function, not merged into this one, since some callers - the
+    legacy whole-row multi-column extraction path - want the masking
+    behavior WITHOUT tightening, e.g. when isolating several kept
+    columns at once within one wide row image).
+
     Returns a NEW image - never mutates the input, same convention as
     every other transform in this module.
     """
@@ -1400,6 +1469,9 @@ def crop_region_from_source(
     bbox: list[int],
     deskew_angle: float = 0.0,
     mask_ranges: list[tuple[int, int]] | None = None,
+    tight_crop_keep_ranges: list[tuple[int, int]] | None = None,
+    tight_crop_padding_px: int = 20,
+    tight_crop_padding_pct: float | None = None,
 ) -> Image.Image:
     """
     Loads the ORIGINAL source image fresh and crops a region using
@@ -1425,6 +1497,31 @@ def crop_region_from_source(
     full-image coordinate space as bbox - applied AFTER cropping, via
     apply_column_mask() above, with crop_x0=bbox[0] so ranges land in
     the right place regardless of where this particular crop starts.
+
+    tight_crop_keep_ranges (2026-07-22, opt-in, backward compatible -
+    default None means IDENTICAL behavior to before this parameter
+    existed): the ORIGINAL kept ranges (not the excluded/painted ones
+    mask_ranges holds), in the same full-image coordinate space. If
+    given, the returned image is additionally narrowed to a padded box
+    around their union via tight_crop_to_ranges() - fixes single-
+    column extraction/training crops being ~3800px wide and ~90% blank
+    (see tight_crop_to_ranges()'s docstring). Deliberately NOT applied
+    automatically whenever mask_ranges is set, because the legacy
+    whole-row multi-column extraction path masks OUT unwanted columns
+    while keeping several wanted ones spread across the row - tightening
+    that case would cut off the very columns it's supposed to keep.
+    Callers that isolate exactly ONE column (run_single_column_extraction,
+    export_lora_dataset.py) should pass this explicitly.
+
+    IMPORTANT: this function's job is unchanged for every EXISTING
+    caller - none of them pass tight_crop_keep_ranges, so none of them
+    see any behavior change from this parameter's addition. The row
+    bbox geometry stored in the sidecar itself (sidecar["rows"]) is
+    never touched by tightening - only the in-memory image this
+    function RETURNS is narrower; the sidecar's own coordinate records
+    stay full-row, so nothing downstream that relies on those
+    coordinates (e.g. re-deriving bbox math, or a future caller that
+    wants the untightened crop) is affected.
     """
     image = Image.open(source_image_path)
     if deskew_angle != 0.0:
@@ -1436,6 +1533,11 @@ def crop_region_from_source(
     cropped = image.crop((x0, y0, x1, y1))
     if mask_ranges:
         cropped = apply_column_mask(cropped, mask_ranges, crop_x0=x0)
+    if tight_crop_keep_ranges:
+        cropped = tight_crop_to_ranges(
+            cropped, tight_crop_keep_ranges, crop_x0=x0,
+            padding_px=tight_crop_padding_px, padding_pct=tight_crop_padding_pct,
+        )
     return cropped
 
 
