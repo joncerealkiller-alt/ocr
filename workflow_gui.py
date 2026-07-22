@@ -817,6 +817,279 @@ class ClassifierTab(CommandTab):
             self.manifest_var.set(values["manifest"])
 
 
+class ScoringTab:
+    """
+    Wraps score_two_stage_against_ground_truth.py's score_results() -
+    built 2026-07-22 after enough real testing sessions where getting a
+    number meant re-typing four file paths on the CLI every single run.
+    Remembers each path across sessions (same _load_state/_save_state
+    mechanism every other tab uses) and shows a real sortable results
+    table instead of parsed console text.
+
+    DELIBERATELY DOES NOT SUBCLASS CommandTab: every other tab shells
+    out to a CLI script as a subprocess and streams raw stdout - fine
+    for a log, useless for a sortable table, since there's no
+    structured data to sort once it's already been formatted as text.
+    This tab imports score_two_stage_against_ground_truth.score_results()
+    directly and calls it in-process instead - CPU-cheap (no model
+    loading, just JSONL parsing and dict comparisons), so there's no
+    real cost to running it on the main thread synchronously, unlike
+    every other tab's subprocess+thread+queue plumbing which exists
+    specifically because THOSE commands can run for minutes.
+
+    STILL a thin wrapper in the sense that matters: score_results() is
+    the ONLY place the actual scoring logic lives. This tab and the
+    CLI's main() both call it and would produce byte-for-byte identical
+    numbers given the same inputs - verified directly (see this
+    session's commit history) by running both against the same real
+    files.
+
+    Explicitly deferred from the original spec (real added complexity,
+    confirm priority before building): character error rate, double-
+    click-to-open-crop-image, drag-and-drop, and named/saved run
+    profiles beyond basic remembered-last-used paths.
+    """
+
+    def __init__(self, parent, app: "WorkflowApp"):
+        self.app = app
+        self.tab_key = "scoring"
+        self.frame = Frame(parent, padx=10, pady=10)
+        self.last_report = None  # ScoringReport | None - kept for "save report"
+
+        Label(self.frame, text="Score extraction results against ground truth",
+              font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        Label(self.frame,
+              text="Wraps score_two_stage_against_ground_truth.score_results() directly "
+                   "(in-process, not a subprocess) - same evaluator the CLI uses, so "
+                   "numbers here and on the command line always match exactly.",
+              font=("Segoe UI", 9), fg="#444", wraplength=1000, justify="left").pack(
+            anchor="w", pady=(2, 10))
+
+        inputs = Frame(self.frame)
+        inputs.pack(fill="x")
+
+        self.results_var = StringVar(value="")
+        self.gt_log_var = StringVar(value="")
+        self.sidecar_var = StringVar(value="")
+        self.out_dir_var = StringVar(value=str(DATA_DIR / "outputs" / "scoring_reports"))
+        self.model_name_var = StringVar(value="")
+
+        def _row(label_text, var, r, browse_kind):
+            Label(inputs, text=label_text).grid(row=r, column=0, sticky="w", pady=(4, 0))
+            Entry(inputs, textvariable=var, width=70).grid(
+                row=r, column=1, sticky="w", pady=(4, 0))
+            Button(inputs, text="Browse...",
+                   command=lambda: self._browse(var, browse_kind)).grid(
+                row=r, column=2, padx=(4, 0), pady=(4, 0))
+
+        _row("Prediction/results JSON:", self.results_var, 0, "file")
+        _row("Ground-truth log (.jsonl):", self.gt_log_var, 1, "file")
+        _row("Sidecar (.json) for this page:", self.sidecar_var, 2, "file")
+        _row("Output report folder:", self.out_dir_var, 3, "dir")
+
+        Label(inputs, text="Model/run name (optional label):").grid(
+            row=4, column=0, sticky="w", pady=(4, 0))
+        Entry(inputs, textvariable=self.model_name_var, width=40).grid(
+            row=4, column=1, sticky="w", pady=(4, 0))
+
+        run_config = Frame(self.frame)
+        run_config.pack(fill="x", pady=(8, 0))
+        self.save_report_var = BooleanVar(value=True)
+        Checkbutton(run_config, text="Save detailed mismatch report to output folder",
+                    variable=self.save_report_var).pack(side="left")
+        self.open_after_var = BooleanVar(value=False)
+        Checkbutton(run_config, text="Open report after completion",
+                    variable=self.open_after_var).pack(side="left", padx=(12, 0))
+
+        action_row = Frame(self.frame)
+        action_row.pack(fill="x", pady=(8, 6))
+        Button(action_row, text="Score", command=self._on_score,
+               bg="#4a7", fg="white", font=("Segoe UI", 10, "bold")).pack(side="left")
+        self.status_label = Label(action_row, text="", fg="#444")
+        self.status_label.pack(side="left", padx=12)
+
+        # -- headline results --------------------------------------------
+        headline = Frame(self.frame, relief="groove", borderwidth=1, padx=8, pady=6)
+        headline.pack(fill="x", pady=(4, 8))
+        self.headline_labels = {}
+        headline_fields = [
+            "Overall accuracy", "False confidence", "Schema failures",
+            "Matched / total records", "Rows in results", "Total runtime (extraction)",
+        ]
+        for i, name in enumerate(headline_fields):
+            Label(headline, text=f"{name}:", font=("Segoe UI", 9, "bold")).grid(
+                row=i // 3, column=(i % 3) * 2, sticky="w", padx=(0, 4), pady=2)
+            lbl = Label(headline, text="-", font=("Segoe UI", 9))
+            lbl.grid(row=i // 3, column=(i % 3) * 2 + 1, sticky="w", padx=(0, 20), pady=2)
+            self.headline_labels[name] = lbl
+
+        # -- sortable failure table ---------------------------------------
+        Label(self.frame, text="Mismatches (click a column header to sort):",
+              font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        table_frame = Frame(self.frame)
+        table_frame.pack(fill="both", expand=True)
+        columns = ("row", "column", "status", "expected", "predicted", "confidence", "flag")
+        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=12)
+        headers = {
+            "row": "Row", "column": "Column", "status": "GT Status",
+            "expected": "Ground Truth", "predicted": "Prediction",
+            "confidence": "Pred. Confidence", "flag": "Flag",
+        }
+        widths = {"row": 50, "column": 130, "status": 90, "expected": 140,
+                  "predicted": 140, "confidence": 100, "flag": 120}
+        for col in columns:
+            self.tree.heading(col, text=headers[col],
+                               command=lambda c=col: self._sort_by(c, False))
+            self.tree.column(col, width=widths[col], anchor="w")
+        tree_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=tree_scroll.set)
+        self.tree.pack(side="left", fill="both", expand=True)
+        tree_scroll.pack(side="right", fill="y")
+
+    def _browse(self, var: StringVar, kind: str):
+        if kind == "file":
+            path = filedialog.askopenfilename(
+                initialdir=str(Path(var.get()).parent) if var.get() else str(DATA_DIR))
+        else:
+            path = filedialog.askdirectory(
+                initialdir=var.get() if var.get() else str(DATA_DIR))
+        if path:
+            var.set(path)
+
+    def _sort_by(self, col: str, reverse: bool):
+        items = [(self.tree.set(k, col), k) for k in self.tree.get_children("")]
+        try:
+            items.sort(key=lambda t: (int(t[0]) if t[0].lstrip("-").isdigit() else t[0]),
+                       reverse=reverse)
+        except (ValueError, TypeError):
+            items.sort(key=lambda t: t[0], reverse=reverse)
+        for index, (_, k) in enumerate(items):
+            self.tree.move(k, "", index)
+        # clicking the same header again reverses order next time
+        self.tree.heading(col, command=lambda: self._sort_by(col, not reverse))
+
+    def _on_score(self):
+        results_path = self.results_var.get().strip()
+        gt_path = self.gt_log_var.get().strip()
+        sidecar_path = self.sidecar_var.get().strip()
+        if not results_path or not gt_path or not sidecar_path:
+            messagebox.showwarning(
+                "Missing input",
+                "Prediction JSON, ground-truth log, and sidecar path are all required.")
+            return
+
+        self.app.save_all_state()
+        self.status_label.config(text="Scoring...")
+        self.frame.update_idletasks()
+
+        # Imported here, not at module top - keeps this GUI's startup
+        # dependency-light (matches this file's own stated principle of
+        # only importing what a given tab's Run action actually needs),
+        # and this scorer module has zero heavy dependencies anyway
+        # (pure stdlib), so this is cheap either way.
+        from score_two_stage_against_ground_truth import score_results
+
+        report = score_results(results_path, gt_path, sidecar_path,
+                                model_name=self.model_name_var.get().strip() or None)
+        self.last_report = report
+
+        if report.error:
+            self.status_label.config(text="Error")
+            msg = report.error
+            if report.available_sidecar_paths:
+                msg += "\n\nAvailable sidecar_paths in this log:\n" + "\n".join(
+                    report.available_sidecar_paths)
+            messagebox.showerror("Scoring failed", msg)
+            return
+
+        self._render_report(report)
+        self.status_label.config(text="Done")
+
+        if self.save_report_var.get():
+            out_path = self._save_report(report)
+            if self.open_after_var.get() and out_path:
+                _open_folder(out_path.parent)
+
+    def _render_report(self, report):
+        matched = sum(c["total"] - c["missing"] for c in report.per_column.values())
+        total = sum(c["total"] for c in report.per_column.values())
+        total_runtime = None
+        try:
+            with open(report.results_path, "r", encoding="utf-8") as f:
+                rows = json.load(f)
+            total_runtime = sum(r.get("runtime_seconds", 0) for r in rows)
+        except Exception:
+            pass
+
+        self.headline_labels["Overall accuracy"].config(
+            text=f"{report.overall_correct}/{report.overall_total} "
+                 f"({report.overall_accuracy:.0%})")
+        fc = report.false_confidence
+        self.headline_labels["False confidence"].config(
+            text=(f"{len(fc)}/{len(report.mismatches)} wrong answers "
+                  f"({report.false_confidence_rate:.0%})") if report.mismatches
+            else "none")
+        self.headline_labels["Schema failures"].config(
+            text=f"{report.schema_failed}/{report.total_rows_in_results}")
+        self.headline_labels["Matched / total records"].config(text=f"{matched}/{total}")
+        self.headline_labels["Rows in results"].config(text=str(report.total_rows_in_results))
+        self.headline_labels["Total runtime (extraction)"].config(
+            text=f"{total_runtime:.1f}s" if total_runtime is not None else "unknown")
+
+        self.tree.delete(*self.tree.get_children())
+        for m in report.mismatches:
+            flag = "FALSE CONFIDENCE" if m["predicted_confidence"] == "confirmed" else ""
+            self.tree.insert("", "end", values=(
+                m["row"], m["column"], m["status"], m["expected"], m["predicted"],
+                m["predicted_confidence"], flag,
+            ))
+
+    def _save_report(self, report) -> Path | None:
+        out_dir = Path(self.out_dir_var.get().strip() or str(DATA_DIR / "outputs" / "scoring_reports"))
+        out_dir.mkdir(parents=True, exist_ok=True)
+        name = report.model_name or Path(report.results_path).stem
+        safe_name = "".join(c if c.isalnum() or c in "-_." else "_" for c in name)
+        out_path = out_dir / f"{safe_name}_scoring_report.json"
+        try:
+            from dataclasses import asdict
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(asdict(report), f, indent=2)
+            return out_path
+        except Exception as e:
+            messagebox.showwarning("Could not save report", str(e))
+            return None
+
+    # -- CommandTab-compatible interface (WorkflowApp calls these on
+    # every tab uniformly, regardless of subclass) -----------------------
+
+    def update_preview(self, *_):
+        pass  # no command preview - this tab doesn't shell out to a CLI
+
+    def capture_state(self) -> dict:
+        return {
+            "results": self.results_var.get(), "gt_log": self.gt_log_var.get(),
+            "sidecar": self.sidecar_var.get(), "out_dir": self.out_dir_var.get(),
+            "model_name": self.model_name_var.get(),
+            "save_report": self.save_report_var.get(), "open_after": self.open_after_var.get(),
+        }
+
+    def restore_state(self, values: dict) -> None:
+        if "results" in values:
+            self.results_var.set(values["results"])
+        if "gt_log" in values:
+            self.gt_log_var.set(values["gt_log"])
+        if "sidecar" in values:
+            self.sidecar_var.set(values["sidecar"])
+        if "out_dir" in values:
+            self.out_dir_var.set(values["out_dir"])
+        if "model_name" in values:
+            self.model_name_var.set(values["model_name"])
+        if "save_report" in values:
+            self.save_report_var.set(values["save_report"])
+        if "open_after" in values:
+            self.open_after_var.set(values["open_after"])
+
+
 class ToolsTab:
     """
     Launch buttons for the standalone GUI apps already built this
@@ -889,8 +1162,12 @@ class WorkflowApp:
             notebook.add(tab.frame, text=label)
             self.tabs.append(tab)
 
+        scoring_tab = ScoringTab(notebook, self)
+        notebook.add(scoring_tab.frame, text="6. Scoring")
+        self.tabs.append(scoring_tab)
+
         tools_tab = ToolsTab(notebook, self)
-        notebook.add(tools_tab.frame, text="6. Tools")
+        notebook.add(tools_tab.frame, text="7. Tools")
 
         self._restore_all_state()
 
