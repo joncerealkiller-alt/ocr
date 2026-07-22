@@ -204,6 +204,15 @@ def export(
                 "target": target,
                 "status": record.get("status"),
                 "notes": record.get("notes", ""),
+                # 2026-07-22: identifies which source page this example
+                # came from - needed for a PAGE-level train/val split
+                # (see train_lora.py) rather than a row-level one. A
+                # random row-level split would let near-identical
+                # handwriting from the same page/enumerator leak into
+                # both train and val, producing a falsely optimistic
+                # validation signal. Sidecar path is a stable per-page
+                # identifier already available on every record.
+                "source_sidecar": record.get("sidecar_path"),
             }, ensure_ascii=False) + "\n")
 
             status_counts[record.get("status")] += 1
