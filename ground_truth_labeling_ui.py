@@ -299,7 +299,23 @@ class LabelingApp:
             return
 
         preview = crop.copy()
-        preview.thumbnail(PREVIEW_SIZE)
+        # Image.thumbnail() only ever SHRINKS - a real row/column crop
+        # is typically far smaller than PREVIEW_SIZE (a masked single-
+        # column crop can be well under 50px tall), so thumbnail() left
+        # it essentially unchanged, rendering as a barely-visible sliver
+        # instead of filling the preview area. Scale UP to fill the
+        # budget (capped so an extremely tiny crop doesn't blow up into
+        # a blurry mess) whenever the crop is smaller than the target in
+        # both dimensions; only fall back to shrinking for a crop that's
+        # actually larger than the budget.
+        MAX_UPSCALE = 6.0
+        scale = min(PREVIEW_SIZE[0] / preview.width, PREVIEW_SIZE[1] / preview.height)
+        if scale > 1.0:
+            scale = min(scale, MAX_UPSCALE)
+            new_size = (max(1, round(preview.width * scale)), max(1, round(preview.height * scale)))
+            preview = preview.resize(new_size, Image.LANCZOS)
+        else:
+            preview.thumbnail(PREVIEW_SIZE)
         self._tk_image = ImageTk.PhotoImage(preview)
         self.image_label.config(image=self._tk_image, text="")
 
