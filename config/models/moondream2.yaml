@@ -31,8 +31,21 @@ keywords_max_new_tokens: 80
 # query() takes a native reasoning=bool kwarg (moondream.py) - a real
 # generate()-adjacent param, not a system-prompt injection like some
 # other loaders' "system_prompt" mechanism.
+#
+# CHANGED 2026-07-23 (false -> true): query()'s OWN documented default
+# is reasoning=True (confirmed via moondream3-preview's README, same
+# API lineage, cached locally - moondream2's own model card wasn't
+# directly checked, so this is a strong signal from the same family,
+# not 100% certain identical). The docs explicitly recommend disabling
+# reasoning only for trivial questions ("what color is the sky") and
+# keeping it ON for anything more complex. Reading ambiguous
+# handwritten cursive is not a trivial question - this project had
+# been running the OPPOSITE of the model's own recommended setting for
+# exactly the task that needs the most help. Worth a real before/after
+# comparison once tested, not just trusting the docs blindly - flip
+# back to false if reasoning=True turns out not to help in practice.
 reasoning_toggle_mechanism: param
-reasoning_enabled: false
+reasoning_enabled: true
 
 prompt_version: v1
 prompt_text: ""
