@@ -1,7 +1,0 @@
-row_index,schema_pass,runtime_seconds,Relationship to Head_value,Relationship to Head_confidence,stage1_raw_output
-1,True,1.76,son,confirmed,
-2,True,1.28,,unclear,
-3,True,1.20,,unclear,
-4,True,1.37,Lancelata,confirmed,
-5,True,1.40,D orientalic,confirmed,
-6,True,1.24,Head,confirmed,
