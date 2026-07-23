@@ -1427,6 +1427,73 @@ def tight_crop_to_ranges(
     return image.crop((left, 0, right, height))
 
 
+def upscale_to_target_height(
+    image: Image.Image,
+    target_height: int = 160,
+    max_width: int = 4096,
+) -> Image.Image:
+    """
+    Upscales (aspect-preserving, LANCZOS) so the image reaches
+    target_height - added 2026-07-23 after real evidence showed every
+    model comparison run this session had a confound sitting underneath
+    it that nobody had checked: after tight_crop_to_ranges() correctly
+    solved the "mostly blank, full-row-width" problem, the resulting
+    crops were still tiny in absolute pixel terms - real column crops
+    from actual sidecars measured as small as 79x36 pixels (a "Sex"
+    column). That's not enough resolution for most vision encoders to
+    have real detail to work with regardless of how good the model is,
+    meaning some of this session's "model X is worse than model Y"
+    conclusions may partly reflect resolution starvation rather than a
+    genuine capability difference between them.
+
+    NEVER SHRINKS - only upscales when the crop is genuinely smaller
+    than target_height; a crop that's already tall enough (or genuinely
+    huge - an unmasked full row) is returned via ordinary shrink-to-fit
+    against target_height instead, same convention as thumbnail().
+
+    max_width caps runaway aspect ratios (a very wide, very short mask -
+    upscaling a 3155x36 crop to reach height 160 would produce an
+    ~14,000px-wide image) - most model processors would just resize
+    that back down internally anyway, so generating it is wasted work
+    and wasted disk/network if the crop gets saved. When the natural
+    aspect-preserving upscale would exceed max_width, width is capped
+    and height falls proportionally short of target_height rather than
+    distorting the aspect ratio to hit both targets exactly.
+
+    Deliberately does NOT do grayscale conversion, contrast adjustment,
+    denoising, or thresholding, even though those were also proposed
+    (see this session's 2026-07-23 discussion) - upscaling alone is a
+    non-lossy, unambiguously safe transform; the others involve real
+    tradeoffs (denoising/thresholding can erase faint pen strokes or
+    merge letters together) that need actual comparative model results
+    to justify, not applied speculatively as a new default. A caller
+    that wants to test those as controlled variants should do so
+    explicitly and record which variant was used (see extraction_meta's
+    "preprocessing" field in run_single_column_extraction), not have
+    them silently bundled into this function.
+    """
+    width, height = image.size
+    if height <= 0 or width <= 0:
+        return image
+    scale = target_height / height
+    if scale <= 1.0:
+        # Already tall enough (or exactly at target) - no upscale
+        # needed. Still respect max_width in case the source is huge.
+        if width <= max_width:
+            return image
+        shrink = max_width / width
+        return image.resize(
+            (max_width, max(1, round(height * shrink))), Image.LANCZOS
+        )
+
+    new_width = round(width * scale)
+    if new_width > max_width:
+        scale = max_width / width
+        new_width = max_width
+    new_height = max(1, round(height * scale))
+    return image.resize((new_width, new_height), Image.LANCZOS)
+
+
 def apply_column_mask(
     image: Image.Image,
     mask_ranges: list[tuple[int, int]],
@@ -1484,6 +1551,8 @@ def crop_region_from_source(
     tight_crop_keep_ranges: list[tuple[int, int]] | None = None,
     tight_crop_padding_px: int = 20,
     tight_crop_padding_pct: float | None = None,
+    upscale_target_height: int | None = None,
+    upscale_max_width: int = 4096,
 ) -> Image.Image:
     """
     Loads the ORIGINAL source image fresh and crops a region using
@@ -1525,15 +1594,30 @@ def crop_region_from_source(
     Callers that isolate exactly ONE column (run_single_column_extraction,
     export_lora_dataset.py) should pass this explicitly.
 
+    upscale_target_height (2026-07-23): applied LAST, after any
+    tightening - see upscale_to_target_height()'s docstring for why
+    (real column crops measured as small as 79x36 pixels even after
+    tightening solved the mostly-blank problem; tightening a mostly-
+    blank image and having enough actual resolution left to read are
+    two separate problems). None (default) means no upscaling - exact
+    prior behavior. This is a METHODOLOGY parameter, not a bugfix
+    default like tight_crop_keep_ranges was: unlike tightening (which
+    only ever removes blank margin, a strict improvement with no
+    tradeoff), upscaling doesn't add real information and its effect on
+    any given model's own internal preprocessing is untested per-model.
+    Callers should set it deliberately when running a "fair bench"
+    comparison and record having done so (see extraction_meta's
+    "preprocessing" field in run_single_column_extraction) rather than
+    silently changing what past results mean.
+
     IMPORTANT: this function's job is unchanged for every EXISTING
-    caller - none of them pass tight_crop_keep_ranges, so none of them
-    see any behavior change from this parameter's addition. The row
-    bbox geometry stored in the sidecar itself (sidecar["rows"]) is
-    never touched by tightening - only the in-memory image this
-    function RETURNS is narrower; the sidecar's own coordinate records
-    stay full-row, so nothing downstream that relies on those
-    coordinates (e.g. re-deriving bbox math, or a future caller that
-    wants the untightened crop) is affected.
+    caller that doesn't pass tight_crop_keep_ranges/upscale_target_height -
+    both default to None/no-op, so no existing behavior changes from
+    either parameter's addition. The row bbox geometry stored in the
+    sidecar itself (sidecar["rows"]) is never touched by either - only
+    the in-memory image this function RETURNS is affected; the
+    sidecar's own coordinate records stay full-row/original-resolution,
+    so nothing downstream that relies on those coordinates is affected.
     """
     image = Image.open(source_image_path)
     if deskew_angle != 0.0:
@@ -1549,6 +1633,10 @@ def crop_region_from_source(
         cropped = tight_crop_to_ranges(
             cropped, tight_crop_keep_ranges, crop_x0=x0,
             padding_px=tight_crop_padding_px, padding_pct=tight_crop_padding_pct,
+        )
+    if upscale_target_height is not None:
+        cropped = upscale_to_target_height(
+            cropped, target_height=upscale_target_height, max_width=upscale_max_width,
         )
     return cropped
 

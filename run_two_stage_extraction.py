@@ -76,6 +76,20 @@ def main():
                               "Added 2026-07-22 so stage 2's instructional wording "
                               "can be iterated on without editing core/"
                               "row_extraction.py.")
+    parser.add_argument("--upscale-target-height", type=int, default=0,
+                         help="Upscales each row crop (aspect-preserving, LANCZOS) "
+                              "so its height reaches at least this many pixels "
+                              "before either stage sees it. Default: 0 (off) - "
+                              "unlike single-column extraction, this path doesn't "
+                              "tight-crop (it can keep several ranges spread across "
+                              "one row), so its crops are typically already full-"
+                              "row-width; the 79x36px evidence behind single-column "
+                              "extraction's upscale-by-default was measured on "
+                              "tightly-cropped images specifically, not this path. "
+                              "Set explicitly (e.g. 160) to test upscaling here too.")
+    parser.add_argument("--upscale-max-width", type=int, default=4096,
+                         help="Caps the upscaled image's width (default: 4096). "
+                              "Only relevant if --upscale-target-height is set.")
     parser.add_argument("--out", type=str, default=None,
                          help="Output directory. Default: same directory as the sidecar.")
     args = parser.parse_args()
@@ -113,12 +127,15 @@ def main():
     print(f"Stage 1 prompt: {args.ocr_prompt_file or '(none - empty)'}")
     print(f"Stage 2 (structure): {args.structure_model}")
     print(f"Stage 2 prompt template: {args.structuring_prompt_file or '(none - built-in default)'}")
+    print(f"Upscale target height: {args.upscale_target_height or '(off)'}")
     print(f"{'='*60}")
 
     results = run_two_stage_extraction(
         str(sidecar_path), args.ocr_model, args.structure_model,
         column_names, max_rows=args.max_rows, ocr_prompt=ocr_prompt,
         structuring_prompt_template=structuring_prompt_template,
+        upscale_target_height=args.upscale_target_height or None,
+        upscale_max_width=args.upscale_max_width,
     )
 
     csv_path = out_dir / f"{name}_twostage_extraction.csv"

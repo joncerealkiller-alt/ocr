@@ -110,6 +110,7 @@ def _sidecar_cache_get(cache: dict, sidecar_path: str) -> dict | None:
 def export(
     log_path: Path, out_dir: Path, min_examples_per_status: int = 0,
     tight_crop_padding_px: int = 20, tight_crop_padding_pct: float | None = None,
+    upscale_target_height: int | None = 160, upscale_max_width: int = 4096,
 ) -> None:
     records = _load_records(log_path)
     if not records:
@@ -185,6 +186,15 @@ def export(
                     tight_crop_keep_ranges=keep_ranges if mask_active else None,
                     tight_crop_padding_px=tight_crop_padding_px,
                     tight_crop_padding_pct=tight_crop_padding_pct,
+                    # Upscale (2026-07-23): defaults to 160 - matching
+                    # run_single_column_extraction's own default exactly,
+                    # deliberately, so LoRA training images match what
+                    # real extraction actually sends the model. Training
+                    # on tiny 79x36px crops while extraction sends 351x160
+                    # would teach the LoRA a different input distribution
+                    # than it's actually used against at inference time.
+                    upscale_target_height=upscale_target_height,
+                    upscale_max_width=upscale_max_width,
                 )
             except Exception as e:
                 print(f"WARNING: could not crop row {row_index} from {source_path}: {e} - skipping.")
@@ -226,6 +236,11 @@ def export(
         f.write(f"Written to training set: {written}\n")
         f.write(f"Skipped (no usable target, e.g. empty 'readable' value): {skipped_no_target}\n")
         f.write(f"Skipped (sidecar/row lookup failed): {skipped_bad_row}\n\n")
+        f.write(
+            f"Preprocessing: upscale_target_height="
+            f"{upscale_target_height if upscale_target_height else 'off'}"
+            f"{f', upscale_max_width={upscale_max_width}' if upscale_target_height else ''}\n\n"
+        )
 
         f.write("Status distribution (overall):\n")
         for status, count in status_counts.most_common():
@@ -289,6 +304,19 @@ def main():
                               "(e.g. 0.1 = 10%%), instead of a fixed pixel margin - "
                               "useful when column widths vary a lot across the page. "
                               "Overrides --tight-crop-padding-px if given.")
+    parser.add_argument("--upscale-target-height", type=int, default=160,
+                         help="Upscales each exported crop (aspect-preserving, "
+                              "LANCZOS) so its height reaches at least this many "
+                              "pixels. Default: 160 - matches run_single_column_"
+                              "extraction's own default exactly, so training images "
+                              "match what real extraction actually sends the model "
+                              "(training on a different input distribution than "
+                              "inference uses would teach the LoRA the wrong thing). "
+                              "Pass 0 to disable and reproduce exact pre-2026-07-23 "
+                              "behavior.")
+    parser.add_argument("--upscale-max-width", type=int, default=4096,
+                         help="Caps the upscaled image's width (default: 4096). "
+                              "Only relevant if --upscale-target-height is nonzero.")
     args = parser.parse_args()
 
     log_path = Path(args.log_file)
@@ -298,7 +326,9 @@ def main():
 
     export(log_path, Path(args.out_dir), args.min_examples_per_status,
            tight_crop_padding_px=args.tight_crop_padding_px,
-           tight_crop_padding_pct=args.tight_crop_padding_pct)
+           tight_crop_padding_pct=args.tight_crop_padding_pct,
+           upscale_target_height=args.upscale_target_height or None,
+           upscale_max_width=args.upscale_max_width)
 
 
 if __name__ == "__main__":

@@ -369,6 +369,8 @@ def _extract_region(
     tight_crop_keep_ranges: list[tuple[int, int]] | None = None,
     tight_crop_padding_px: int = 20,
     tight_crop_padding_pct: float | None = None,
+    upscale_target_height: int | None = None,
+    upscale_max_width: int = 4096,
 ) -> RowExtractionResult:
     """
     Shared extraction logic for ONE region (a person row OR the page
@@ -415,6 +417,8 @@ def _extract_region(
         tight_crop_keep_ranges=tight_crop_keep_ranges,
         tight_crop_padding_px=tight_crop_padding_px,
         tight_crop_padding_pct=tight_crop_padding_pct,
+        upscale_target_height=upscale_target_height,
+        upscale_max_width=upscale_max_width,
     )
     if region_image.mode != "RGB":
         region_image = region_image.convert("RGB")
@@ -583,6 +587,8 @@ def run_two_stage_extraction(
     max_rows: int | None = None,
     ocr_prompt: str = "",
     structuring_prompt_template: str | None = None,
+    upscale_target_height: int | None = None,
+    upscale_max_width: int = 4096,
 ) -> list[RowExtractionResult]:
     """
     Two-stage pipeline (2026-07-13, per Jon's direction): stage 1 runs
@@ -609,6 +615,17 @@ def run_two_stage_extraction(
     function's docstring. Lets stage 2's INSTRUCTIONAL wording be
     swapped per-run without editing this module, mirroring ocr_prompt's
     existing swappability for stage 1.
+
+    upscale_target_height (2026-07-23): unlike run_single_column_
+    extraction, defaults to None (off) here rather than 160 - the real
+    79x36px evidence behind that default change was measured on
+    TIGHTLY-CROPPED single-column crops specifically; this legacy
+    multi-column path deliberately does NOT tight-crop (several kept
+    ranges can be spread across one row - see crop_region_from_source's
+    docstring), so its crops are typically the full row width already
+    and less likely to be as resolution-starved. Available to opt into
+    for a controlled comparison, but not defaulted on without directly
+    measured evidence for THIS path specifically.
 
     Loads BOTH models for the duration of the run (not one at a time
     per row) - stage 1 processes every row first, then stage 1's model
@@ -637,7 +654,11 @@ def run_two_stage_extraction(
     try:
         ocr_loader.initialize_model_and_tokenizer()
         for row in rows:
-            row_image = crop_region_from_source(source_path, row["bbox"], deskew_angle, row_masks)
+            row_image = crop_region_from_source(
+                source_path, row["bbox"], deskew_angle, row_masks,
+                upscale_target_height=upscale_target_height,
+                upscale_max_width=upscale_max_width,
+            )
             if row_image.mode != "RGB":
                 row_image = row_image.convert("RGB")
             try:
@@ -660,7 +681,11 @@ def run_two_stage_extraction(
         struct_loader.initialize_model_and_tokenizer()
         for row in rows:
             start = time.time()
-            row_image = crop_region_from_source(source_path, row["bbox"], deskew_angle, row_masks)
+            row_image = crop_region_from_source(
+                source_path, row["bbox"], deskew_angle, row_masks,
+                upscale_target_height=upscale_target_height,
+                upscale_max_width=upscale_max_width,
+            )
             if row_image.mode != "RGB":
                 row_image = row_image.convert("RGB")
 
@@ -825,6 +850,8 @@ def run_single_column_extraction(
     mark_done: bool = True,
     tight_crop_padding_px: int = 20,
     tight_crop_padding_pct: float | None = None,
+    upscale_target_height: int | None = 160,
+    upscale_max_width: int = 4096,
 ) -> list[RowExtractionResult]:
     """
     Extracts ONE column (using that column's OWN stored mask, not a
@@ -861,6 +888,22 @@ def run_single_column_extraction(
     column actually has an active mask (mask_apply_rows AND a non-
     empty mask_keep_ranges) - a column with no mask has no range to
     tighten to, and sends the full unmasked row as before.
+
+    upscale_target_height (2026-07-23, DEFAULT CHANGED from prior
+    behavior - real evidence, not a guess): defaults to 160 now, not
+    None. A real inventory this session found tightened column crops
+    as small as 79x36 pixels - not enough resolution for most vision
+    encoders to have real detail to work with, regardless of model
+    capability. Unlike tight-cropping (a strict improvement with no
+    tradeoff), upscaling doesn't add real information and its
+    interaction with any given model's own internal preprocessing is
+    untested per-model - but given how small these crops measured in
+    practice, defaulting to upscale-on is the more defensible choice
+    than continuing to silently under-resource every model tested. Set
+    to None to reproduce EXACT prior behavior for a specific controlled
+    comparison. Recorded in extraction_meta's "preprocessing" field
+    either way, so results from before/after this default changed stay
+    distinguishable - same principle as tight_crop_applied.
 
     Still writes a CSV/JSON alongside (via save_results_csv/json in the
     caller, same as run_row_extraction) for tooling that reads those
@@ -911,6 +954,8 @@ def run_single_column_extraction(
                 tight_crop_keep_ranges=tight_crop_ranges,
                 tight_crop_padding_px=tight_crop_padding_px,
                 tight_crop_padding_pct=tight_crop_padding_pct,
+                upscale_target_height=upscale_target_height,
+                upscale_max_width=upscale_max_width,
             )
             results.append(result)
             field = result.fields.get(column_name)
@@ -944,6 +989,17 @@ def run_single_column_extraction(
             # when this flag matches - the input distribution genuinely
             # changed, not just the model or column.
             "tight_crop_applied": tight_crop_ranges is not None,
+            # 2026-07-23: same idea, for the upscale-to-target-height
+            # default change - see run_single_column_extraction's
+            # upscale_target_height docstring. None here means this run
+            # used the pre-2026-07-23 tiny-crop input (e.g. the real
+            # 79x36px 'Sex' column crops found this session); a number
+            # means every result in this batch was upscaled to at least
+            # that height before the model ever saw it.
+            "preprocessing": {
+                "upscale_target_height": upscale_target_height,
+                "upscale_max_width": upscale_max_width if upscale_target_height else None,
+            },
         },
     }
     if mark_done:

@@ -105,6 +105,20 @@ def main():
                               "of a fixed pixel margin - useful when column widths "
                               "vary a lot across the page. Overrides --tight-crop-"
                               "padding-px if given.")
+    parser.add_argument("--upscale-target-height", type=int, default=160,
+                         help="Single-column mode only: upscales the crop (aspect-"
+                              "preserving, LANCZOS) so its height reaches at least "
+                              "this many pixels before sending it to the model. "
+                              "Default: 160 - real evidence found tightly-cropped "
+                              "column images as small as 79x36px, not enough "
+                              "resolution for most vision encoders. Pass 0 to "
+                              "disable and reproduce exact pre-2026-07-23 behavior "
+                              "for a controlled comparison.")
+    parser.add_argument("--upscale-max-width", type=int, default=4096,
+                         help="Caps the upscaled image's width (default: 4096) - "
+                              "prevents a very wide, very short mask from producing "
+                              "an absurdly large image that most model processors "
+                              "would just resize back down internally anyway.")
     parser.add_argument("--model", type=str, required=True,
                          help="Model profile name (e.g. qwen3vl2b) - must exist in "
                               "config/models/")
@@ -151,6 +165,8 @@ def main():
             max_rows=args.max_rows, mark_done=not args.no_mark_done,
             tight_crop_padding_px=args.tight_crop_padding_px,
             tight_crop_padding_pct=args.tight_crop_padding_pct,
+            upscale_target_height=args.upscale_target_height or None,
+            upscale_max_width=args.upscale_max_width,
         )
 
         csv_path = out_dir / f"{name}_{column_name}_extraction.csv"
