@@ -279,6 +279,22 @@ class BaseLoader(ABC):
         """Raw model call. Returns unvalidated text."""
         ...
 
+    def release(self) -> None:
+        """
+        Hook for releasing resources beyond model/tokenizer/processor -
+        default no-op, since most loaders keep everything as in-process
+        HF objects that core.row_extraction._release_model() already
+        handles correctly (set to None, gc.collect(), torch.cuda.
+        empty_cache()). Override this ONLY when a loader owns something
+        that plain None-ing + garbage collection won't actually release
+        - e.g. MoondreamLoader's worker subprocess (see that class),
+        which holds its own separate CUDA context in a different OS
+        process entirely. _release_model() calls this BEFORE clearing
+        model/tokenizer/processor, so an override can still reference
+        them if needed during its own cleanup.
+        """
+        pass
+
     def classify(self, file_path: str, raw_image: Any) -> ClassificationResult:
         prompt = self._build_prompt(task="classify")
         raw_output = self._run_generate(raw_image, prompt)

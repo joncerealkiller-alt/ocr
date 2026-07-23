@@ -116,11 +116,49 @@ class MoondreamLoader(BaseLoader):
         self.processor = None
         return None, None, None
 
-    def __del__(self):
+    def release(self) -> None:
+        """
+        Explicit, deterministic subprocess teardown - added 2026-07-22
+        after tracing a real gap: core.row_extraction._release_model()'s
+        own `del loader` only removes ITS internal local binding, not
+        the CALLER's - the caller's own `loader` variable keeps this
+        object alive until the caller's frame itself exits. Relying on
+        __del__ alone meant the worker subprocess (with its own
+        separate CUDA context, in a different venv/process entirely -
+        NOT freed by the parent process's torch.cuda.empty_cache(),
+        which only touches the calling process's own CUDA context)
+        could keep running well past the point run_two_stage_
+        extraction() intended it to be freed before loading the SECOND
+        model - undermining that function's own documented "avoid two
+        models resident in VRAM simultaneously" guarantee. Now called
+        explicitly by _release_model() (see that function's docstring)
+        via this override, rather than left to non-deterministic GC
+        timing.
+        """
+        self._terminate_worker()
+
+    def _terminate_worker(self) -> None:
         proc = getattr(self, "_proc", None)
         if proc is not None and proc.poll() is None:
-            proc.stdin.close()
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
             proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+        self._proc = None
+
+    def __del__(self):
+        # Last-resort safety net ONLY - release() (called explicitly by
+        # _release_model()) is the real cleanup path now. This still
+        # matters for any code path that constructs a MoondreamLoader
+        # without ever calling _release_model (e.g. an error before
+        # extraction starts) - better an eventual GC-triggered cleanup
+        # than a permanently orphaned subprocess.
+        self._terminate_worker()
 
     def _build_prompt(self, task: str) -> str:
         if task != "extract":

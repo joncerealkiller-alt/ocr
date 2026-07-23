@@ -451,9 +451,29 @@ def _release_model(loader) -> None:
     docstring/comment references to it - a real bug, caught by an
     actual live run raising NameError, not by any test in this sandbox
     (no torch available here to exercise this code path directly).
+
+    UPDATED 2026-07-22 to call loader.release() first - found via
+    MoondreamLoader (its worker runs as a genuinely separate OS
+    subprocess with its OWN CUDA context in a different venv/process
+    entirely). This function's own `del loader` only removes ITS
+    internal local binding, not the CALLER's - the caller's own
+    `loader` variable keeps the object alive until the caller's frame
+    itself exits, so relying on MoondreamLoader.__del__ to terminate
+    the subprocess meant it could keep running (and holding VRAM in
+    its own process) well past the point run_two_stage_extraction()
+    intended it to be freed before loading the SECOND model - directly
+    undermining the "avoid two models resident in VRAM simultaneously"
+    guarantee that function's docstring promises. release() is a no-op
+    for every ordinary in-process loader (default on BaseLoader), so
+    this change is a no-op for them too - only a loader that overrides
+    release() (currently just MoondreamLoader) behaves any differently.
     """
     import gc
     import torch
+    try:
+        loader.release()
+    except Exception:
+        pass
     try:
         loader.model = None
         loader.processor = None

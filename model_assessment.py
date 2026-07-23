@@ -652,6 +652,15 @@ class AssessmentApp:
         if loader is None:
             return
         before_mb = torch.cuda.memory_allocated() / (1024 ** 2) if torch.cuda.is_available() else 0
+        # release() first - see core/loaders/base_loader.py's docstring
+        # and core/row_extraction.py's matching _release_model for why:
+        # a subprocess-backed loader (MoondreamLoader) needs its worker
+        # process explicitly terminated, not just its Python attributes
+        # cleared - default no-op for every ordinary in-process loader.
+        try:
+            loader.release()
+        except Exception:
+            pass
         try:
             loader.model = None
             loader.processor = None
