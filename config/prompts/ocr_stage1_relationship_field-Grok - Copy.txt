@@ -1,0 +1,1 @@
+English handwriting OCR only. Extract every visible character exactly with zero guessing, substitutions, or extra text. Give a letter count and  Use ? for illegible letters. Perform 2 passes.

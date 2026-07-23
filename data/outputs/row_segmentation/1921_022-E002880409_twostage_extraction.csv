@@ -1,0 +1,24 @@
+row_index,schema_pass,runtime_seconds,Name_value,Name_confidence,Age_value,Age_confidence,Sex_value,Sex_confidence,Relationship to Head_value,Relationship to Head_confidence,Birthplace_value,Birthplace_confidence,stage1_raw_output
+1,True,1.70,John Smith,unclear,25,unclear,Male,unclear,Head,unclear,Unknown,unclear,"The image shows a handwritten name ""John Smith"" in the upper left corner, and below it, there is a table with two columns labeled ""Name"" and ""Age"". The table contains two rows of data:
+
+1. John Smith   25
+2. Jane Doe     30
+
+This appears to be a simple table listing names and ages, possibly for a database or a list."
+2,False,1.64,,,,,,,,,,,"The image shows two handwritten notes or messages. The left note is partially cut off, but it appears to be written in cursive and includes the word ""June"" at the end. The right note is more fully visible and reads:
+
+""Dear [Name],
+
+I am sorry for the delay in responding to your email. I have been quite busy with work and personal matters. I hope you are well and that everything is going well for you.
+
+Best regards,
+
+[Your Name]""
+
+This note expresses regret for not responding promptly to an email and offers a brief update on the sender's current situation."
+3,True,2.32,1920,unclear,22,unclear,M,unclear,1,unclear,1920,unclear,"The image appears to be a table with two columns and several rows, but the content of the table is mostly cut off or not fully visible. The left column contains some text that looks like mathematical or scientific notation, such as ""g_{\mu\nu}(x)"", ""L_{\mu\nu}(x)"", and ""L_{\mu}(x)"". The right column also contains some text, but it is mostly illegible due to the quality and angle of the image.
+
+If you have a higher quality scan or another angle of this table, please provide it for better results. If you have a different question or need help with something else, feel free to ask!"
+4,True,1.51,Jenny,unclear,12,unclear,Female,unclear,Mother,unclear,Unknown,unclear,"The image appears to be a table with two columns and several rows, but the text is very small and mostly illegible. Only a few scattered letters and numbers are partially visible, such as ""Jenny,"" ""12,"" and some numbers in the second column. The majority of the content cannot be reliably transcribed or translated due to the quality and size of the text. If you have a higher quality scan or another image, please provide it for better results."
+5,True,1.92,18,unclear,25,unclear,M,unclear,1,unclear,1,unclear,"The image shows two people sitting at a table, with one person appearing to be in distress or discomfort. The background is blurred, but it seems to be an outdoor setting. There is no visible text or additional context provided in the image itself. If you have any specific questions about the image or need further analysis, please provide more details."
+6,True,1.52,Elysha,unclear,11,unclear,Female,unclear,Unknown,unclear,Unknown,unclear,"The image shows a partial view of a handwritten note or signature, with the visible text ""Elysha"" and some numbers ""11"" and ""2"". The rest of the content is not fully visible or legible. If you have more of the image or another context, please provide it for better results."

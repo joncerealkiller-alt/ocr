@@ -1,0 +1,4 @@
+file_path,category,confidence,text_density,handwriting,table_layout,faces,map_like,reason,model,prompt_version
+C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-03 131344.png,map_land_record,0.98,0.1,False,False,False,True,"The image is an aerial or satellite view showing roads, buildings, and geographic layouts.",gemma,v1
+C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-03 133216.png,map_land_record,0.98,0.0,False,False,False,True,The image is an aerial or satellite view showing geographic features and roads.,gemma,v1
+C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\T24 R22 W1.jpg,map_land_record,0.98,0.3,False,False,False,True,The image is a printed plan or map detailing a plan of a township and range.,gemma,v1

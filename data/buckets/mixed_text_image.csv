@@ -1,0 +1,3 @@
+file_path,category,confidence,text_density,handwriting,table_layout,faces,map_like,reason,model,prompt_version
+C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-03 194506.png,mixed_text_image,0.95,0.4,False,False,False,False,"The image contains a photograph accompanied by substantial surrounding text, fitting the mixed text image classification.",gemma,v1
+C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-03 194533.png,mixed_text_image,0.95,0.3,False,False,False,False,"The image contains a photograph accompanied by surrounding textual content, fitting the mixed text and image description.",gemma,v1

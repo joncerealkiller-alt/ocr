@@ -1,0 +1,203 @@
+[
+  {
+    "row_index": 1,
+    "bbox": [
+      230,
+      750,
+      3385,
+      786
+    ],
+    "fields": {
+      "Name": {
+        "value": "John Smith",
+        "confidence": "unclear"
+      },
+      "Age": {
+        "value": "25",
+        "confidence": "unclear"
+      },
+      "Sex": {
+        "value": "Male",
+        "confidence": "unclear"
+      },
+      "Relationship to Head": {
+        "value": "Head",
+        "confidence": "unclear"
+      },
+      "Birthplace": {
+        "value": "Unknown",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Name: John Smith\nAge: 25\nSex: Male\nRelationship to Head: Head\nBirthplace: Unknown",
+    "model": "olmocr_2_7b+smolvlm2_2b",
+    "runtime_seconds": 1.697878360748291,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": "The image shows a handwritten name \"John Smith\" in the upper left corner, and below it, there is a table with two columns labeled \"Name\" and \"Age\". The table contains two rows of data:\n\n1. John Smith   25\n2. Jane Doe     30\n\nThis appears to be a simple table listing names and ages, possibly for a database or a list."
+  },
+  {
+    "row_index": 2,
+    "bbox": [
+      230,
+      778,
+      3385,
+      814
+    ],
+    "fields": {},
+    "raw_output": "Name: [Name], Age: [Age], Sex: [Sex], Relationship to Head: [Relationship to Head], Birthplace: [Birthplace]",
+    "model": "olmocr_2_7b+smolvlm2_2b",
+    "runtime_seconds": 1.641160488128662,
+    "schema_pass": false,
+    "schema_error": "Missing/dropped fields: {'Age', 'Birthplace', 'Relationship to Head', 'Sex', 'Name'}",
+    "stage1_raw_output": "The image shows two handwritten notes or messages. The left note is partially cut off, but it appears to be written in cursive and includes the word \"June\" at the end. The right note is more fully visible and reads:\n\n\"Dear [Name],\n\nI am sorry for the delay in responding to your email. I have been quite busy with work and personal matters. I hope you are well and that everything is going well for you.\n\nBest regards,\n\n[Your Name]\"\n\nThis note expresses regret for not responding promptly to an email and offers a brief update on the sender's current situation."
+  },
+  {
+    "row_index": 3,
+    "bbox": [
+      230,
+      806,
+      3385,
+      842
+    ],
+    "fields": {
+      "Name": {
+        "value": "1920",
+        "confidence": "unclear"
+      },
+      "Age": {
+        "value": "22",
+        "confidence": "unclear"
+      },
+      "Sex": {
+        "value": "M",
+        "confidence": "unclear"
+      },
+      "Relationship to Head": {
+        "value": "1",
+        "confidence": "unclear"
+      },
+      "Birthplace": {
+        "value": "1920",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Name: 1920|unclear\nAge: 22|unclear\nSex: M|unclear\nRelationship to Head: 1|unclear\nBirthplace: 1920|unclear",
+    "model": "olmocr_2_7b+smolvlm2_2b",
+    "runtime_seconds": 2.320476531982422,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": "The image appears to be a table with two columns and several rows, but the content of the table is mostly cut off or not fully visible. The left column contains some text that looks like mathematical or scientific notation, such as \"g_{\\mu\\nu}(x)\", \"L_{\\mu\\nu}(x)\", and \"L_{\\mu}(x)\". The right column also contains some text, but it is mostly illegible due to the quality and angle of the image.\n\nIf you have a higher quality scan or another angle of this table, please provide it for better results. If you have a different question or need help with something else, feel free to ask!"
+  },
+  {
+    "row_index": 4,
+    "bbox": [
+      230,
+      834,
+      3385,
+      870
+    ],
+    "fields": {
+      "Name": {
+        "value": "Jenny",
+        "confidence": "unclear"
+      },
+      "Age": {
+        "value": "12",
+        "confidence": "unclear"
+      },
+      "Sex": {
+        "value": "Female",
+        "confidence": "unclear"
+      },
+      "Relationship to Head": {
+        "value": "Mother",
+        "confidence": "unclear"
+      },
+      "Birthplace": {
+        "value": "Unknown",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Name: Jenny\nAge: 12\nSex: Female\nRelationship to Head: Mother\nBirthplace: Unknown",
+    "model": "olmocr_2_7b+smolvlm2_2b",
+    "runtime_seconds": 1.5083003044128418,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": "The image appears to be a table with two columns and several rows, but the text is very small and mostly illegible. Only a few scattered letters and numbers are partially visible, such as \"Jenny,\" \"12,\" and some numbers in the second column. The majority of the content cannot be reliably transcribed or translated due to the quality and size of the text. If you have a higher quality scan or another image, please provide it for better results."
+  },
+  {
+    "row_index": 5,
+    "bbox": [
+      230,
+      862,
+      3385,
+      898
+    ],
+    "fields": {
+      "Name": {
+        "value": "18",
+        "confidence": "unclear"
+      },
+      "Age": {
+        "value": "25",
+        "confidence": "unclear"
+      },
+      "Sex": {
+        "value": "M",
+        "confidence": "unclear"
+      },
+      "Relationship to Head": {
+        "value": "1",
+        "confidence": "unclear"
+      },
+      "Birthplace": {
+        "value": "1",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Name: 18|unclear\nAge: 25|unclear\nSex: M|unclear\nRelationship to Head: 1|unclear\nBirthplace: 1|unclear",
+    "model": "olmocr_2_7b+smolvlm2_2b",
+    "runtime_seconds": 1.9231319427490234,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": "The image shows two people sitting at a table, with one person appearing to be in distress or discomfort. The background is blurred, but it seems to be an outdoor setting. There is no visible text or additional context provided in the image itself. If you have any specific questions about the image or need further analysis, please provide more details."
+  },
+  {
+    "row_index": 6,
+    "bbox": [
+      230,
+      890,
+      3385,
+      926
+    ],
+    "fields": {
+      "Name": {
+        "value": "Elysha",
+        "confidence": "unclear"
+      },
+      "Age": {
+        "value": "11",
+        "confidence": "unclear"
+      },
+      "Sex": {
+        "value": "Female",
+        "confidence": "unclear"
+      },
+      "Relationship to Head": {
+        "value": "Unknown",
+        "confidence": "unclear"
+      },
+      "Birthplace": {
+        "value": "Unknown",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Name: Elysha\nAge: 11\nSex: Female\nRelationship to Head: Unknown\nBirthplace: Unknown",
+    "model": "olmocr_2_7b+smolvlm2_2b",
+    "runtime_seconds": 1.5227315425872803,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": "The image shows a partial view of a handwritten note or signature, with the visible text \"Elysha\" and some numbers \"11\" and \"2\". The rest of the content is not fully visible or legible. If you have more of the image or another context, please provide it for better results."
+  }
+]

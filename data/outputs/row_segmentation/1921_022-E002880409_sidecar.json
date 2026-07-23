@@ -1,0 +1,605 @@
+{
+  "source_image_path": "J:\\Screenshots\\Knott_Ancestry\\Knott\\1921_022-E002880409.jpg",
+  "deskewed_image_size": [
+    3604,
+    2299
+  ],
+  "deskew_angle": 0.0,
+  "coordinate_space": "deskewed_image",
+  "mode": "uniform_tile",
+  "parameters": {
+    "row_count": 50,
+    "first_row_top": 754.0,
+    "first_row_bottom": 782.0,
+    "table_left": 230,
+    "table_right": 3385,
+    "metadata_bottom": 440,
+    "header_row_count": 1
+  },
+  "table_bbox": [
+    230,
+    754,
+    3385,
+    2154
+  ],
+  "metadata_bbox": [
+    0,
+    0,
+    3604,
+    440
+  ],
+  "header_bbox": [
+    230,
+    436,
+    3385,
+    594
+  ],
+  "mask_keep_ranges": [],
+  "mask_apply_header": false,
+  "mask_apply_rows": true,
+  "rows": [
+    {
+      "index": 1,
+      "bbox": [
+        230,
+        750,
+        3385,
+        786
+      ]
+    },
+    {
+      "index": 2,
+      "bbox": [
+        230,
+        778,
+        3385,
+        814
+      ]
+    },
+    {
+      "index": 3,
+      "bbox": [
+        230,
+        806,
+        3385,
+        842
+      ]
+    },
+    {
+      "index": 4,
+      "bbox": [
+        230,
+        834,
+        3385,
+        870
+      ]
+    },
+    {
+      "index": 5,
+      "bbox": [
+        230,
+        862,
+        3385,
+        898
+      ]
+    },
+    {
+      "index": 6,
+      "bbox": [
+        230,
+        890,
+        3385,
+        926
+      ]
+    },
+    {
+      "index": 7,
+      "bbox": [
+        230,
+        918,
+        3385,
+        954
+      ]
+    },
+    {
+      "index": 8,
+      "bbox": [
+        230,
+        946,
+        3385,
+        982
+      ]
+    },
+    {
+      "index": 9,
+      "bbox": [
+        230,
+        974,
+        3385,
+        1010
+      ]
+    },
+    {
+      "index": 10,
+      "bbox": [
+        230,
+        1002,
+        3385,
+        1038
+      ]
+    },
+    {
+      "index": 11,
+      "bbox": [
+        230,
+        1030,
+        3385,
+        1066
+      ]
+    },
+    {
+      "index": 12,
+      "bbox": [
+        230,
+        1058,
+        3385,
+        1094
+      ]
+    },
+    {
+      "index": 13,
+      "bbox": [
+        230,
+        1086,
+        3385,
+        1122
+      ]
+    },
+    {
+      "index": 14,
+      "bbox": [
+        230,
+        1114,
+        3385,
+        1150
+      ]
+    },
+    {
+      "index": 15,
+      "bbox": [
+        230,
+        1142,
+        3385,
+        1178
+      ]
+    },
+    {
+      "index": 16,
+      "bbox": [
+        230,
+        1170,
+        3385,
+        1206
+      ]
+    },
+    {
+      "index": 17,
+      "bbox": [
+        230,
+        1198,
+        3385,
+        1234
+      ]
+    },
+    {
+      "index": 18,
+      "bbox": [
+        230,
+        1226,
+        3385,
+        1262
+      ]
+    },
+    {
+      "index": 19,
+      "bbox": [
+        230,
+        1254,
+        3385,
+        1290
+      ]
+    },
+    {
+      "index": 20,
+      "bbox": [
+        230,
+        1282,
+        3385,
+        1318
+      ]
+    },
+    {
+      "index": 21,
+      "bbox": [
+        230,
+        1310,
+        3385,
+        1346
+      ]
+    },
+    {
+      "index": 22,
+      "bbox": [
+        230,
+        1338,
+        3385,
+        1374
+      ]
+    },
+    {
+      "index": 23,
+      "bbox": [
+        230,
+        1366,
+        3385,
+        1402
+      ]
+    },
+    {
+      "index": 24,
+      "bbox": [
+        230,
+        1394,
+        3385,
+        1430
+      ]
+    },
+    {
+      "index": 25,
+      "bbox": [
+        230,
+        1422,
+        3385,
+        1458
+      ]
+    },
+    {
+      "index": 26,
+      "bbox": [
+        230,
+        1450,
+        3385,
+        1486
+      ]
+    },
+    {
+      "index": 27,
+      "bbox": [
+        230,
+        1478,
+        3385,
+        1514
+      ]
+    },
+    {
+      "index": 28,
+      "bbox": [
+        230,
+        1506,
+        3385,
+        1542
+      ]
+    },
+    {
+      "index": 29,
+      "bbox": [
+        230,
+        1534,
+        3385,
+        1570
+      ]
+    },
+    {
+      "index": 30,
+      "bbox": [
+        230,
+        1562,
+        3385,
+        1598
+      ]
+    },
+    {
+      "index": 31,
+      "bbox": [
+        230,
+        1590,
+        3385,
+        1626
+      ]
+    },
+    {
+      "index": 32,
+      "bbox": [
+        230,
+        1618,
+        3385,
+        1654
+      ]
+    },
+    {
+      "index": 33,
+      "bbox": [
+        230,
+        1646,
+        3385,
+        1682
+      ]
+    },
+    {
+      "index": 34,
+      "bbox": [
+        230,
+        1674,
+        3385,
+        1710
+      ]
+    },
+    {
+      "index": 35,
+      "bbox": [
+        230,
+        1702,
+        3385,
+        1738
+      ]
+    },
+    {
+      "index": 36,
+      "bbox": [
+        230,
+        1730,
+        3385,
+        1766
+      ]
+    },
+    {
+      "index": 37,
+      "bbox": [
+        230,
+        1758,
+        3385,
+        1794
+      ]
+    },
+    {
+      "index": 38,
+      "bbox": [
+        230,
+        1786,
+        3385,
+        1822
+      ]
+    },
+    {
+      "index": 39,
+      "bbox": [
+        230,
+        1814,
+        3385,
+        1850
+      ]
+    },
+    {
+      "index": 40,
+      "bbox": [
+        230,
+        1842,
+        3385,
+        1878
+      ]
+    },
+    {
+      "index": 41,
+      "bbox": [
+        230,
+        1870,
+        3385,
+        1906
+      ]
+    },
+    {
+      "index": 42,
+      "bbox": [
+        230,
+        1898,
+        3385,
+        1934
+      ]
+    },
+    {
+      "index": 43,
+      "bbox": [
+        230,
+        1926,
+        3385,
+        1962
+      ]
+    },
+    {
+      "index": 44,
+      "bbox": [
+        230,
+        1954,
+        3385,
+        1990
+      ]
+    },
+    {
+      "index": 45,
+      "bbox": [
+        230,
+        1982,
+        3385,
+        2018
+      ]
+    },
+    {
+      "index": 46,
+      "bbox": [
+        230,
+        2010,
+        3385,
+        2046
+      ]
+    },
+    {
+      "index": 47,
+      "bbox": [
+        230,
+        2038,
+        3385,
+        2074
+      ]
+    },
+    {
+      "index": 48,
+      "bbox": [
+        230,
+        2066,
+        3385,
+        2102
+      ]
+    },
+    {
+      "index": 49,
+      "bbox": [
+        230,
+        2094,
+        3385,
+        2130
+      ]
+    },
+    {
+      "index": 50,
+      "bbox": [
+        230,
+        2122,
+        3385,
+        2158
+      ]
+    }
+  ],
+  "dropped_bands": [],
+  "warnings": [
+    "Deskew angle applied: 0.00 degrees. (user-confirmed, not auto-estimated)",
+    "Uniform-tile mode: first row (754.0, 782.0), row_height=28.00px, tiled 50 times (no detection, no ruling-line search - pure arithmetic)."
+  ],
+  "columns": {
+    "Name": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          320,
+          622
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {},
+      "extraction_meta": {}
+    },
+    "Age": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          1422,
+          1467
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {},
+      "extraction_meta": {}
+    },
+    "Sex": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          1336,
+          1379
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {},
+      "extraction_meta": {}
+    },
+    "Relationship to Head": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          1213,
+          1336
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {},
+      "extraction_meta": {}
+    },
+    "Birthplace": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          1468,
+          1619
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {},
+      "extraction_meta": {}
+    },
+    "__multi__": {
+      "status": "in_progress",
+      "mask_keep_ranges": [
+        [
+          321,
+          623
+        ],
+        [
+          1422,
+          1467
+        ],
+        [
+          1335,
+          1378
+        ],
+        [
+          1212,
+          1336
+        ],
+        [
+          1467,
+          1619
+        ]
+      ],
+      "mask_apply_header": true,
+      "mask_apply_rows": true,
+      "results": {},
+      "extraction_meta": {}
+    }
+  },
+  "column_order": [
+    "Name",
+    "Age",
+    "Sex",
+    "Relationship to Head",
+    "Birthplace"
+  ],
+  "active_column": null,
+  "progress": {
+    "completed": 5,
+    "total": 6
+  }
+}

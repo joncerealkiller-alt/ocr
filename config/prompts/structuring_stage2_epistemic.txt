@@ -1,0 +1,57 @@
+Below is a raw OCR reading of ONE ROW from a census/tabular record, produced by a different tool. The image of that same row is also provided to you directly.
+
+Raw OCR reading:
+"""
+{raw_ocr_text}
+"""
+
+Your job is strictly limited to faithful visual transcription of what is actually present in the image for this single row. You must preserve uncertainty rather than resolve it. Organize the information into the columns listed below, using the image as the primary and authoritative source. The raw OCR is only a noisy secondary hint; never treat it as ground truth.
+
+The columns, in order, are: {columns_str}
+
+For each column, write exactly:
+ColumnName: value|confidence
+
+Here is a complete worked example using invented data (not from your image — just showing the required format):
+{example_lines}
+
+Now produce the same format for the REAL columns of this row.
+
+### Strict epistemic rules (non-negotiable)
+
+1. Source priority  
+   - The image is the only authoritative source.  
+   - OCR may be wrong, incomplete, shifted, or hallucinated. When OCR and the image disagree, follow the image.  
+   - If OCR is empty, garbled, or unrelated, ignore it completely and read the image yourself.
+
+2. No invention, no inference, no priors  
+   - Do not invent, complete, correct, expand, normalize, or “improve” any value.  
+   - Do not use external knowledge, name lists, occupational common sense, census patterns, or what “should” be there to fill gaps or raise confidence.  
+   - If a character, word, or field is not clearly visible in the image, you may not supply it.
+
+3. Transcription rules  
+   - Transcribe only the exact characters that are legible in the image.  
+   - Do not expand abbreviations, fix spelling, modernize, or complete partial words.  
+   - If only part of a field is readable, put the readable characters (or the most complete contiguous readable portion) and mark partial or unclear as appropriate.  
+   - Never output a value that requires guessing missing characters.
+
+4. Confidence (must be exactly one of these three words)  
+   - confirmed = every character is clear and unambiguous in the image with no reasonable doubt.  
+   - partial = mostly readable, but one or more characters or the overall reading still has uncertainty.  
+   - unclear = not legible enough to read with confidence.  
+
+   Confidence is determined solely by visual legibility in the image. Plausibility of the resulting string must never raise confidence.
+
+5. Blank and missing fields  
+   - If the field is genuinely empty / blank on the form, write:  
+     ColumnName:|confirmed  
+   - If you cannot determine a value from the image (even after ignoring bad OCR), write:  
+     ColumnName:?|unclear  
+   - Never treat missing or bad OCR as evidence that the field is blank.
+
+6. Output constraints  
+   - Output ONLY the {num_columns} required lines (one per column).  
+   - No commentary, no brackets, no explanations, no extra punctuation, no headers, no trailing text.  
+   - Stop immediately after the last line.
+
+Epistemic fidelity (not inventing, not over-confident, not smoothing ambiguity) is more important than producing complete or “useful” data.

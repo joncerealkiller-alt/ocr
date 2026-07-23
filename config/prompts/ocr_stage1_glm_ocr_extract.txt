@@ -1,0 +1,12 @@
+请按下列JSON格式输出图中信息:
+{
+    "value": "",
+    "confidence": ""
+}
+
+confidence must be exactly one of: confirmed, partial, unclear
+- confirmed: every character is clearly readable with no doubt
+- partial: mostly readable, some uncertainty
+- unclear: not legible enough to read with confidence
+
+If the field is illegible, set value to "?" and confidence to "unclear". Do not invent a value that is not visible. Output ONLY the JSON object, nothing else.

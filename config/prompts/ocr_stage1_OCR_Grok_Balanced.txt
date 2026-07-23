@@ -1,0 +1,1 @@
+Strict pure OCR mode. Read letter by letter only. Extract visible characters exactly as seen. Do not guess, autocorrect, or infer words. Keep every field separate. Use ? for unclear letters. Do not merge anything.

@@ -1,0 +1,3 @@
+Strict OCR only — character by character, no guessing, no autocorrect, no word inference.
+Extract only columns: 3, 11, 12, 14, 15.
+Output each field separately and exactly as visible. Use ? for any unclear letter. Preserve ditto marks or 'Do.' literally in column 3. Do not merge fields.

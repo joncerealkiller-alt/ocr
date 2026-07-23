@@ -1,0 +1,166 @@
+[
+  {
+    "row_index": 1,
+    "bbox": [
+      210,
+      637,
+      4000,
+      677
+    ],
+    "fields": {
+      "Name": {
+        "value": "1.1",
+        "confidence": "unclear"
+      },
+      "Age": {
+        "value": "1.1",
+        "confidence": "unclear"
+      },
+      "Sex": {
+        "value": "1.1",
+        "confidence": "unclear"
+      },
+      "Relationship to Head": {
+        "value": "1.1",
+        "confidence": "unclear"
+      },
+      "Birthplace": {
+        "value": "1.1",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Name: 1.1\nAge: 1.1\nSex: 1.1\nRelationship to Head: 1.1\nBirthplace: 1.1",
+    "model": "got_ocr2+smolvlm2_2b",
+    "runtime_seconds": 2.1846697330474854,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": "[1]  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1.1  1."
+  },
+  {
+    "row_index": 2,
+    "bbox": [
+      210,
+      671,
+      4000,
+      712
+    ],
+    "fields": {
+      "Name": {
+        "value": "John Smith",
+        "confidence": "confirmed"
+      },
+      "Age": {
+        "value": "45",
+        "confidence": "confirmed"
+      },
+      "Sex": {
+        "value": "M",
+        "confidence": "confirmed"
+      },
+      "Relationship to Head": {
+        "value": "Boarder",
+        "confidence": "confirmed"
+      },
+      "Birthplace": {
+        "value": "Ontario",
+        "confidence": "confirmed"
+      }
+    },
+    "raw_output": "Name: John Smith|confirmed\nAge: 45|confirmed\nSex: M|confirmed\nRelationship to Head: Boarder|confirmed\nBirthplace: Ontario|confirmed\nOccupation:|confirmed",
+    "model": "got_ocr2+smolvlm2_2b",
+    "runtime_seconds": 1.9620740413665771,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": "1920192111"
+  },
+  {
+    "row_index": 3,
+    "bbox": [
+      210,
+      706,
+      4000,
+      746
+    ],
+    "fields": {
+      "Name": {
+        "value": "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Name: 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+    "model": "got_ocr2+smolvlm2_2b",
+    "runtime_seconds": 15.866240978240967,
+    "schema_pass": false,
+    "schema_error": "Missing/dropped fields: {'Sex', 'Relationship to Head', 'Birthplace', 'Age'}",
+    "stage1_raw_output": "\\=-111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+  },
+  {
+    "row_index": 4,
+    "bbox": [
+      210,
+      740,
+      4000,
+      780
+    ],
+    "fields": {},
+    "raw_output": "Name:\nAge:\nSex:\nRelationship to Head:\nBirthplace:",
+    "model": "got_ocr2+smolvlm2_2b",
+    "runtime_seconds": 1.3805313110351562,
+    "schema_pass": false,
+    "schema_error": "Missing/dropped fields: {'Name', 'Relationship to Head', 'Birthplace', 'Age', 'Sex'}",
+    "stage1_raw_output": "\\(\\cdot\\) \\(\\cdot\\)"
+  },
+  {
+    "row_index": 5,
+    "bbox": [
+      210,
+      774,
+      4000,
+      814
+    ],
+    "fields": {},
+    "raw_output": "Name: B. S. L. S. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M. M.",
+    "model": "got_ocr2+smolvlm2_2b",
+    "runtime_seconds": 15.821080684661865,
+    "schema_pass": false,
+    "schema_error": "Missing/dropped fields: {'Name', 'Relationship to Head', 'Birthplace', 'Age', 'Sex'}",
+    "stage1_raw_output": "[1]  B.  S.  L.  S.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M.  M"
+  },
+  {
+    "row_index": 6,
+    "bbox": [
+      210,
+      808,
+      4000,
+      849
+    ],
+    "fields": {
+      "Name": {
+        "value": "John Smith",
+        "confidence": "confirmed"
+      },
+      "Age": {
+        "value": "45",
+        "confidence": "confirmed"
+      },
+      "Sex": {
+        "value": "M",
+        "confidence": "confirmed"
+      },
+      "Relationship to Head": {
+        "value": "Boarder",
+        "confidence": "confirmed"
+      },
+      "Birthplace": {
+        "value": "Ontario",
+        "confidence": "confirmed"
+      }
+    },
+    "raw_output": "Name: John Smith|confirmed\nAge: 45|confirmed\nSex: M|confirmed\nRelationship to Head: Boarder|confirmed\nBirthplace: Ontario|confirmed\nOccupation:|confirmed",
+    "model": "got_ocr2+smolvlm2_2b",
+    "runtime_seconds": 1.9278202056884766,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": "198"
+  }
+]

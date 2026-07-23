@@ -1,0 +1,2 @@
+Pure character-by-character OCR. This is English handwriting only. Extract every visible letter exactly. No guessing, no substitutions (do not output Cyrillic, Mr, or any other language).
+Output ONLY the transcribed word or short phrase — no extra text. Use ? for illegible letters. Preserve exact spelling as seen.

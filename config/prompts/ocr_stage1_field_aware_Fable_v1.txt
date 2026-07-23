@@ -1,0 +1,3 @@
+Extract only these columns:
+Col 3 (Name), Col 11 (Relationship to Head), Col 12 (Sex), Col 14 (Age), Col 15 (Birthplace)
+Output one line per column as: <column name>: <exact text>

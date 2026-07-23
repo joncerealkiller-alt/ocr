@@ -1,0 +1,11 @@
+# Bucket-level generation overrides for census_or_form_text.
+# See printed_document.yaml for full provenance notes - same evidence
+# base (dense form/certificate content tested 2026-07-10). Kept as a
+# separate file rather than aliasing printed_document.yaml since these
+# are logically distinct buckets that happened to need the same
+# settings on the evidence gathered so far - if that changes, they
+# should be free to diverge without one file secretly governing both.
+
+do_sample: false
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5

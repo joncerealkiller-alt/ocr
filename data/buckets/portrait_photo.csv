@@ -1,0 +1,3 @@
+file_path,category,confidence,text_density,handwriting,table_layout,faces,map_like,reason,model,prompt_version
+C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-05 190439.png,portrait_photo,0.98,0.0,False,False,True,False,"The image primarily depicts a close-up photograph of two people, fitting the definition of a portrait photo.",gemma,v1
+C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-05 192135.png,portrait_photo,0.98,0.0,False,False,True,False,The image primarily depicts two people in a photograph with negligible accompanying text.,gemma,v1

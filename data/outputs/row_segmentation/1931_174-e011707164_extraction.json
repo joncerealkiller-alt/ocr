@@ -1,0 +1,128 @@
+[
+  {
+    "row_index": 1,
+    "bbox": [
+      210,
+      637,
+      4000,
+      677
+    ],
+    "fields": {
+      "Relationship to Head": {
+        "value": "son",
+        "confidence": "confirmed"
+      }
+    },
+    "raw_output": "Relationship to Head: son|confirmed",
+    "model": "gemma_extract",
+    "runtime_seconds": 1.7609355449676514,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": null
+  },
+  {
+    "row_index": 2,
+    "bbox": [
+      210,
+      671,
+      4000,
+      712
+    ],
+    "fields": {
+      "Relationship to Head": {
+        "value": "",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Relationship to Head: |unclear",
+    "model": "gemma_extract",
+    "runtime_seconds": 1.2754580974578857,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": null
+  },
+  {
+    "row_index": 3,
+    "bbox": [
+      210,
+      706,
+      4000,
+      746
+    ],
+    "fields": {
+      "Relationship to Head": {
+        "value": "",
+        "confidence": "unclear"
+      }
+    },
+    "raw_output": "Relationship to Head: |unclear",
+    "model": "gemma_extract",
+    "runtime_seconds": 1.198805332183838,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": null
+  },
+  {
+    "row_index": 4,
+    "bbox": [
+      210,
+      740,
+      4000,
+      780
+    ],
+    "fields": {
+      "Relationship to Head": {
+        "value": "Lancelata",
+        "confidence": "confirmed"
+      }
+    },
+    "raw_output": "Relationship to Head: Lancelata|confirmed",
+    "model": "gemma_extract",
+    "runtime_seconds": 1.3653783798217773,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": null
+  },
+  {
+    "row_index": 5,
+    "bbox": [
+      210,
+      774,
+      4000,
+      814
+    ],
+    "fields": {
+      "Relationship to Head": {
+        "value": "D orientalic",
+        "confidence": "confirmed"
+      }
+    },
+    "raw_output": "Relationship to Head: D orientalic|confirmed",
+    "model": "gemma_extract",
+    "runtime_seconds": 1.3957724571228027,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": null
+  },
+  {
+    "row_index": 6,
+    "bbox": [
+      210,
+      808,
+      4000,
+      849
+    ],
+    "fields": {
+      "Relationship to Head": {
+        "value": "Head",
+        "confidence": "confirmed"
+      }
+    },
+    "raw_output": "Relationship to Head:Head|confirmed",
+    "model": "gemma_extract",
+    "runtime_seconds": 1.2388532161712646,
+    "schema_pass": true,
+    "schema_error": null,
+    "stage1_raw_output": null
+  }
+]

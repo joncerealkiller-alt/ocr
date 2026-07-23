@@ -1,0 +1,11 @@
+Top Row - Only Numbers, these indicate the Header for the Census data listed directly below, Each number is its own field that needs to be logged separately
+
+Only extract column 3 , 4 , 4a , 4b , 4c , 11 , 12 , 14 and 15
+3 is Name , this may contain ditto marks or the letters Do. inidicating the Surname is the same as the previous recorded entry.
+4 , 4a , 4b , 4c . This is the Home Address using DLS grid sections
+11 - Relationship to Head of Household
+12 - Gender , this is Either M or F , no other options just those two 
+14 - Age in Years
+15 - Birthplace of Person
+
+This image shows one header row with numbered fields, and one row with multiple labeled fields. Transcribe the text, keeping each field's value separate from its neighbors - do not merge adjacent fields together, even if you don't know what each field is called. Do not fabricate names, if you dont know try to extract letters visible recording unknown letters with a ?.

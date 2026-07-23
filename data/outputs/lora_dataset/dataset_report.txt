@@ -1,0 +1,44 @@
+LoRA training set export report
+========================================
+
+Source log: data\outputs\ground_truth_log.jsonl
+Total records in log: 750
+Written to training set: 750
+Skipped (no usable target, e.g. empty 'readable' value): 0
+Skipped (sidecar/row lookup failed): 0
+
+Status distribution (overall):
+  readable: 341
+  illegible: 183
+  partially_readable: 153
+  blank: 73
+
+Per-column status breakdown:
+  Age:
+    readable: 67
+    illegible: 41
+    partially_readable: 24
+    blank: 18
+  Birthplace:
+    readable: 85
+    partially_readable: 32
+    illegible: 18
+    blank: 15
+  Name:
+    illegible: 58
+    readable: 42
+    partially_readable: 41
+    blank: 9
+  Relationship to Head:
+    readable: 63
+    partially_readable: 45
+    illegible: 29
+    blank: 13
+  Sex:
+    readable: 84
+    illegible: 37
+    blank: 18
+    partially_readable: 11
+
+Coverage warnings:
+  None - all tracked statuses meet the minimum threshold.

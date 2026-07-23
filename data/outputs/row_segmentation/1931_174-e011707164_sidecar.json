@@ -1,0 +1,2130 @@
+{
+  "source_image_path": "J:\\Screenshots\\Knott_Ancestry\\Knott\\1931_174-e011707164.jpg",
+  "deskewed_image_size": [
+    4139,
+    2669
+  ],
+  "deskew_angle": 0.07,
+  "coordinate_space": "deskewed_image",
+  "mode": "uniform_tile",
+  "parameters": {
+    "row_count": 50,
+    "first_row_top": 640.0,
+    "first_row_bottom": 674.3,
+    "table_left": 210,
+    "table_right": 4000,
+    "metadata_bottom": 260,
+    "header_row_count": 1
+  },
+  "table_bbox": [
+    210,
+    640,
+    4000,
+    2355
+  ],
+  "metadata_bbox": [
+    0,
+    0,
+    4139,
+    260
+  ],
+  "header_bbox": [
+    210,
+    597,
+    4000,
+    643
+  ],
+  "mask_keep_ranges": [],
+  "mask_apply_header": false,
+  "mask_apply_rows": true,
+  "rows": [
+    {
+      "index": 1,
+      "bbox": [
+        210,
+        637,
+        4000,
+        677
+      ]
+    },
+    {
+      "index": 2,
+      "bbox": [
+        210,
+        671,
+        4000,
+        712
+      ]
+    },
+    {
+      "index": 3,
+      "bbox": [
+        210,
+        706,
+        4000,
+        746
+      ]
+    },
+    {
+      "index": 4,
+      "bbox": [
+        210,
+        740,
+        4000,
+        780
+      ]
+    },
+    {
+      "index": 5,
+      "bbox": [
+        210,
+        774,
+        4000,
+        814
+      ]
+    },
+    {
+      "index": 6,
+      "bbox": [
+        210,
+        808,
+        4000,
+        849
+      ]
+    },
+    {
+      "index": 7,
+      "bbox": [
+        210,
+        843,
+        4000,
+        883
+      ]
+    },
+    {
+      "index": 8,
+      "bbox": [
+        210,
+        877,
+        4000,
+        917
+      ]
+    },
+    {
+      "index": 9,
+      "bbox": [
+        210,
+        911,
+        4000,
+        952
+      ]
+    },
+    {
+      "index": 10,
+      "bbox": [
+        210,
+        946,
+        4000,
+        986
+      ]
+    },
+    {
+      "index": 11,
+      "bbox": [
+        210,
+        980,
+        4000,
+        1020
+      ]
+    },
+    {
+      "index": 12,
+      "bbox": [
+        210,
+        1014,
+        4000,
+        1055
+      ]
+    },
+    {
+      "index": 13,
+      "bbox": [
+        210,
+        1049,
+        4000,
+        1089
+      ]
+    },
+    {
+      "index": 14,
+      "bbox": [
+        210,
+        1083,
+        4000,
+        1123
+      ]
+    },
+    {
+      "index": 15,
+      "bbox": [
+        210,
+        1117,
+        4000,
+        1157
+      ]
+    },
+    {
+      "index": 16,
+      "bbox": [
+        210,
+        1151,
+        4000,
+        1192
+      ]
+    },
+    {
+      "index": 17,
+      "bbox": [
+        210,
+        1186,
+        4000,
+        1226
+      ]
+    },
+    {
+      "index": 18,
+      "bbox": [
+        210,
+        1220,
+        4000,
+        1260
+      ]
+    },
+    {
+      "index": 19,
+      "bbox": [
+        210,
+        1254,
+        4000,
+        1295
+      ]
+    },
+    {
+      "index": 20,
+      "bbox": [
+        210,
+        1289,
+        4000,
+        1329
+      ]
+    },
+    {
+      "index": 21,
+      "bbox": [
+        210,
+        1323,
+        4000,
+        1363
+      ]
+    },
+    {
+      "index": 22,
+      "bbox": [
+        210,
+        1357,
+        4000,
+        1398
+      ]
+    },
+    {
+      "index": 23,
+      "bbox": [
+        210,
+        1392,
+        4000,
+        1432
+      ]
+    },
+    {
+      "index": 24,
+      "bbox": [
+        210,
+        1426,
+        4000,
+        1466
+      ]
+    },
+    {
+      "index": 25,
+      "bbox": [
+        210,
+        1460,
+        4000,
+        1500
+      ]
+    },
+    {
+      "index": 26,
+      "bbox": [
+        210,
+        1494,
+        4000,
+        1535
+      ]
+    },
+    {
+      "index": 27,
+      "bbox": [
+        210,
+        1529,
+        4000,
+        1569
+      ]
+    },
+    {
+      "index": 28,
+      "bbox": [
+        210,
+        1563,
+        4000,
+        1603
+      ]
+    },
+    {
+      "index": 29,
+      "bbox": [
+        210,
+        1597,
+        4000,
+        1638
+      ]
+    },
+    {
+      "index": 30,
+      "bbox": [
+        210,
+        1632,
+        4000,
+        1672
+      ]
+    },
+    {
+      "index": 31,
+      "bbox": [
+        210,
+        1666,
+        4000,
+        1706
+      ]
+    },
+    {
+      "index": 32,
+      "bbox": [
+        210,
+        1700,
+        4000,
+        1741
+      ]
+    },
+    {
+      "index": 33,
+      "bbox": [
+        210,
+        1735,
+        4000,
+        1775
+      ]
+    },
+    {
+      "index": 34,
+      "bbox": [
+        210,
+        1769,
+        4000,
+        1809
+      ]
+    },
+    {
+      "index": 35,
+      "bbox": [
+        210,
+        1803,
+        4000,
+        1843
+      ]
+    },
+    {
+      "index": 36,
+      "bbox": [
+        210,
+        1837,
+        4000,
+        1878
+      ]
+    },
+    {
+      "index": 37,
+      "bbox": [
+        210,
+        1872,
+        4000,
+        1912
+      ]
+    },
+    {
+      "index": 38,
+      "bbox": [
+        210,
+        1906,
+        4000,
+        1946
+      ]
+    },
+    {
+      "index": 39,
+      "bbox": [
+        210,
+        1940,
+        4000,
+        1981
+      ]
+    },
+    {
+      "index": 40,
+      "bbox": [
+        210,
+        1975,
+        4000,
+        2015
+      ]
+    },
+    {
+      "index": 41,
+      "bbox": [
+        210,
+        2009,
+        4000,
+        2049
+      ]
+    },
+    {
+      "index": 42,
+      "bbox": [
+        210,
+        2043,
+        4000,
+        2084
+      ]
+    },
+    {
+      "index": 43,
+      "bbox": [
+        210,
+        2078,
+        4000,
+        2118
+      ]
+    },
+    {
+      "index": 44,
+      "bbox": [
+        210,
+        2112,
+        4000,
+        2152
+      ]
+    },
+    {
+      "index": 45,
+      "bbox": [
+        210,
+        2146,
+        4000,
+        2186
+      ]
+    },
+    {
+      "index": 46,
+      "bbox": [
+        210,
+        2180,
+        4000,
+        2221
+      ]
+    },
+    {
+      "index": 47,
+      "bbox": [
+        210,
+        2215,
+        4000,
+        2255
+      ]
+    },
+    {
+      "index": 48,
+      "bbox": [
+        210,
+        2249,
+        4000,
+        2289
+      ]
+    },
+    {
+      "index": 49,
+      "bbox": [
+        210,
+        2283,
+        4000,
+        2324
+      ]
+    },
+    {
+      "index": 50,
+      "bbox": [
+        210,
+        2318,
+        4000,
+        2358
+      ]
+    }
+  ],
+  "dropped_bands": [],
+  "warnings": [
+    "Deskew angle applied: 0.07 degrees. (user-confirmed, not auto-estimated)",
+    "Uniform-tile mode: first row (640.0, 674.3), row_height=34.30px, tiled 50 times (no detection, no ruling-line search - pure arithmetic)."
+  ],
+  "columns": {
+    "Name": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          312,
+          668
+        ]
+      ],
+      "mask_apply_header": true,
+      "mask_apply_rows": true,
+      "results": {
+        "1": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "2": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "3": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "4": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White"
+        },
+        "5": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married"
+        },
+        "6": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "7": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "8": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White\nNationality: American"
+        },
+        "9": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "10": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "11": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "12": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "13": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nIncome: $50,000|partial\nEducation: Bachelor's Degree|partial\nEmployment Status: Employed|partial"
+        },
+        "14": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "15": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married"
+        },
+        "16": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White"
+        },
+        "17": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "18": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nIncome: $50,000|partial\nEducation: Bachelor's Degree|partial\nEmployment Status: Employed|partial\nHousing: Rent|partial\nLocation: New York City|partial"
+        },
+        "19": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "20": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "21": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "22": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "23": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "24": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White"
+        },
+        "25": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "26": {
+          "value": "Francisco",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: Francisco|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nIncome: $50,000|partial\nEducation: Bachelor's Degree|partial\nEmployment Status: Employed|partial"
+        },
+        "27": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male"
+        },
+        "28": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "29": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White"
+        },
+        "30": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "31": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "32": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White"
+        },
+        "33": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White"
+        },
+        "34": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "35": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "36": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "37": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith"
+        },
+        "38": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "39": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White"
+        },
+        "40": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "41": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "42": {
+          "value": "John Smith",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith\nOccupation:|confirmed\nAge: 35\nGender: Male\nMarital Status: Married\nEthnicity: White"
+        },
+        "43": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "44": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "45": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "46": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "47": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "48": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "49": {
+          "value": "John Smith",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: John Smith|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School Diploma|partial\nIncome: $50,000|partial\nOccupation: Engineer|partial"
+        },
+        "50": {
+          "value": "Douglas",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Name: Douglas|partial\nOccupation:|partial\nAge: 35|partial\nGender: Male|partial\nMarital Status: Married|partial\nIncome: $50,000|partial\nEducation: High School Diploma|partial\nEmployment Status: Employed|partial"
+        }
+      },
+      "extraction_meta": {
+        "model": "smolvlm2_2b",
+        "updated_at": "2026-07-22T04:30:03.456499+00:00",
+        "row_count": 50
+      }
+    },
+    "Age": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          1400,
+          1452
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {
+        "1": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "2": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed\nOccupation:|confirmed\nEducation: |partial\nMarital Status: |unclear\nIncome: |unclear\nLocation: |unclear"
+        },
+        "3": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed\nOccupation:|confirmed\nEducation: |partial\nMarital Status: |unclear\nIncome: |unclear\nLocation: |unclear"
+        },
+        "4": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed\nOccupation:|confirmed\nEducation: 12|partial\nMarital Status: single|unclear\nIncome: 50000|unclear\nLocation: New York|unclear"
+        },
+        "5": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "6": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed\nOccupation:|confirmed\nEducation: |partial\nMarital Status: |unclear\nIncome: |unclear\nLocation: |unclear"
+        },
+        "7": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "8": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "9": {
+          "value": "30",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Age: 30|partial\nOccupation:|partial\nEducation: |partial\nMarital Status: |partial\nIncome: |partial\nLocation: |partial"
+        },
+        "10": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "11": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "12": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "13": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "14": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "15": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "16": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed\nOccupation:|confirmed\nEducation: |partial\nMarital Status: |unclear\nIncome: |unclear\nLocation: |unclear"
+        },
+        "17": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "18": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed\nOccupation:|confirmed\nEducation: |partial\nMarital Status: |unclear\nIncome: |unclear\nLocation: |unclear"
+        },
+        "19": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "20": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "21": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "22": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed\nOccupation:|confirmed\nEducation: |partial\nMarital Status: |unclear\nIncome: |unclear\nLocation: |unclear"
+        },
+        "23": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "24": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "25": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "26": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "27": {
+          "value": "66",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Age: 66|partial\nOccupation:|partial\nEducation: 12|partial\nMarital Status: Married|partial\nIncome: $50,000|partial\nOccupation: Teacher|partial"
+        },
+        "28": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "29": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "30": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "31": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "32": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "33": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "34": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "35": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "36": {
+          "value": "45",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Age: 45|partial"
+        },
+        "37": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "38": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "39": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "40": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "41": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "42": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "43": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "44": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "45": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "46": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "47": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "48": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "49": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        },
+        "50": {
+          "value": "45",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Age: 45|confirmed"
+        }
+      },
+      "extraction_meta": {
+        "model": "smolvlm2_2b",
+        "updated_at": "2026-07-22T04:34:37.502107+00:00",
+        "row_count": 50
+      }
+    },
+    "Sex": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          1323,
+          1362
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {
+        "1": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "2": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "3": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "4": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "5": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "6": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "7": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "8": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "9": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "10": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "11": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "12": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "13": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "14": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "15": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "16": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "17": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "18": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "19": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "20": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "21": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "22": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "23": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "24": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "25": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "26": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "27": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "28": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "29": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "30": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "31": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "32": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "33": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "34": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "35": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "36": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "37": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "38": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "39": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "40": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "41": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "42": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "43": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "44": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "45": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "46": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "47": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "48": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "49": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        },
+        "50": {
+          "value": "M",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Sex: M"
+        }
+      },
+      "extraction_meta": {
+        "model": "smolvlm2_2b",
+        "updated_at": "2026-07-22T04:39:17.960090+00:00",
+        "row_count": 50
+      }
+    },
+    "Relationship to Head": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          1201,
+          1322
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {
+        "1": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "2": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "3": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "4": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "5": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "6": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "7": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "8": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "9": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "10": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "11": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "12": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "13": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "14": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "15": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "16": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "17": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "18": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "19": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "20": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "21": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Status:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Amount Type:|confirmed\nIncome Source Amount Currency:|confirmed\nIncome Source Currency:|confirmed\nIncome Source Currency Type:|confirmed\nIncome Source Currency Type Amount:|confirmed\nIncome Source Currency Amount Type:|confirmed\nIncome Source Currency Amount Currency:|confirmed\nIncome Source Currency Currency:|confirmed\nIncome Source Currency Currency Type:|confirmed\nIncome Source Currency Currency Type Amount:|confirmed\nIncome Source Currency Currency Amount Type:|confirmed\nIncome Source Currency Currency Amount Currency:|confirmed\nIncome Source Currency Currency Currency:|confirmed\nIncome Source Currency Currency Currency Type:|confirmed\nIncome Source Currency Currency Currency Amount:|confirmed\nIncome Source Currency Currency Currency Amount Type:|confirmed\nIncome Source Currency Currency Currency Amount Currency:|confirmed\nIncome Source Currency Currency Currency Amount Currency:|confirmed"
+        },
+        "22": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "23": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "24": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Situation:|confirmed\nNumber of Children:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Amount Type:|confirmed\nIncome Source Amount Duration:|confirmed\nIncome Source Duration Type:|confirmed\nIncome Source Duration Amount:|confirmed\nIncome Source Duration Amount Type:|confirmed\nIncome Source Duration Amount Duration:|confirmed\nIncome Source Duration Duration Type:|confirmed\nIncome Source Duration Duration Amount:|confirmed\nIncome Source Duration Duration Amount Type:|confirmed\nIncome Source Duration Duration Amount Duration:|confirmed\nIncome Source Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Amount Type:|confirmed\nIncome Source Duration Duration Duration Amount Duration:|confirmed"
+        },
+        "25": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Situation:|confirmed\nNumber of Children:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Amount Type:|confirmed\nIncome Source Amount Duration:|confirmed\nIncome Source Duration Type:|confirmed\nIncome Source Duration Amount:|confirmed\nIncome Source Duration Amount Type:|confirmed\nIncome Source Duration Amount Duration:|confirmed\nIncome Source Duration Duration Type:|confirmed\nIncome Source Duration Duration Amount:|confirmed\nIncome Source Duration Duration Amount Type:|confirmed\nIncome Source Duration Duration Amount Duration:|confirmed\nIncome Source Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Amount Type:|confirmed\nIncome Source Duration Duration Duration Amount Duration:|confirmed"
+        },
+        "26": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "27": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "28": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "29": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Situation:|confirmed\nNumber of Children:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Amount Type:|confirmed\nIncome Source Amount Duration:|confirmed\nIncome Source Duration Type:|confirmed\nIncome Source Duration Amount:|confirmed\nIncome Source Duration Amount Type:|confirmed\nIncome Source Duration Amount Duration:|confirmed\nIncome Source Duration Duration Type:|confirmed\nIncome Source Duration Duration Amount:|confirmed\nIncome Source Duration Duration Amount Type:|confirmed\nIncome Source Duration Duration Amount Duration:|confirmed\nIncome Source Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Amount Type:|confirmed\nIncome Source Duration Duration Duration Amount Duration:|confirmed"
+        },
+        "30": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Situation:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Frequency:|confirmed\nIncome Source Duration:|confirmed\nIncome Source Duration Type:|confirmed\nIncome Source Duration Amount:|confirmed\nIncome Source Duration Frequency:|confirmed\nIncome Source Duration Duration Type:|confirmed\nIncome Source Duration Duration Amount:|confirmed\nIncome Source Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Frequency:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Duration Frequency:|confirmed"
+        },
+        "31": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "32": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "33": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "34": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Status:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Amount Type:|confirmed\nIncome Source Amount Currency:|confirmed\nIncome Source Currency:|confirmed\nIncome Source Currency Type:|confirmed\nIncome Source Currency Type Amount:|confirmed\nIncome Source Currency Amount Type:|confirmed\nIncome Source Currency Amount Currency:|confirmed\nIncome Source Currency Currency:|confirmed\nIncome Source Currency Currency Type:|confirmed\nIncome Source Currency Currency Type Amount:|confirmed\nIncome Source Currency Currency Amount Type:|confirmed\nIncome Source Currency Currency Amount Currency:|confirmed\nIncome Source Currency Currency Currency:|confirmed\nIncome Source Currency Currency Currency Type:|confirmed\nIncome Source Currency Currency Currency Amount:|confirmed\nIncome Source Currency Currency Currency Amount Type:|confirmed\nIncome Source Currency Currency Currency Amount Currency:|confirmed\nIncome Source Currency Currency Currency Amount Currency:|confirmed"
+        },
+        "35": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Situation:|confirmed\nNumber of Children:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Amount Type:|confirmed\nIncome Source Amount Duration:|confirmed\nIncome Source Duration Type:|confirmed\nIncome Source Duration Amount:|confirmed\nIncome Source Duration Amount Type:|confirmed\nIncome Source Duration Amount Duration:|confirmed\nIncome Source Duration Duration Type:|confirmed\nIncome Source Duration Duration Amount:|confirmed\nIncome Source Duration Duration Amount Type:|confirmed\nIncome Source Duration Duration Amount Duration:|confirmed\nIncome Source Duration Duration Duration Type:|confirmed\nIncome Source Duration Duration Duration Amount:|confirmed\nIncome Source Duration Duration Duration Amount Type:|confirmed\nIncome Source Duration Duration Duration Amount Duration:|confirmed"
+        },
+        "36": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "37": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "38": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Status:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Amount Type:|confirmed\nIncome Source Amount Currency:|confirmed\nIncome Source Currency:|confirmed\nIncome Source Currency Type:|confirmed\nIncome Source Currency Type Amount:|confirmed\nIncome Source Currency Amount Type:|confirmed\nIncome Source Currency Amount Currency:|confirmed\nIncome Source Currency Currency:|confirmed\nIncome Source Currency Currency Type:|confirmed\nIncome Source Currency Currency Type Amount:|confirmed\nIncome Source Currency Currency Amount Type:|confirmed\nIncome Source Currency Currency Amount Currency:|confirmed\nIncome Source Currency Currency Currency:|confirmed\nIncome Source Currency Currency Currency Type:|confirmed\nIncome Source Currency Currency Currency Amount:|confirmed\nIncome Source Currency Currency Currency Amount Type:|confirmed\nIncome Source Currency Currency Currency Amount Currency:|confirmed\nIncome Source Currency Currency Currency Amount Currency:|confirmed"
+        },
+        "39": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "40": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "41": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "42": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "43": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "44": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "45": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "46": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "47": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\nOccupation:|confirmed\nAge:|confirmed\nSex:|confirmed\nMarital Status:|confirmed\nIncome:|confirmed\nEducation Level:|confirmed\nEmployment Status:|confirmed\nHousing Status:|confirmed\nIncome Source:|confirmed\nIncome Source Type:|confirmed\nIncome Source Amount:|confirmed\nIncome Source Amount Type:|confirmed\nIncome Source Amount Currency:|confirmed\nIncome Source Currency:|confirmed\nIncome Source Currency Type:|confirmed\nIncome Source Currency Type Amount:|confirmed\nIncome Source Currency Amount Type:|confirmed\nIncome Source Currency Amount Currency:|confirmed\nIncome Source Currency Currency:|confirmed\nIncome Source Currency Currency Type:|confirmed\nIncome Source Currency Currency Type Amount:|confirmed\nIncome Source Currency Currency Amount Type:|confirmed\nIncome Source Currency Currency Amount Currency:|confirmed\nIncome Source Currency Currency Currency:|confirmed\nIncome Source Currency Currency Currency Type:|confirmed\nIncome Source Currency Currency Currency Amount:|confirmed\nIncome Source Currency Currency Currency Amount Type:|confirmed\nIncome Source Currency Currency Currency Amount Currency:|confirmed\nIncome Source Currency Currency Currency Amount Currency:|confirmed"
+        },
+        "48": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "49": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        },
+        "50": {
+          "value": "Boarder",
+          "confidence": "confirmed",
+          "schema_pass": true,
+          "raw_output": "Relationship to Head: Boarder|confirmed\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|partial\n\nMarital Status:|partial\n\nIncome:|partial\n\nEducation Level:|partial\n\nEmployment Status:|partial\n\nNumber of Children:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Widows:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Divorces:|partial\n\nNumber of Marriages:|partial\n\nNumber of Div"
+        }
+      },
+      "extraction_meta": {
+        "model": "smolvlm2_2b",
+        "updated_at": "2026-07-22T04:53:30.131404+00:00",
+        "row_count": 50
+      }
+    },
+    "Birthplace": {
+      "status": "done",
+      "mask_keep_ranges": [
+        [
+          1452,
+          1644
+        ]
+      ],
+      "mask_apply_header": false,
+      "mask_apply_rows": true,
+      "results": {
+        "1": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "2": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "3": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "4": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "5": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "6": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "7": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear"
+        },
+        "8": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "9": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear\n\nMarital Status:|unclear\n\nEthnicity:|unclear"
+        },
+        "10": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "11": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "12": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "13": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "14": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "15": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "16": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear\n\nMarital Status:|unclear\n\nEthnicity:|unclear"
+        },
+        "17": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "18": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear\n\nMarital Status:|unclear\n\nEthnicity:|unclear"
+        },
+        "19": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment Status: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|"
+        },
+        "20": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "21": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "22": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "23": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "24": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "25": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "26": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "27": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married\n\nEthnicity: White"
+        },
+        "28": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear\n\nMarital Status:|unclear\n\nEthnicity:|unclear"
+        },
+        "29": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear\n\nMarital Status:|unclear\n\nEthnicity:|unclear"
+        },
+        "30": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "31": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "32": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "33": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "34": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear"
+        },
+        "35": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "36": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear\n\nMarital Status:|unclear\n\nEthnicity:|unclear"
+        },
+        "37": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "38": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "39": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nHousing Area: Suburban|partial\nHousing Area Value: $300,000|partial\nHousing Area Area: 1000|partial\nHousing Area Area Value: 1000000|partial\nHousing Area Area Area: 1000000|partial\nHousing Area Area Area Value: 1000000000|partial"
+        },
+        "40": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear\n\nMarital Status:|unclear\n\nEthnicity:|unclear\n\nRace:|unclear\n\nNationality:|unclear"
+        },
+        "41": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "42": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "43": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "44": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear"
+        },
+        "45": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial"
+        },
+        "46": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "47": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge: 25\n\nSex: Male\n\nMarital Status: Married"
+        },
+        "48": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "49": {
+          "value": "Ontario",
+          "confidence": "partial",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario|partial\nOccupation:|partial\nAge: 25|partial\nSex: Male|partial\nMarital Status: Married|partial\nEthnicity: White|partial\nReligion: Christian|partial\nEducation: High School|partial\nEmployment: Employed|partial\nIncome: $30,000|partial\nHousing: Own|partial\nHousing Value: $150,000|partial\nIncome Source: Wage|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial\nIncome Source Value: $30,000|partial"
+        },
+        "50": {
+          "value": "Ontario",
+          "confidence": "unclear",
+          "schema_pass": true,
+          "raw_output": "Birthplace: Ontario\n\nOccupation:|confirmed\n\nAge:|partial\n\nSex:|unclear"
+        }
+      },
+      "extraction_meta": {
+        "model": "smolvlm2_2b",
+        "updated_at": "2026-07-22T05:37:52.341792+00:00",
+        "row_count": 50
+      }
+    },
+    "__multi__": {
+      "status": "in_progress",
+      "mask_keep_ranges": [
+        [
+          311,
+          668
+        ],
+        [
+          1400,
+          1452
+        ],
+        [
+          1322,
+          1362
+        ],
+        [
+          1200,
+          1322
+        ],
+        [
+          1451,
+          1644
+        ]
+      ],
+      "mask_apply_header": true,
+      "mask_apply_rows": true,
+      "results": {},
+      "extraction_meta": {}
+    }
+  },
+  "column_order": [
+    "Name",
+    "Age",
+    "Sex",
+    "Relationship to Head",
+    "Birthplace"
+  ],
+  "active_column": null,
+  "progress": {
+    "completed": 5,
+    "total": 6
+  }
+}

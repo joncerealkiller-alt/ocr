@@ -1,0 +1,42 @@
+Dwelling House
+Family Household or Institution
+Name
+Section
+Township
+Range
+Meridian
+Home Owned or Rented
+Owned Value
+Class of House
+Construction Materials
+Rooms Occupied
+Owns Radio
+Relationship to Head
+Sex
+Relationship Status
+Age
+Place of Birth
+Father Place of Birth
+Mother Place of Birth
+Year of Immigration
+Yea of Naturalization
+Nationality
+Racial Origin
+Can Speak English
+Can Speak French
+Other Language
+Can Read and Write
+Months at School
+Occupation
+Industry
+Class of Worker
+Total Earnings
+If Employee, did you work at date given
+If No Explain
+Weeks Unemployed
+No Job
+Illness
+Accident
+Strike or Lockout
+Layoff
+Other Cause

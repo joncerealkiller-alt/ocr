@@ -1,0 +1,1 @@
+Pure character-by-character OCR. Transcribe exactly what you see, one letter at a time. Never guess, correct, or complete words. Separate each field. Use ? for any uncertain character. No merging fields.

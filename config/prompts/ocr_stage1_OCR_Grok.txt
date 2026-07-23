@@ -1,0 +1,1 @@
+Strict OCR only. Extract every visible character exactly, letter-by-letter, no guessing, no auto-correction, no word completion, no inference. Output each field's text separately. Use ? for unclear letters. Do not merge adjacent fields. Preserve exact spacing and order
