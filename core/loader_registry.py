@@ -21,6 +21,7 @@ from core.loaders.internvl_loader import InternVLLoader
 from core.loaders.chandra_loader import ChandraLoader
 from core.loaders.pixtral_loader import PixtralLoader
 from core.loaders.got_ocr2_loader import GotOcr2Loader
+from core.loaders.moondream_loader import MoondreamLoader
 
 LOADER_REGISTRY = {
     "GemmaLoader": GemmaLoader,
@@ -35,4 +36,5 @@ LOADER_REGISTRY = {
     "ChandraLoader": ChandraLoader,
     "PixtralLoader": PixtralLoader,
     "GotOcr2Loader": GotOcr2Loader,
+    "MoondreamLoader": MoondreamLoader,
 }

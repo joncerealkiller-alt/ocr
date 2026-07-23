@@ -1,0 +1,41 @@
+model_name: moondream2
+repo_id: vikhyatk/moondream2
+loader_class: MoondreamLoader
+
+# Pin the exact cached revision (matches the ref file in the local HF
+# cache: models--vikhyatk--moondream2/refs/2025-06-21). MoondreamLoader
+# also forces local_files_only=True on both from_pretrained() calls, so
+# this pin is what determines which cached snapshot loads - it will NOT
+# silently fall back to fetching a different revision from the Hub.
+revision: "2025-06-21"
+
+# UNTESTED in this project. query()'s own default is do_sample=False-
+# equivalent (greedy) per moondream.py; no separate sampling knobs are
+# exposed through this loader's _run_generate (model.query() doesn't take
+# temperature/top_p/top_k/repetition_penalty - it's not a raw generate()
+# call). These fields are kept here for content_hash()/audit-trail parity
+# with every other loader, not because they're wired to anything for this
+# model.
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.1
+no_repeat_ngram_size: null
+max_new_tokens: 512
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+
+# query() takes a native reasoning=bool kwarg (moondream.py) - a real
+# generate()-adjacent param, not a system-prompt injection like some
+# other loaders' "system_prompt" mechanism.
+reasoning_toggle_mechanism: param
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

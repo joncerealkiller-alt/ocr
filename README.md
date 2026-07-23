@@ -68,6 +68,48 @@ pip install "chandra-ocr[hf]"
 pip install olmocr
 ```
 
+### MoondreamLoader — separate venv required (not a pip install into the main env)
+
+`vikhyatk/moondream2`'s `trust_remote_code` model only produces correct
+output on `transformers==4.52.4` (its own declared version) — on this
+project's main `transformers` (5.12.1), generation silently degenerates
+to garbage (`"1"` followed by hundreds of blank-token lines), confirmed
+by a direct A/B test, not a guess. Since two `transformers` versions
+can't coexist in one Python process, `MoondreamLoader`
+(`core/loaders/moondream_loader.py`) doesn't load the model itself — it
+spawns `core/loaders/_moondream_worker.py` as a subprocess under a
+dedicated venv and talks to it over stdin/stdout JSON. Create that venv
+once, from the project root:
+
+```bash
+# --system-site-packages reuses this environment's already-installed
+# torch/CUDA build instead of re-downloading it (multi-GB torch+cuda
+# wheel) — do not omit this flag.
+python -m venv --system-site-packages .venv_moondream
+.venv_moondream/Scripts/python.exe -m pip install transformers==4.52.4
+```
+
+`.venv_moondream/` is local environment state, not source — don't
+commit it, and don't add it to `requirements.txt`. If `MoondreamLoader`
+can't find `.venv_moondream/Scripts/python.exe` (or `bin/python` on
+non-Windows), it raises with this same setup command rather than
+silently falling back to the main environment's (broken, for this
+model) transformers.
+
+Model weights: `vikhyatk/moondream2` (revision pinned in
+`config/models/moondream2.yaml`) must already be present in the normal
+Hugging Face hub cache (`~/.cache/huggingface/hub/`,
+`models--vikhyatk--moondream2/...`) — the loader always passes
+`local_files_only=True`, so it will not attempt an on-demand download
+even from inside the worker venv, and instead should be moved/downloaded
+into the hub cache ahead of time. This is also a deliberate cutoff of
+moondream2's LoRA-variant-download feature (a bare `urlopen()` against
+`api.moondream.ai` in the model's own remote code, only reachable if a
+`variant`/`settings` kwarg is ever passed to `query()`) — both the
+loader and the worker never pass that kwarg, and the worker additionally
+monkeypatches the relevant function to raise instead of opening a
+socket, so this stays blocked even if that changes accidentally later.
+
 ### tkinter (no install needed, but required)
 `build_manifest.py`, `review_uncertain.py`, and `model_assessment.py`
 all use `tkinter` for their UI (folder picker / review queue / test
@@ -117,6 +159,11 @@ chandra-ocr[hf]         # ChandraLoader only - own generate_hf() API,
 olmocr                  # OlmOcrLoader only - supplies its RL-trained
                          # prompt builder
 ```
+
+MoondreamLoader is deliberately NOT in this list — it runs entirely
+inside `.venv_moondream`, a separate venv with `transformers==4.52.4`
+pinned (see "MoondreamLoader — separate venv required" above), not
+inside the main environment described by this list.
 
 (`tkinter` not listed — stdlib, not pip-installable)
 
@@ -277,6 +324,25 @@ document-classification pipeline above.
 
 Keep brief entries here when dependencies or major structure change,
 so it's clear why a version was pinned/changed later.
+
+- Added MoondreamLoader (`core/loaders/moondream_loader.py`,
+  `vikhyatk/moondream2`) as an extraction-stage candidate. Its
+  `trust_remote_code` model produces garbage output on this project's
+  main `transformers` (5.12.1) — confirmed via direct A/B test, not
+  assumed — but correct output on `transformers==4.52.4`, its own
+  declared version. Since one process can't run two `transformers`
+  versions, the loader now spawns `core/loaders/_moondream_worker.py`
+  as a subprocess under a separate `.venv_moondream` venv
+  (`--system-site-packages`, so it reuses the main env's torch/CUDA
+  rather than a second multi-GB download) and talks to it over
+  stdin/stdout JSON — see the "MoondreamLoader — separate venv
+  required" section above for the one-time setup command. Also closes
+  off moondream2's LoRA-variant-download path (a bare `urlopen()`
+  against `api.moondream.ai` in the model's own remote code) at two
+  layers: neither the loader nor the worker ever pass the
+  `variant`/`settings` kwarg that triggers it, and the worker
+  additionally monkeypatches the download function to raise instead of
+  opening a socket.
 
 - Fixed a serious bug affecting both real extraction AND LoRA training
   data: apply_column_mask() only PAINTS outside a kept column range
