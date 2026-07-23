@@ -1,6 +1,6 @@
 """
-Standalone worker process for moondream2, run under .venv_moondream (a
-separate venv pinned to transformers==4.52.4, --system-site-packages so it
+Worker script for moondream2, run under .venv_moondream (a separate
+venv pinned to transformers==4.52.4, --system-site-packages so it
 shares the main environment's torch/CUDA install) rather than the main
 project venv (transformers 5.12.1).
 
@@ -11,18 +11,14 @@ silently degenerates to garbage ("1" followed by hundreds of blank-token
 lines) on transformers 5.12.1, which every other loader in this project
 runs on. That's a real incompatibility in moondream2's custom
 attention/KV-cache code against current transformers internals, not
-something fixable by patching from the loader side (a narrower
-tied-weights-attribute gap in the same vein WAS patchable - see
-MoondreamLoader - but this deeper one isn't). Two transformers versions
-can't coexist in one Python process, so moondream2 gets its own venv and
-talks to the main pipeline over stdin/stdout instead.
+something fixable by patching from the loader side. Two transformers
+versions can't coexist in one Python process, so moondream2 gets its own
+venv and talks to the main pipeline over stdin/stdout instead.
 
-Protocol: newline-delimited JSON on stdin/stdout.
-  Request:  {"image_path": str, "question": str, "reasoning": bool}
-  Response: {"answer": str} or {"error": str}
-A single literal line "READY" is printed to stdout once the model has
-finished loading, before the request loop starts - the parent process
-blocks on reading that line to know the worker is usable.
+Uses the shared request-loop helper (_subprocess_worker_common.run_worker)
+rather than hand-rolling the JSON I/O loop - this file only supplies the
+two things actually specific to moondream2: how to load it, and how to
+call it. See that module's docstring for the full wire protocol.
 
 Run standalone: .venv_moondream/Scripts/python.exe _moondream_worker.py
 <repo_id> <revision>
@@ -30,8 +26,15 @@ Run standalone: .venv_moondream/Scripts/python.exe _moondream_worker.py
 
 from __future__ import annotations
 
-import json
 import sys
+
+# This worker's own directory isn't necessarily on sys.path when run as
+# a standalone script from a different venv/cwd - added explicitly so
+# `from _subprocess_worker_common import run_worker` resolves regardless
+# of how/where this script is invoked from.
+sys.path.insert(0, __file__.rsplit("/", 1)[0].rsplit("\\", 1)[0])
+
+from _subprocess_worker_common import run_worker
 
 
 def _block_lora_network_calls(model) -> None:
@@ -64,20 +67,11 @@ def _block_lora_network_calls(model) -> None:
     lora_module.cached_variant_path = _blocked_cached_variant_path
 
 
-def main() -> None:
-    if len(sys.argv) != 3:
-        print(
-            "usage: _moondream_worker.py <repo_id> <revision>",
-            file=sys.stderr,
-        )
-        sys.exit(2)
-
-    repo_id, revision = sys.argv[1], sys.argv[2]
-
+def _load():
     import torch
-    from PIL import Image
     from transformers import AutoModelForCausalLM
 
+    repo_id, revision = sys.argv[1], sys.argv[2]
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     model = AutoModelForCausalLM.from_pretrained(
@@ -90,32 +84,20 @@ def main() -> None:
     ).to(device).eval()
 
     _block_lora_network_calls(model)
+    return model
 
-    print("READY", flush=True)
 
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            request = json.loads(line)
-            with Image.open(request["image_path"]) as raw_image:
-                if raw_image.mode != "RGB":
-                    raw_image = raw_image.convert("RGB")
-                # No `settings=` kwarg - see _block_lora_network_calls and
-                # the module docstring above.
-                result = model.query(
-                    image=raw_image,
-                    question=request["question"],
-                    reasoning=bool(request.get("reasoning", False)),
-                    stream=False,
-                )
-            response = {"answer": result["answer"].strip()}
-        except Exception as e:
-            response = {"error": f"{type(e).__name__}: {e}"}
-
-        print(json.dumps(response), flush=True)
+def _query(model, image, question, extra):
+    # No `settings=` kwarg - see _block_lora_network_calls and the
+    # module docstring above.
+    result = model.query(
+        image=image,
+        question=question,
+        reasoning=bool(extra.get("reasoning", False)),
+        stream=False,
+    )
+    return result["answer"]
 
 
 if __name__ == "__main__":
-    main()
+    run_worker(_load, _query)
