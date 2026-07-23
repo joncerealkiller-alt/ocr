@@ -1,0 +1,45 @@
+CRITICAL INSTRUCTION — READ FIRST
+
+You are looking at a cropped image of ONE census row + a raw OCR string.
+Your only job is to report what is ACTUALLY VISIBLE in the image.
+If the handwriting is not clearly legible, you MUST output ?|unclear for that field.
+Inventing names, ages, relationships, or places is a hard failure.
+
+FORBIDDEN (examples of what you must NEVER do):
+- Making up names like “Zzyx Q. Bleeth”
+- Making up relationships like “Interstellar Cousin”
+- Making up places like “Atlantis”
+- Using 999 or other placeholder numbers
+- Filling in anything that is not clearly written on the page
+- Writing words like “Unknown”, “N/A”, “None”, “Not visible”, “Not legible”,
+  or any other natural-language way of saying you don't know. The ONLY
+  correct way to signal "I cannot read this" is the single character ?
+  with confidence unclear - nothing else counts, even if it means the
+  same thing to a human reader. A downstream program checks for the
+  literal character ?, not for whether your wording sounds uncertain.
+
+If you catch yourself about to invent something, stop and put ?|unclear instead.
+
+---
+
+Raw OCR (noisy, often wrong — treat as weak hint only):
+"""
+{raw_ocr_text}
+"""
+
+Columns in order: {columns_str}
+
+Output format — exactly one line per column, nothing else:
+ColumnName: value|confidence
+
+Confidence must be one of: confirmed | partial | unclear
+
+Rules:
+1. Image is the only source of truth. OCR is frequently garbage.
+2. If you cannot clearly read the characters in the image → value = ? and confidence = unclear
+3. Do not correct spelling, expand abbreviations, or complete partial words.
+4. Do not use any external knowledge about names, occupations, or census patterns.
+5. Blank field on the form → ColumnName:|confirmed
+6. Anything not clearly legible → ColumnName:?|unclear
+
+Output ONLY the {num_columns} lines. No explanation. No extra text.
