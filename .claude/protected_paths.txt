@@ -1,0 +1,20 @@
+# Paths (relative to the project root) that must NEVER be targeted by a
+# recursive/force delete command (rm -rf, Remove-Item -Recurse, git
+# clean -f, etc.) without explicit, separate user confirmation done
+# manually - not via a reused or scripted cleanup command.
+#
+# Enforced by .claude/hooks/block_protected_delete.py, wired in as a
+# PreToolUse hook on Bash/PowerShell in .claude/settings.json. To
+# protect an additional directory, just add a line below - no code
+# changes needed. One path per line, forward or back slashes both
+# work, '#' starts a comment.
+#
+# Added 2026-07-26 after a real incident: a `rm -rf
+# data/outputs/dewarped` cleanup command, reused carelessly from
+# earlier test cleanup, destroyed 25 real, manually-dewarped images
+# with no way to recover them.
+
+data/outputs/dewarped
+data/outputs/row_segmentation
+data/outputs/lora_dataset
+data/outputs/scoring_reports

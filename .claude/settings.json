@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/block_protected_delete.py",
+            "timeout": 10,
+            "statusMessage": "Checking against protected-path list..."
+          }
+        ]
+      }
+    ]
+  }
+}
