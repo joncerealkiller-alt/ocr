@@ -31,6 +31,18 @@ max_pixels: null
 reasoning_toggle_mechanism: system_prompt
 reasoning_enabled: false
 
+# Constrained decoding (2026-07-24, enabled 2026-07-26) - masks generation
+# to only allow expected-script characters (Latin/accented-Latin letters,
+# digits, this project's own output-format punctuation, including
+# underscore for document_type/personal_names/etc.), preventing off-script
+# token fallback. Turned ON after real evidence from a live Gemma run:
+# fell back to Chinese/Korean/other-script tokens under low visual
+# confidence - this project has no foreign-language documents, so those
+# script ranges are pure noise here, same reasoning as the earlier
+# Cyrillic case this mechanism was originally built for (see
+# core/loaders/constrained_decoding.py).
+restrict_output_charset: true
+
 prompt_version: v1
 prompt_text: ""
 

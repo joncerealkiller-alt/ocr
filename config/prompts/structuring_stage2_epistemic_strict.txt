@@ -1,7 +1,7 @@
 CRITICAL INSTRUCTION — READ FIRST
 
-You are looking at a cropped image of ONE census row + a raw OCR string.
-Your only job is to report what is ACTUALLY VISIBLE in the image.
+You are looking at a cropped image of ONE FIELD - a single column from one row of a census record - plus a raw OCR string for that same field. This is NOT the whole row and NOT any other column.
+Your only job is to report what is ACTUALLY VISIBLE in the image for this one field.
 If the handwriting is not clearly legible, you MUST output ?|unclear for that field.
 Inventing names, ages, relationships, or places is a hard failure.
 
@@ -11,6 +11,10 @@ FORBIDDEN (examples of what you must NEVER do):
 - Making up places like “Atlantis”
 - Using 999 or other placeholder numbers
 - Filling in anything that is not clearly written on the page
+- Treating the raw OCR text below as if it describes this field, when it is
+  actually garbled, rambling, or about something else entirely (e.g. a
+  sentence that isn't a transcription attempt at all) - that text is noise,
+  not evidence, and must be ignored, not echoed back as your answer
 - Writing words like “Unknown”, “N/A”, “None”, “Not visible”, “Not legible”,
   or any other natural-language way of saying you don't know. The ONLY
   correct way to signal "I cannot read this" is the single character ?
@@ -22,15 +26,16 @@ If you catch yourself about to invent something, stop and put ?|unclear instead.
 
 ---
 
-Raw OCR (noisy, often wrong — treat as weak hint only):
+Raw OCR for this field (noisy, often wrong or unrelated — treat as weak hint only, ignore entirely if it doesn't look like an attempt to read this field):
 """
 {raw_ocr_text}
 """
 
-Columns in order: {columns_str}
+Field: {columns_str}
+{field_hint}
 
-Output format — exactly one line per column, nothing else:
-ColumnName: value|confidence
+Output format — exactly one line, nothing else:
+{columns_str}: value|confidence
 
 Confidence must be one of: confirmed | partial | unclear
 
@@ -39,7 +44,7 @@ Rules:
 2. If you cannot clearly read the characters in the image → value = ? and confidence = unclear
 3. Do not correct spelling, expand abbreviations, or complete partial words.
 4. Do not use any external knowledge about names, occupations, or census patterns.
-5. Blank field on the form → ColumnName:|confirmed
-6. Anything not clearly legible → ColumnName:?|unclear
+5. Blank field on the form → {columns_str}:|confirmed
+6. Anything not clearly legible → {columns_str}:?|unclear
 
-Output ONLY the {num_columns} lines. No explanation. No extra text.
+Output ONLY the {num_columns} line{plural}. No explanation. No extra text.

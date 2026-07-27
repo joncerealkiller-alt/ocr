@@ -10,7 +10,7 @@ This is what makes it safe to experiment freely - nothing here can
 contaminate the real pipeline's data.
 
 Usage:
-    python model_assessment.py
+    python scripts/model_assessment.py
 
 Workflow: pick an image, pick a bucket type (for schema validation
 context, since ExtractionResult needs a category), pick a prompt file,
@@ -46,12 +46,16 @@ from tkinter import (
 from PIL import Image, ImageTk
 from pydantic import ValidationError
 
+# Moved into scripts/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the `core.*`
+# imports below will resolve.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from core.loaders.base_loader import GenerationConfig, load_model_config
 from core.loader_registry import LOADER_REGISTRY
 from core.schema import DocumentCategory, ConfidenceLevel
 from core.image_preprocessing import PREPROCESSING_PROFILES, apply_profile
-
-PROJECT_ROOT = Path(__file__).resolve().parent
 MODELS_DIR = PROJECT_ROOT / "config" / "models"
 PROMPTS_DIR = PROJECT_ROOT / "config" / "prompts"
 BUCKET_PROFILES_DIR = PROJECT_ROOT / "config" / "bucket_profiles"

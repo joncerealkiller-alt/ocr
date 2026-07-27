@@ -118,14 +118,16 @@ class GotOcr2Loader(BaseLoader):
 
         stop_strings = self.config.stop_string or "<|im_end|>"
 
+        gen_kwargs = dict(
+            do_sample=self.config.do_sample,
+            tokenizer=self.processor.tokenizer,
+            stop_strings=stop_strings,
+            max_new_tokens=self.config.max_new_tokens,
+        )
+        self._maybe_add_charset_logits_processor(gen_kwargs)
+
         with torch.inference_mode():
-            generated_ids = self.model.generate(
-                **inputs,
-                do_sample=self.config.do_sample,
-                tokenizer=self.processor.tokenizer,
-                stop_strings=stop_strings,
-                max_new_tokens=self.config.max_new_tokens,
-            )
+            generated_ids = self.model.generate(**inputs, **gen_kwargs)
 
         decoded = self.processor.batch_decode(
             generated_ids[:, inputs["input_ids"].shape[1]:],

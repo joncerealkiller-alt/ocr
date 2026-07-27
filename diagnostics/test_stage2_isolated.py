@@ -30,13 +30,13 @@ under the tester's direct control is the simulated stage-1 text.
 
 Usage:
     # Simulate an empty stage-1 reading (the exact failure case):
-    python test_stage2_isolated.py <sidecar.json> config/columns/relationship_only.txt --row 5 --structure-model qwen3vl4b --simulated-ocr ""
+    python diagnostics/test_stage2_isolated.py <sidecar.json> config/columns/relationship_only.txt --row 5 --structure-model qwen3vl4b --simulated-ocr ""
 
     # Simulate garbled/unrelated stage-1 text:
-    python test_stage2_isolated.py <sidecar.json> config/columns/relationship_only.txt --row 5 --structure-model qwen3vl4b --simulated-ocr "4.2.2019"
+    python diagnostics/test_stage2_isolated.py <sidecar.json> config/columns/relationship_only.txt --row 5 --structure-model qwen3vl4b --simulated-ocr "4.2.2019"
 
     # Read the simulated text from a file instead (for longer/special content):
-    python test_stage2_isolated.py <sidecar.json> config/columns/relationship_only.txt --row 5 --structure-model qwen3vl4b --simulated-ocr-file some_text.txt
+    python diagnostics/test_stage2_isolated.py <sidecar.json> config/columns/relationship_only.txt --row 5 --structure-model qwen3vl4b --simulated-ocr-file some_text.txt
 
 What to look for in the result: if the output still guesses a
 plausible-but-wrong word with no visible connection to the real
@@ -52,6 +52,11 @@ import argparse
 import sys
 import time
 from pathlib import Path
+
+# Moved into diagnostics/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the `core.*`
+# imports below will resolve.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.row_segmentation import load_sidecar, crop_region_from_source, compute_exclude_ranges
 from core.loader_registry import LOADER_REGISTRY

@@ -135,6 +135,7 @@ class InternVLLoader(BaseLoader):
         if self.config.stop_string:
             gen_kwargs["stop_strings"] = [self.config.stop_string]
             gen_kwargs["tokenizer"] = self.processor.tokenizer
+        self._maybe_add_charset_logits_processor(gen_kwargs)
 
         with torch.inference_mode():
             generated_ids = self.model.generate(**inputs, **gen_kwargs)

@@ -146,6 +146,18 @@ class GenerationConfig:
     prompt_version: str = "v1"
     prompt_text: str = ""
 
+    # Constrained decoding (2026-07-24) - masks generation to only allow
+    # expected-script characters (Latin letters/accented Latin, digits,
+    # this project's own output-format punctuation), forcing the model
+    # to pick its best answer from what's actually plausible instead of
+    # falling back to a high-probability-but-wrong-script token (real
+    # evidence: multiple runs this session produced stray Cyrillic
+    # fragments under low visual confidence). See
+    # core/loaders/constrained_decoding.py for the full mechanism and
+    # which loaders it applies to. Opt-in (default False) - a deliberate
+    # behavior change like reasoning_enabled, not silently applied.
+    restrict_output_charset: bool = False
+
     extra: dict[str, Any] = field(default_factory=dict)
 
     def build_max_memory_map(self) -> Optional[dict]:
@@ -201,6 +213,7 @@ class GenerationConfig:
             "do_image_splitting": self.do_image_splitting,
             "reasoning_enabled": self.reasoning_enabled,
             "prompt_version": self.prompt_version,
+            "restrict_output_charset": self.restrict_output_charset,
         }
         blob = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(blob).hexdigest()[:12]
@@ -294,6 +307,45 @@ class BaseLoader(ABC):
         them if needed during its own cleanup.
         """
         pass
+
+    def _maybe_add_charset_logits_processor(self, gen_kwargs: dict) -> None:
+        """
+        Mutates gen_kwargs IN PLACE, adding an AllowedCharsLogitsProcessor
+        (core/loaders/constrained_decoding.py) to its "logits_processor"
+        list when self.config.restrict_output_charset is True - a no-op
+        otherwise (default False), so calling this unconditionally at
+        the top of every qualifying loader's _run_generate() before its
+        own model.generate(**inputs, **gen_kwargs) call is always safe -
+        no `if` needed at each call site.
+
+        Only meaningful for loaders that call transformers' generate()
+        directly with a real logits_processor= kwarg - see constrained_
+        decoding.py's module docstring for the real, confirmed-by-audit
+        list of which loaders in this project qualify (most do) and
+        which don't (ChandraLoader - a different package's own generate_
+        hf(), no hook exposed; MoondreamLoader - a separate-venv
+        subprocess whose public API has no token-level hook, though a
+        private-internals hook is confirmed possible if ever needed).
+        Loaders that don't qualify simply never call this method.
+
+        Requires self.tokenizer to already be set (true for every
+        qualifying loader once initialize_model_and_tokenizer() has run,
+        which is always the case by the time _run_generate() executes) -
+        raises clearly rather than silently skipping the mask if that
+        invariant is somehow violated, since a silently-ignored opt-in
+        flag would be a worse surprise than a loud error.
+        """
+        if not self.config.restrict_output_charset:
+            return
+        if self.tokenizer is None:
+            raise RuntimeError(
+                f"{type(self).__name__}: restrict_output_charset=True but "
+                "self.tokenizer is not set - initialize_model_and_tokenizer() "
+                "must run before _run_generate()."
+            )
+        from core.loaders.constrained_decoding import AllowedCharsLogitsProcessor
+        gen_kwargs.setdefault("logits_processor", [])
+        gen_kwargs["logits_processor"].append(AllowedCharsLogitsProcessor(self.tokenizer))
 
     def classify(self, file_path: str, raw_image: Any) -> ClassificationResult:
         prompt = self._build_prompt(task="classify")

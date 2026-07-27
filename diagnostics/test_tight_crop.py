@@ -14,13 +14,21 @@ images at all - fixed alongside this).
 No pytest dependency, matching this project's other test_*.py files -
 plain asserts, run directly:
 
-    python test_tight_crop.py
+    python diagnostics/test_tight_crop.py
 
 Exits non-zero (via AssertionError) on any failure, prints PASS lines
 for each check on success.
 """
 
 from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Moved into diagnostics/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the `core.*`
+# import below will resolve.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from PIL import Image
 

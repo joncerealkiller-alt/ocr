@@ -4,22 +4,24 @@ Jon's request: a way to run the pipeline's CLI tools without needing
 to keep the README open for exact flag names.
 
 ARCHITECTURE: this GUI calls the REAL CLI entry points as subprocesses
-(python test_row_segmentation.py ..., python run_row_extraction.py ...,
-etc.) - it does NOT reimplement any of their processing logic. Every
-option shown here maps to an actual argparse flag in the real script,
-cross-checked directly against each script's add_argument() calls
-before this GUI was built, not guessed or half-remembered. If a CLI
-script's options change, this GUI's comboboxes may go stale, but the
-actual command that runs is always exactly what the real script defines
-- there's no separate pipeline implementation here to drift out of sync
-with the one that matters.
+(python scripts/run_row_extraction.py ..., python diagnostics/
+test_row_segmentation.py ..., etc. - paths updated 2026-07-25 for the
+repo-root reorganization, see README.md) - it does NOT reimplement any
+of their processing logic. Every option shown here maps to an actual
+argparse flag in the real script, cross-checked directly against each
+script's add_argument() calls before this GUI was built, not guessed or
+half-remembered. If a CLI script's options change, this GUI's
+comboboxes may go stale, but the actual command that runs is always
+exactly what the real script defines - there's no separate pipeline
+implementation here to drift out of sync with the one that matters.
 
-Standalone GUI tools already built this session (model_assessment.py,
-review_uncertain.py, row_segmentation_ui.py, build_manifest.py) are NOT
-re-wrapped as option-driven tabs - they're full self-contained apps, so
-this GUI just launches them as separate processes via simple buttons,
-same "call the real entry point" principle applied to a different shape
-of tool.
+Standalone GUI tools already built this session (scripts/
+model_assessment.py, debug_tools/review_uncertain.py, ui/
+row_segmentation_ui.py, scripts/build_manifest.py) are NOT re-wrapped
+as option-driven tabs - they're full self-contained apps, so this GUI
+just launches them as separate processes via simple buttons, same
+"call the real entry point" principle applied to a different shape of
+tool.
 """
 
 from __future__ import annotations
@@ -37,7 +39,13 @@ from tkinter import (
     DISABLED, ttk,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+# Moved into debug_tools/ (2026-07-25) - one directory deeper than repo
+# root. PROJECT_ROOT must still resolve to the actual repo root (every
+# subprocess below is launched with cwd=PROJECT_ROOT, and script paths
+# passed to those subprocesses are relative to it), and repo root needs
+# to be back on sys.path for the lazy benchmark.* import further down.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 MODELS_DIR = PROJECT_ROOT / "config" / "models"
 PROMPTS_DIR = PROJECT_ROOT / "config" / "prompts"
 COLUMNS_DIR = PROJECT_ROOT / "config" / "columns"
@@ -376,7 +384,7 @@ class SegmentationTab(CommandTab):
             if not silent:
                 messagebox.showwarning("Missing input", "Select an image first.")
             return None
-        cmd = [PYTHON, "test_row_segmentation.py", image_path,
+        cmd = [PYTHON, "diagnostics/test_row_segmentation.py", image_path,
                "--mode", self.mode_var.get(),
                "--row-count", str(self.row_count_var.get()),
                "--header-rows", str(self.header_rows_var.get()),
@@ -469,6 +477,13 @@ class RowExtractionTab(CommandTab):
         self.out_var = StringVar(value="")
         Entry(f, textvariable=self.out_var, width=47).grid(row=5, column=1, sticky="w", pady=(6, 0))
 
+        # --debug-model-inputs (2026-07-24): see core/debug_dump.py. Off
+        # by default, no effect on extraction results when unchecked.
+        self.debug_model_inputs_var = BooleanVar(value=False)
+        Checkbutton(f, text="Debug model inputs (--debug-model-inputs)",
+                    variable=self.debug_model_inputs_var,
+                    command=self.update_preview).grid(row=6, column=1, sticky="w", pady=(6, 0))
+
         for var in [self.sidecar_var, self.columns_var, self.model_var,
                     self.header_fields_var, self.max_rows_var, self.out_var]:
             var.trace_add("write", self.update_preview)
@@ -498,7 +513,7 @@ class RowExtractionTab(CommandTab):
                 messagebox.showwarning(
                     "Missing input", "Sidecar, columns file, and model are all required.")
             return None
-        cmd = [PYTHON, "run_row_extraction.py", sidecar, columns, "--model", model]
+        cmd = [PYTHON, "scripts/run_row_extraction.py", sidecar, columns, "--model", model]
         max_rows = self.max_rows_var.get().strip()
         if max_rows:
             cmd.extend(["--max-rows", max_rows])
@@ -510,6 +525,8 @@ class RowExtractionTab(CommandTab):
         out = self.out_var.get().strip()
         if out:
             cmd.extend(["--out", out])
+        if self.debug_model_inputs_var.get():
+            cmd.append("--debug-model-inputs")
         return cmd
 
     def input_folder(self) -> Path:
@@ -521,7 +538,8 @@ class RowExtractionTab(CommandTab):
 
     def capture_state(self) -> dict:
         return {"model": self.model_var.get(), "header_fields": self.header_fields_var.get(),
-                "max_rows": self.max_rows_var.get()}
+                "max_rows": self.max_rows_var.get(),
+                "debug_model_inputs": self.debug_model_inputs_var.get()}
 
     def restore_state(self, values: dict) -> None:
         if "model" in values:
@@ -530,6 +548,8 @@ class RowExtractionTab(CommandTab):
             self.header_fields_var.set(values["header_fields"])
         if "max_rows" in values:
             self.max_rows_var.set(values["max_rows"])
+        if "debug_model_inputs" in values:
+            self.debug_model_inputs_var.set(values["debug_model_inputs"])
 
 
 class TwoStageTab(CommandTab):
@@ -588,6 +608,13 @@ class TwoStageTab(CommandTab):
         self.out_var = StringVar(value="")
         Entry(f, textvariable=self.out_var, width=47).grid(row=7, column=1, sticky="w", pady=(6, 0))
 
+        # --debug-model-inputs (2026-07-24): see core/debug_dump.py. Off
+        # by default, no effect on extraction results when unchecked.
+        self.debug_model_inputs_var = BooleanVar(value=False)
+        Checkbutton(f, text="Debug model inputs (--debug-model-inputs)",
+                    variable=self.debug_model_inputs_var,
+                    command=self.update_preview).grid(row=8, column=1, sticky="w", pady=(6, 0))
+
         for var in [self.sidecar_var, self.columns_var, self.ocr_model_var,
                     self.structure_model_var, self.ocr_prompt_var, self.structuring_prompt_var,
                     self.max_rows_var, self.out_var]:
@@ -633,7 +660,7 @@ class TwoStageTab(CommandTab):
                     "Missing input",
                     "Sidecar, columns file, stage-1 model, and stage-2 model are all required.")
             return None
-        cmd = [PYTHON, "run_two_stage_extraction.py", sidecar, columns,
+        cmd = [PYTHON, "scripts/run_two_stage_extraction.py", sidecar, columns,
                "--ocr-model", ocr_model, "--structure-model", structure_model]
         max_rows = self.max_rows_var.get().strip()
         if max_rows:
@@ -651,6 +678,8 @@ class TwoStageTab(CommandTab):
         out = self.out_var.get().strip()
         if out:
             cmd.extend(["--out", out])
+        if self.debug_model_inputs_var.get():
+            cmd.append("--debug-model-inputs")
         return cmd
 
     def input_folder(self) -> Path:
@@ -665,7 +694,8 @@ class TwoStageTab(CommandTab):
                 "structure_model": self.structure_model_var.get(),
                 "ocr_prompt": self.ocr_prompt_var.get(),
                 "structuring_prompt": self.structuring_prompt_var.get(),
-                "max_rows": self.max_rows_var.get()}
+                "max_rows": self.max_rows_var.get(),
+                "debug_model_inputs": self.debug_model_inputs_var.get()}
 
     def restore_state(self, values: dict) -> None:
         if "ocr_model" in values:
@@ -678,6 +708,8 @@ class TwoStageTab(CommandTab):
             self.structuring_prompt_var.set(values["structuring_prompt"])
         if "max_rows" in values:
             self.max_rows_var.set(values["max_rows"])
+        if "debug_model_inputs" in values:
+            self.debug_model_inputs_var.set(values["debug_model_inputs"])
 
 
 class NativePromptTab(CommandTab):
@@ -740,7 +772,7 @@ class NativePromptTab(CommandTab):
             if not silent:
                 messagebox.showwarning("Missing input", "Sidecar and model are both required.")
             return None
-        cmd = [PYTHON, "test_native_prompt.py", sidecar, "--model", model]
+        cmd = [PYTHON, "diagnostics/test_native_prompt.py", sidecar, "--model", model]
         if self.target_var.get() == "header":
             cmd.append("--header")
         else:
@@ -987,7 +1019,7 @@ class ScoringTab:
         # only importing what a given tab's Run action actually needs),
         # and this scorer module has zero heavy dependencies anyway
         # (pure stdlib), so this is cheap either way.
-        from score_two_stage_against_ground_truth import score_results
+        from benchmark.score_two_stage_against_ground_truth import score_results
 
         report = score_results(results_path, gt_path, sidecar_path,
                                 model_name=self.model_name_var.get().strip() or None)
@@ -1109,18 +1141,18 @@ class ToolsTab:
               font=("Segoe UI", 9), fg="#444").pack(anchor="w", pady=(2, 12))
 
         tools = [
-            ("Row Segmentation UI", "row_segmentation_ui.py",
+            ("Row Segmentation UI", "ui/row_segmentation_ui.py",
              "Interactive, visual deskew/bounds/row confirmation - the "
              "primary tool for producing a sidecar JSON before running "
              "any extraction step."),
-            ("Model Assessment", "model_assessment.py",
+            ("Model Assessment", "scripts/model_assessment.py",
              "Test a single model/prompt/bucket-profile combination "
              "against one image, with a preprocessing dropdown and raw-"
              "output review."),
-            ("Review Uncertain", "review_uncertain.py",
+            ("Review Uncertain", "debug_tools/review_uncertain.py",
              "Manually assign a final bucket to images the classifier "
              "couldn't confidently place."),
-            ("Build Manifest", "build_manifest.py",
+            ("Build Manifest", "scripts/build_manifest.py",
              "Pick a folder of images, write data/manifest.csv - the "
              "input the Classification tab needs."),
         ]

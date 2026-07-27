@@ -222,8 +222,8 @@ def check_uncertain_gate() -> bool:
     if pending:
         print(f"\nBLOCKED: {len(pending)} row(s) still pending in "
               f"uncertain_review.csv.")
-        print("Run 'python review_uncertain.py' to clear the queue before "
-              "extraction.")
+        print("Run 'python debug_tools/review_uncertain.py' to clear the queue "
+              "before extraction.")
         print("(Rows with a logged error, e.g. file-not-found, don't count "
               "against this gate - those are pipeline failures, not "
               "classification ambiguity, and won't block extraction.)")

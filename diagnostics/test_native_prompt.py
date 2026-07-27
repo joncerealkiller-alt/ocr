@@ -24,8 +24,8 @@ the raw output directly, the same "read the raw pane" approach already
 established for Florence-2 and olmOCR's own whole-page testing.
 
 Usage:
-    python test_native_prompt.py <sidecar.json> --model olmocr_2_7b --row 6
-    python test_native_prompt.py <sidecar.json> --model olmocr_2_7b --header
+    python diagnostics/test_native_prompt.py <sidecar.json> --model olmocr_2_7b --row 6
+    python diagnostics/test_native_prompt.py <sidecar.json> --model olmocr_2_7b --header
 
 Only meaningful for loaders with a real native-prompt override
 (currently: OlmOcrLoader). For every other loader, _build_prompt(task=
@@ -43,6 +43,11 @@ import argparse
 import sys
 import time
 from pathlib import Path
+
+# Moved into diagnostics/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the `core.*`
+# imports below will resolve.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.row_segmentation import load_sidecar, crop_region_from_source
 from core.loader_registry import LOADER_REGISTRY

@@ -1,4 +1,10 @@
 file_path,category,confidence,text_density,handwriting,table_layout,faces,map_like,reason,model,prompt_version
-C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-03 131344.png,map_land_record,0.98,0.1,False,False,False,True,"The image is an aerial or satellite view showing roads, buildings, and geographic layouts.",gemma,v1
-C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-03 133216.png,map_land_record,0.98,0.0,False,False,False,True,The image is an aerial or satellite view showing geographic features and roads.,gemma,v1
-C:\Users\jonny\Pictures\Screenshots\Knott_Ancestry\Knott\T24 R22 W1.jpg,map_land_record,0.98,0.3,False,False,False,True,The image is a printed plan or map detailing a plan of a township and range.,gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\file_000000007aec723087be2dc427c14d84.png,map_land_record,0.98,0.1,False,False,False,True,"The image is an aerial or satellite view showing geographic features and roads, classifying it as a map or land record.",gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-03 131344.png,map_land_record,0.98,0.1,False,False,False,True,"The image is an aerial or satellite view showing roads, buildings, and geographic layouts.",gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-03 133216.png,map_land_record,0.98,0.0,False,False,False,True,The image is an aerial or satellite view showing geographic features and roads.,gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-07 001032.png,map_land_record,0.98,0.0,False,False,False,True,The image is an aerial or satellite view showing geographic layouts and land features.,gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-07 002716.png,map_land_record,1.0,0.0,False,False,False,True,"The image is a geographic layout showing streets and land divisions, characteristic of a map.",gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-07 002803.png,map_land_record,1.0,0.0,False,False,False,True,The image is an aerial or satellite view showing geographic layouts and roads.,gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-08 080345.png,map_land_record,0.98,0.1,False,False,False,True,The image is an aerial view showing a geographic layout of a farm property.,gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\Screenshot 2026-05-08 080359.png,map_land_record,0.98,0.0,False,False,False,True,"The image is an aerial or satellite view of a geographical area, fitting the definition of a map or geographic layout.",gemma,v1
+J:\Screenshots\Knott_Ancestry\Knott\T24 R22 W1.jpg,map_land_record,0.98,0.3,False,False,False,True,The image is a printed plan or map detailing a plan of a township and range.,gemma,v1

@@ -148,6 +148,16 @@ class FlorenceLoader(BaseLoader):
         # static code review couldn't explain. This makes it directly
         # visible whether a given setting actually reached generate(),
         # rather than continuing to guess from output differences alone.
+        # CAVEAT specific to this loader (restrict_output_charset=True):
+        # <OCR_WITH_REGION>'s location tokens (e.g. <loc_123>) contain
+        # "<"/">"/"_" - none of which are in the default allowed
+        # charset (see core/loaders/constrained_decoding.py) - so this
+        # would break bbox-preserving output if that task token is ever
+        # used with this flag on. Safe for plain <OCR> (this loader's
+        # actual documented role - see module docstring), which doesn't
+        # need location tokens in its output.
+        self._maybe_add_charset_logits_processor(gen_kwargs)
+
         print(f"[FlorenceLoader] gen_kwargs passed to generate(): {gen_kwargs}")
 
         with torch.inference_mode():

@@ -19,7 +19,7 @@ repetition_penalty: 1.15
 no_repeat_ngram_size: 5
 max_new_tokens: 512
 
-# Explicit stop condition, paired with extract_census_v3.txt's instruction
+# Explicit stop condition, paired with extractor_census_v3.txt's instruction
 # to emit this token immediately after subject_keywords and stop. Added
 # after two rounds of penalty tuning (no_repeat_ngram_size 5 -> 7) failed
 # to fix unbounded subject_keywords drift - round 2 just relocated the
@@ -43,6 +43,14 @@ max_pixels: null
 
 reasoning_toggle_mechanism: unsupported
 reasoning_enabled: false
+
+# Constrained decoding (2026-07-24) - masks generation to only allow
+# expected-script characters (Latin/accented-Latin letters, digits, this
+# project's own output-format punctuation), preventing off-script token
+# fallback (e.g. a stray Cyrillic fragment under low visual confidence -
+# real evidence, see core/loaders/constrained_decoding.py). Opt-in like
+# reasoning_enabled - default false, not a silent behavior change.
+restrict_output_charset: true
 
 prompt_version: v1
 prompt_text: ""

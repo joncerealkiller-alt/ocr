@@ -5,7 +5,7 @@ the segmentation layer works on real census pages before adding any
 model-call complexity on top.
 
 Usage:
-    python test_row_segmentation.py <image_path> [options]
+    python diagnostics/test_row_segmentation.py <image_path> [options]
 
 Normal output, written to --out (default: data/outputs/row_segmentation/):
     <name>_debug_overlay.png   - full page with detected bands drawn on it
@@ -24,7 +24,7 @@ Pass --debug-crops to ALSO save individual row PNGs for direct visual
 inspection - useful while first tuning a new document type.
 
 For genuinely interactive deskew/bounds adjustment (nudge buttons, live
-preview), use row_segmentation_ui.py instead - this CLI script is for
+preview), use ui/row_segmentation_ui.py instead - this CLI script is for
 non-interactive/batch use once settings are already confirmed.
 """
 
@@ -33,6 +33,11 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+
+# Moved into diagnostics/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the `core.*`
+# import below will resolve.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from PIL import Image
 
@@ -75,7 +80,7 @@ def main():
                               "right edge. Default: full image width.")
     parser.add_argument("--deskew-angle", type=float, default=None,
                          help="Use this EXACT deskew angle (degrees) instead of "
-                              "auto-estimating. Read off row_segmentation_ui.py's "
+                              "auto-estimating. Read off ui/row_segmentation_ui.py's "
                               "preview once you've confirmed it visually.")
     parser.add_argument("--search-radius-ratio", type=float, default=0.3,
                          help="[periodic mode only] Local refinement window size as a "

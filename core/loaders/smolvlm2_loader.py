@@ -160,6 +160,7 @@ class SmolVLM2Loader(BaseLoader):
         # supported for this architecture - Qwen3-VL's card advertised it
         # and it still turned out unsupported by generate() on that model;
         # no reason to assume it's supported here without evidence either.
+        self._maybe_add_charset_logits_processor(gen_kwargs)
 
         with torch.inference_mode():
             generated_ids = self.model.generate(**inputs, **gen_kwargs)

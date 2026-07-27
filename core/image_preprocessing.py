@@ -22,6 +22,7 @@ losing the ability to tell what actually helped.
 
 from __future__ import annotations
 
+import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 
@@ -104,6 +105,211 @@ def invert(image: Image.Image) -> Image.Image:
     profile below) rather than relied on alone.
     """
     return ImageOps.invert(image.convert("RGB"))
+
+
+def median(image: Image.Image, size: int = 3) -> Image.Image:
+    """
+    Same operation as denoise() above, exposed under its own name for
+    ui/row_segmentation_ui.py's checkbox-based preprocessing pipeline
+    (2026-07-25) - "Median" is its own independent toggle there, not
+    folded into one fixed "denoise" step. size must be odd (PIL's own
+    MedianFilter requirement); even values are bumped up by 1 rather
+    than raising, since a live-preview checkbox shouldn't throw over a
+    parameter a user could reasonably type as an even number.
+    """
+    if size % 2 == 0:
+        size += 1
+    return image.filter(ImageFilter.MedianFilter(size=size))
+
+
+def unsharp_mask(image: Image.Image, radius: float = 1.5, amount: float = 1.2) -> Image.Image:
+    """
+    PIL's own UnsharpMask filter - a different mechanism from sharpen()
+    above (ImageEnhance.Sharpness, a global sharpness scalar): this
+    sharpens edges specifically by subtracting a blurred copy of the
+    image from itself (the classic "unsharp mask" darkroom technique),
+    which tends to look less artificial on scanned handwriting than a
+    flat global sharpness boost. amount maps to PIL's percent parameter
+    (100 = PIL's own default strength; threshold left at PIL's default
+    of 3 - only differences above that are sharpened, so flat
+    background regions don't pick up sharpening noise).
+    """
+    percent = max(1, round(amount * 100))
+    return image.filter(ImageFilter.UnsharpMask(radius=radius, percent=percent, threshold=3))
+
+
+def clahe(image: Image.Image, clip_limit: float = 2.0, tile_size: int = 8) -> Image.Image:
+    """
+    Contrast Limited Adaptive Histogram Equalization, implemented in
+    plain numpy - this project is deliberately dependency-free (PIL +
+    numpy only, no OpenCV; see core/row_segmentation.py's manually
+    implemented Otsu threshold for the same discipline applied
+    elsewhere in this codebase), and CLAHE is conventionally an OpenCV
+    (`cv2.createCLAHE`) call, so it's reimplemented here rather than
+    adding OpenCV as a new dependency for one function.
+
+    Operates on LUMINANCE only (converts to grayscale first, same
+    RGB-compatibility handling as grayscale() above) - not per-channel
+    color CLAHE. Unlike autocontrast()/enhance_contrast() above (both
+    GLOBAL - one stretch/scale for the whole image), this equalizes
+    contrast LOCALLY per tile, which is what actually helps a scan
+    where different regions of the same page sit at different
+    background tones (e.g. a shadow or aging gradient across the
+    page) - a global stretch can't fix that, since it's driven by the
+    same single histogram everywhere.
+
+    tile_size is a GRID COUNT (e.g. 8 = an 8x8 grid of tiles spanning
+    the whole image), matching OpenCV's `tileGridSize` convention most
+    users encountering CLAHE elsewhere will already expect - NOT a
+    pixel dimension.
+
+    Standard algorithm, not a shortcut: each tile's own 256-bin
+    histogram is clipped at `clip_limit * tile_pixel_count / 256`
+    (excess redistributed uniformly across all bins, preventing the
+    "hard clip and discard" look) then converted to a per-tile
+    cumulative-distribution mapping; each pixel's final value is a
+    BILINEAR interpolation between its 4 nearest tiles' mappings, not
+    just its own tile's mapping alone - interpolation is what prevents
+    visible blocking artifacts at tile boundaries (a per-tile-only
+    mapping is windowed histogram equalization, not real CLAHE).
+    Vectorized with numpy fancy indexing rather than a per-pixel Python
+    loop, since these are full page scans (thousands of pixels wide).
+    """
+    gray_img = ImageOps.grayscale(image.convert("RGB"))
+    gray = np.array(gray_img)
+    h, w = gray.shape
+    ty = tx = max(1, int(tile_size))
+
+    y_edges = np.linspace(0, h, ty + 1).astype(int)
+    x_edges = np.linspace(0, w, tx + 1).astype(int)
+
+    luts = np.zeros((ty, tx, 256))
+    for j in range(ty):
+        for i in range(tx):
+            tile = gray[y_edges[j]:y_edges[j + 1], x_edges[i]:x_edges[i + 1]]
+            hist, _ = np.histogram(tile, bins=256, range=(0, 256))
+            hist = hist.astype(np.float64)
+            if clip_limit > 0 and tile.size > 0:
+                clip = max(1.0, clip_limit * tile.size / 256.0)
+                excess = np.clip(hist - clip, 0, None).sum()
+                hist = np.minimum(hist, clip)
+                hist = hist + excess / 256.0
+            cdf = np.cumsum(hist)
+            if cdf[-1] > 0:
+                cdf = cdf / cdf[-1] * 255.0
+            luts[j, i] = cdf
+
+    centers_y = (y_edges[:-1] + y_edges[1:]) / 2.0
+    centers_x = (x_edges[:-1] + x_edges[1:]) / 2.0
+
+    j_pos = np.interp(np.arange(h), centers_y, np.arange(ty))
+    i_pos = np.interp(np.arange(w), centers_x, np.arange(tx))
+    j0 = np.clip(np.floor(j_pos).astype(int), 0, ty - 1)
+    j1 = np.clip(j0 + 1, 0, ty - 1)
+    i0 = np.clip(np.floor(i_pos).astype(int), 0, tx - 1)
+    i1 = np.clip(i0 + 1, 0, tx - 1)
+    wj = np.clip(j_pos - j0, 0, 1)
+    wi = np.clip(i_pos - i0, 0, 1)
+
+    J0, I0 = np.meshgrid(j0, i0, indexing="ij")
+    J1, I1 = np.meshgrid(j1, i1, indexing="ij")
+    WJ, WI = np.meshgrid(wj, wi, indexing="ij")
+
+    top = luts[J0, I0, gray] * (1 - WI) + luts[J0, I1, gray] * WI
+    bottom = luts[J1, I0, gray] * (1 - WI) + luts[J1, I1, gray] * WI
+    result = np.clip(top * (1 - WJ) + bottom * WJ, 0, 255).astype(np.uint8)
+
+    return Image.fromarray(result).convert("RGB")
+
+
+def adaptive_threshold(image: Image.Image, block_size: int = 11, C: float = 2.0) -> Image.Image:
+    """
+    Local (not global) binarization - each pixel is compared against
+    the mean of its OWN neighborhood rather than one fixed threshold
+    for the whole page. Different use case from core/row_segmentation.
+    py's global Otsu threshold (built for row-band detection): this is
+    a display/legibility transform for uneven lighting across a single
+    scan (a shadow or vignette means one fixed global threshold can't
+    be right everywhere at once - one region ends up too dark, another
+    washed out, at the same threshold value).
+
+    Local mean computed via PIL's own BoxBlur (fast, C-implemented) -
+    keeps this dependency-free (PIL + numpy only, no OpenCV, no manual
+    sliding-window Python loop over every pixel). block_size must be
+    odd (matches OpenCV's adaptiveThreshold convention most users will
+    already expect); even values are bumped up by 1 rather than
+    raising, same reasoning as median() above.
+
+    Formula matches OpenCV's ADAPTIVE_THRESH_MEAN_C exactly: output is
+    255 where the source pixel exceeds (local mean - C), else 0.
+    """
+    if block_size % 2 == 0:
+        block_size += 1
+    gray_img = ImageOps.grayscale(image.convert("RGB"))
+    local_mean_img = gray_img.filter(ImageFilter.BoxBlur(block_size // 2))
+    gray = np.array(gray_img, dtype=np.float64)
+    local_mean = np.array(local_mean_img, dtype=np.float64)
+    binary = np.where(gray > (local_mean - C), 255, 0).astype(np.uint8)
+    return Image.fromarray(binary).convert("RGB")
+
+
+# Fixed internal execution order for apply_pipeline() below - checkboxes
+# in ui/row_segmentation_ui.py's Preprocessing section only ever
+# enable/disable a step, never reorder it. Deliberate ordering (Jon's
+# direction, 2026-07-25): grayscale/invert establish the tonal baseline
+# before anything contrast- or edge-based runs; CLAHE (local contrast)
+# before noise reduction/sharpening so those don't operate on the
+# unequalized original; sharpening before upscale so edge enhancement
+# isn't itself upscaled and softened again; upscale before threshold so
+# binarization happens at final resolution, not on a source that's
+# about to be resized out from under it. Deskew is NOT a step here - it
+# already happens upstream, once, via apply_deskew_angle() before this
+# pipeline ever runs, since it's a geometric correction the rest of
+# this UI already owns, not a display/legibility filter.
+PIPELINE_ORDER = [
+    "grayscale", "invert", "clahe", "median", "unsharp", "upscale", "adaptive_threshold",
+]
+
+_PIPELINE_FUNCTIONS = {
+    "grayscale": lambda img, cfg: grayscale(img),
+    "invert": lambda img, cfg: invert(img),
+    "clahe": lambda img, cfg: clahe(
+        img, clip_limit=cfg.get("clip_limit", 2.0), tile_size=cfg.get("tile_size", 8)),
+    "median": lambda img, cfg: median(img, size=cfg.get("size", 3)),
+    "unsharp": lambda img, cfg: unsharp_mask(
+        img, radius=cfg.get("radius", 1.5), amount=cfg.get("amount", 1.2)),
+    "upscale": lambda img, cfg: upscale(img, factor=cfg.get("factor", 2.0)),
+    "adaptive_threshold": lambda img, cfg: adaptive_threshold(
+        img, block_size=cfg.get("block_size", 11), C=cfg.get("C", 2.0)),
+}
+
+
+def apply_pipeline(image: Image.Image, config: dict) -> Image.Image:
+    """
+    Applies whichever steps in PIPELINE_ORDER are enabled, in that
+    FIXED order, regardless of what order they appear in `config` -
+    the checkbox UI only controls enabled/disabled per step, never
+    sequencing, per PIPELINE_ORDER's own docstring above (accidentally
+    running e.g. threshold before CLAHE would binarize the image before
+    contrast equalization ever saw real grayscale data to work with).
+
+    config shape: {"grayscale": {"enabled": bool}, "clahe": {"enabled":
+    bool, "clip_limit": float, "tile_size": int}, ...} - one entry per
+    PIPELINE_ORDER name, each with at least "enabled"; missing entries
+    or missing param keys fall back to the defaults baked into
+    _PIPELINE_FUNCTIONS above, so a caller only needs to send the
+    fields that differ from default. Same never-mutates-input,
+    always-returns-a-new-image contract as apply_profile() above.
+    """
+    result = image.copy()
+    if result.mode != "RGB":
+        result = result.convert("RGB")
+    for step_name in PIPELINE_ORDER:
+        step_cfg = config.get(step_name) or {}
+        if not step_cfg.get("enabled"):
+            continue
+        result = _PIPELINE_FUNCTIONS[step_name](result, step_cfg)
+    return result
 
 
 PREPROCESSING_PROFILES = {

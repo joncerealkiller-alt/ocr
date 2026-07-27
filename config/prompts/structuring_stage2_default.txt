@@ -1,27 +1,28 @@
-Below is a raw OCR reading of ONE ROW from a census/tabular record, produced by a different tool. The image of that same row is also provided to you directly.
+Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular record - produced by a different tool. The image shown to you is that SAME field crop, not the whole row and not any other column.
 
-Raw OCR reading:
+Raw OCR reading of this field:
 """
 {raw_ocr_text}
 """
 
-Your job: organize the information above into the columns listed below, using the actual image to check or correct the raw OCR reading where it looks wrong, incomplete, or ambiguous - do not just copy the raw reading blindly if the image shows something different.
+Your job: report this ONE field's real value, using the actual image as the authoritative source - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the image shows. Do not just copy the raw reading blindly if the image shows something different, and do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all - that kind of text is noise, not evidence.
 
-The columns, in order, are: {columns_str}
+The field is: {columns_str}
+{field_hint}
 
-For each column, write the column name, a colon, the value, a pipe character, then a confidence word. Here is a complete worked example using invented data (not from your image - just showing the format):
+Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete worked example using invented data (not from your image - just showing the format):
 
 {example_lines}
 
-Now do the same thing for the REAL columns of this row, using the values actually visible in the image and supported by the raw OCR reading above - not the example values.
+Now do the same thing for the REAL field shown in the image ({columns_str}), using the value actually visible there - not the example value.
 
 Confidence must be exactly one of: confirmed, partial, unclear
 - confirmed: every character is clearly readable with no doubt
 - partial: mostly readable, some uncertainty
 - unclear: not legible enough to read with confidence
 
-If a column is genuinely blank for this row, write the column name and colon followed immediately by the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+If the field is genuinely blank on the form, write the field name and colon followed immediately by the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
 
-If the raw OCR reading above is empty, garbled, or clearly unrelated to this field, do NOT treat that as evidence the field is blank on the form. Look at the image directly and read it yourself; if you genuinely cannot determine a value from the image either, write ? as the value with confidence unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g. an unrelated sentence, a description of a different kind of image entirely), ignore it completely - it is not evidence about what's on the form. Look at the image directly and read it yourself; if you genuinely cannot determine a value from the image either, write ? as the value with confidence unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
 
-Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation not shown in the example. Output ONLY {num_columns} line{plural}, one per column, then stop.
+Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation not shown in the example. Output ONLY {num_columns} line{plural}, nothing else, then stop.

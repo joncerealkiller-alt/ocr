@@ -2,7 +2,7 @@
 Minimal manifest builder for smoke-testing the classifier stage.
 
 Usage:
-    python build_manifest.py
+    python scripts/build_manifest.py
 
 Opens a native folder picker (tkinter, no extra deps). Walks the
 selected folder for image files and writes data/manifest.csv with
@@ -23,7 +23,8 @@ from tkinter import Tk, filedialog
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp"}
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+# Moved into scripts/ (2026-07-25) - one directory deeper than repo root.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = PROJECT_ROOT / "data" / "manifest.csv"
 
 

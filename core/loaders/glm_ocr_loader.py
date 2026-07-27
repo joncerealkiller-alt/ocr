@@ -35,7 +35,7 @@ name, one address per field) - it never demonstrates an array-of-objects
 pattern for a variable-length list of repeated entries, which is what
 our actual schema needs (multiple names, multiple places, each with its
 own confidence tag). There's no confirmation this generalizes. The
-prompt (config/prompts/glm_ocr_extract.txt) asks for arrays anyway,
+prompt (config/prompts/loader_glm_ocr_extract.txt) asks for arrays anyway,
 since that's the correct target shape to test - but _parse_extraction
 below defensively coerces a lone dict into a one-item list for each
 field, in case the model returns a single object per field instead of
@@ -209,6 +209,7 @@ class GlmOcrLoader(BaseLoader):
                 gen_kwargs["length_penalty"] = self.config.length_penalty
             if self.config.early_stopping:
                 gen_kwargs["early_stopping"] = self.config.early_stopping
+        self._maybe_add_charset_logits_processor(gen_kwargs)
 
         with torch.inference_mode():
             generated_ids = self.model.generate(**inputs, **gen_kwargs)
@@ -240,13 +241,13 @@ class GlmOcrLoader(BaseLoader):
             raise ValueError(
                 f"GLM-OCR output was not valid JSON for {file_path}. This "
                 f"is EXPECTED and fine if you deliberately used a raw "
-                f"'Document Parsing' prompt (e.g. glm_ocr_text_recognition.txt, "
+                f"'Document Parsing' prompt (e.g. loader_glm_ocr_text_recognition.txt, "
                 f"'Text Recognition:') to compare pure extraction quality "
                 f"against JSON-schema adherence - read raw_output directly "
                 f"for the transcription text in that case, this Schema: "
                 f"FAIL is not a real problem. If you intended the "
                 f"'Information Extraction' JSON mode instead "
-                f"(glm_ocr_extract.txt / glm_ocr_extract_flat.txt), then "
+                f"(loader_glm_ocr_extract.txt / loader_glm_ocr_extract_flat.txt), then "
                 f"this genuinely means the model didn't follow the "
                 f"requested schema format. Raw output: {raw_output[:300]!r}. "
                 f"JSON error: {e}"

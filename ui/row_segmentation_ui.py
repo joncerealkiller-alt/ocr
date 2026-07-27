@@ -32,8 +32,17 @@ import json
 import platform
 import queue
 import subprocess
+import sys
 import threading
 from pathlib import Path
+
+# Moved into ui/ (2026-07-25) - one directory deeper than repo root, so
+# repo root must be put back on sys.path before any `core.*` import
+# below will resolve. See PROJECT_ROOT's own reuse further down for
+# path-building.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from tkinter import (
     Tk, Frame, Label, Button, Entry, StringVar, OptionMenu, Text,
     Checkbutton, BooleanVar, filedialog, messagebox, END, NORMAL, DISABLED,
@@ -46,9 +55,9 @@ from core.row_segmentation import (
     segment_rows, segment_rows_periodic, segment_rows_uniform_tile,
     estimate_table_extent, estimate_deskew_angle, apply_deskew_angle,
     build_sidecar, save_sidecar, load_sidecar, update_sidecar,
+    update_sidecar_preprocessing,
 )
-
-PROJECT_ROOT = Path(__file__).resolve().parent
+from core.image_preprocessing import apply_pipeline
 OUTPUT_DIR = PROJECT_ROOT / "data" / "outputs" / "row_segmentation"
 PREVIEW_SIZE = (760, 920)
 
@@ -73,6 +82,15 @@ PER_IMAGE_FIELDS = [
 GENERAL_FIELDS = [
     "mode_var", "row_count_var", "search_radius_var", "header_rows_var",
     "debug_crops_var", "padding_var", "padding_pct_var", "zoom_var",
+    # Preprocessing (2026-07-25) - a "how do I want to view any scan"
+    # choice, more like zoom than per-image geometry, so it belongs
+    # here rather than in PER_IMAGE_FIELDS.
+    "preproc_grayscale_var", "preproc_invert_var",
+    "preproc_clahe_var", "preproc_clahe_clip_var", "preproc_clahe_tile_var",
+    "preproc_median_var", "preproc_median_size_var",
+    "preproc_unsharp_var", "preproc_unsharp_radius_var", "preproc_unsharp_amount_var",
+    "preproc_upscale_var", "preproc_upscale_factor_var",
+    "preproc_adaptive_threshold_var", "preproc_at_block_size_var", "preproc_at_c_var",
 ]
 
 
@@ -93,6 +111,30 @@ def _save_ui_state(state: dict) -> None:
 
 
 class RowSegmentationApp:
+    # Click-to-set (2026-07-26, Jon's direction): these bounds are all
+    # "identify a visual location on the page" values - same direct-
+    # manipulation interaction style as ui/dewarp_preprocessor_ui.py's
+    # corner clicking, instead of estimate-type-refresh-repeat. Row 1
+    # top/bottom deliberately have NO entry here - Jon's explicit
+    # direction that those stay precision/manual-refinement-only (a 1px
+    # error there compounds across row_count tiled rows, unlike every
+    # field below, which is set once).
+    _BORDER_CLICK_BUTTON_LABELS = {
+        "table_top": "Set Top",
+        "table_bottom": "Set Bottom",
+        "table_left": "Set Left",
+        "table_right": "Set Right",
+        "metadata_bottom": "Set Metadata Bottom",
+        "header_box_top": "Set Header Top",
+        "header_box_bottom": "Set Header Bottom",
+    }
+    _BORDER_CLICK_ORIENTATION = {
+        "table_top": "h", "table_bottom": "h",
+        "table_left": "v", "table_right": "v",
+        "metadata_bottom": "h",
+        "header_box_top": "h", "header_box_bottom": "h",
+    }
+
     def __init__(self, root: Tk):
         self.root = root
         root.title("Row Segmentation - visual adjustment workflow (no model calls)")
@@ -106,6 +148,13 @@ class RowSegmentationApp:
         self._last_overlay_path: str | None = None
         self._tk_preview = None
         self._preview_scale = 1.0
+        self._preview_render_size: tuple[int, int] = (0, 0)
+
+        # Click-to-set border mode (2026-07-26): None when idle, else one
+        # of _BORDER_CLICK_BUTTON_LABELS's keys - see _start_border_click_
+        # mode()/_handle_border_click() below.
+        self._border_click_mode: str | None = None
+        self._border_guide_line_id: int | None = None
 
         # Column masking (2026-07-15, per Jon's direction, corrected):
         # real testing showed Age contamination pulling from DIFFERENT
@@ -151,8 +200,127 @@ class RowSegmentationApp:
         self.mask_apply_header_var = BooleanVar(value=False)
         self.mask_apply_rows_var = BooleanVar(value=True)
 
+        # Preprocessing (2026-07-25, per Jon's direction): applied to the
+        # PREVIEW only, on top of the existing deskew step - never
+        # touches the original source image on disk. Checkboxes only
+        # ever enable/disable a step; the actual execution order is
+        # fixed internally by core.image_preprocessing.PIPELINE_ORDER,
+        # not by which order the user happens to check boxes in (Jon's
+        # explicit requirement - e.g. running threshold before CLAHE is
+        # rarely useful, so that ordering mistake isn't offered as an
+        # option at all). Saved to the sidecar's own "preprocessing" key
+        # via update_sidecar_preprocessing() - a separate, page-level
+        # setting alongside deskew_angle, not folded into any column's
+        # mask/results state.
+        self.preproc_grayscale_var = BooleanVar(value=True)
+        self.preproc_invert_var = BooleanVar(value=False)
+        self.preproc_clahe_var = BooleanVar(value=True)
+        self.preproc_clahe_clip_var = StringVar(value="2.0")
+        self.preproc_clahe_tile_var = StringVar(value="8")
+        self.preproc_median_var = BooleanVar(value=False)
+        self.preproc_median_size_var = StringVar(value="3")
+        self.preproc_unsharp_var = BooleanVar(value=True)
+        self.preproc_unsharp_radius_var = StringVar(value="1.5")
+        self.preproc_unsharp_amount_var = StringVar(value="1.2")
+        self.preproc_upscale_var = BooleanVar(value=True)
+        self.preproc_upscale_factor_var = StringVar(value="2.0")
+        self.preproc_adaptive_threshold_var = BooleanVar(value=False)
+        self.preproc_at_block_size_var = StringVar(value="11")
+        self.preproc_at_c_var = StringVar(value="2.0")
+
         top = Frame(root, padx=10, pady=10)
         top.pack(fill="both", expand=True)
+
+        # -- preprocessing section (2026-07-25) --------------------------
+        # Preview-only - never touches the original source image. Fixed
+        # execution order (core.image_preprocessing.PIPELINE_ORDER), not
+        # whatever order these checkboxes happen to be toggled in.
+        preproc_frame = Frame(top, relief="groove", borderwidth=1, padx=8, pady=4)
+        preproc_frame.pack(fill="x", pady=(0, 3))
+        Label(preproc_frame,
+              text="Preprocessing (preview only, saved to sidecar) + Deskew "
+                   "(auto-estimate is a SUGGESTION) - confirm everything visually:",
+              font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w")
+
+        simple_row = Frame(preproc_frame)
+        simple_row.grid(row=1, column=0, sticky="w", pady=(4, 0))
+        Checkbutton(simple_row, text="Grayscale", variable=self.preproc_grayscale_var,
+                    command=self.update_preview).pack(side="left")
+        Checkbutton(simple_row, text="Invert", variable=self.preproc_invert_var,
+                    command=self.update_preview).pack(side="left", padx=(10, 0))
+        Checkbutton(simple_row, text="Median", variable=self.preproc_median_var,
+                    command=self.update_preview).pack(side="left", padx=(10, 0))
+        Label(simple_row, text="Size:").pack(side="left", padx=(4, 2))
+        Entry(simple_row, textvariable=self.preproc_median_size_var, width=4).pack(side="left")
+        Checkbutton(simple_row, text="Upscale", variable=self.preproc_upscale_var,
+                    command=self.update_preview).pack(side="left", padx=(10, 0))
+        Label(simple_row, text="Factor:").pack(side="left", padx=(4, 2))
+        Entry(simple_row, textvariable=self.preproc_upscale_factor_var, width=4).pack(side="left")
+
+        # Expandable filters (CLAHE / Unsharp / Adaptive Threshold) -
+        # most users never touch the underlying parameters, so they
+        # start collapsed regardless of whether the filter itself is
+        # enabled - the checkbox controls "does this run", the arrow
+        # controls "are the knobs visible", independently.
+        expand_row = Frame(preproc_frame)
+        expand_row.grid(row=2, column=0, sticky="w", pady=(4, 0))
+
+        Checkbutton(expand_row, text="CLAHE", variable=self.preproc_clahe_var,
+                    command=self.update_preview).pack(side="left")
+        clahe_toggle = Button(expand_row, text="▶", width=2)
+        clahe_toggle.pack(side="left", padx=(2, 0))
+        clahe_params = Frame(expand_row)
+        Label(clahe_params, text="Clip:").pack(side="left", padx=(6, 2))
+        Entry(clahe_params, textvariable=self.preproc_clahe_clip_var, width=5).pack(side="left")
+        Label(clahe_params, text="Tile:").pack(side="left", padx=(6, 2))
+        Entry(clahe_params, textvariable=self.preproc_clahe_tile_var, width=5).pack(side="left")
+        clahe_toggle.config(command=lambda: self._toggle_filter_params(clahe_params, clahe_toggle))
+
+        Checkbutton(expand_row, text="Unsharp", variable=self.preproc_unsharp_var,
+                    command=self.update_preview).pack(side="left", padx=(16, 0))
+        unsharp_toggle = Button(expand_row, text="▶", width=2)
+        unsharp_toggle.pack(side="left", padx=(2, 0))
+        unsharp_params = Frame(expand_row)
+        Label(unsharp_params, text="Radius:").pack(side="left", padx=(6, 2))
+        Entry(unsharp_params, textvariable=self.preproc_unsharp_radius_var, width=5).pack(side="left")
+        Label(unsharp_params, text="Amount:").pack(side="left", padx=(6, 2))
+        Entry(unsharp_params, textvariable=self.preproc_unsharp_amount_var, width=5).pack(side="left")
+        unsharp_toggle.config(
+            command=lambda: self._toggle_filter_params(unsharp_params, unsharp_toggle))
+
+        Checkbutton(expand_row, text="Adaptive Threshold",
+                    variable=self.preproc_adaptive_threshold_var,
+                    command=self.update_preview).pack(side="left", padx=(16, 0))
+        at_toggle = Button(expand_row, text="▶", width=2)
+        at_toggle.pack(side="left", padx=(2, 0))
+        at_params = Frame(expand_row)
+        Label(at_params, text="Block:").pack(side="left", padx=(6, 2))
+        Entry(at_params, textvariable=self.preproc_at_block_size_var, width=5).pack(side="left")
+        Label(at_params, text="C:").pack(side="left", padx=(6, 2))
+        Entry(at_params, textvariable=self.preproc_at_c_var, width=5).pack(side="left")
+        at_toggle.config(command=lambda: self._toggle_filter_params(at_params, at_toggle))
+
+        # -- deskew controls, same box now -----------------------------------
+        deskew_row = Frame(preproc_frame)
+        deskew_row.grid(row=3, column=0, sticky="w", pady=(6, 0))
+        Label(deskew_row, text="Deskew:").pack(side="left")
+        Button(deskew_row, text="Auto-estimate", command=self.auto_estimate_angle
+               ).pack(side="left", padx=(6, 0))
+        self.angle_var = StringVar(value="0.0")
+        Entry(deskew_row, textvariable=self.angle_var, width=6).pack(side="left", padx=(6, 10))
+        for step in ANGLE_NUDGE_STEPS:
+            label = f"{step:+.2f}°"
+            Button(deskew_row, text=label, width=6,
+                   command=lambda s=step: self.nudge_angle(s)).pack(side="left", padx=1)
+        Button(deskew_row, text="Reset to 0°", command=self.reset_angle
+               ).pack(side="left", padx=(10, 0))
+
+        bottom_row = Frame(preproc_frame)
+        bottom_row.grid(row=4, column=0, sticky="w", pady=(6, 0))
+        Button(bottom_row, text="Refresh preview", command=self.update_preview,
+               bg="#68a", fg="white").pack(side="left")
+        Label(bottom_row, text="Any edit above needs Refresh preview to apply.",
+              font=("Segoe UI", 8), fg="#666").pack(side="left", padx=(10, 0))
 
         # -- image selection ---------------------------------------------
         img_row = Frame(top)
@@ -165,31 +333,6 @@ class RowSegmentationApp:
         self.open_overlay_button.pack(side="left", padx=(6, 0))
         self.image_path_label = Label(img_row, text="(no image selected)", fg="#666")
         self.image_path_label.pack(side="left", padx=8)
-
-        # -- deskew section: user-controlled, auto-estimate is a suggestion --
-        deskew_frame = Frame(top, relief="groove", borderwidth=1, padx=8, pady=4)
-        deskew_frame.pack(fill="x", pady=(4, 3))
-        Label(deskew_frame, text="Deskew angle (degrees) - auto-estimate is a "
-                                  "SUGGESTION, confirm/override visually:",
-              font=("Segoe UI", 9, "bold")).grid(row=0, column=0, columnspan=8, sticky="w")
-
-        Button(deskew_frame, text="Auto-estimate", command=self.auto_estimate_angle
-               ).grid(row=1, column=0, sticky="w", pady=(4, 0))
-
-        self.angle_var = StringVar(value="0.0")
-        Entry(deskew_frame, textvariable=self.angle_var, width=8).grid(
-            row=1, column=1, sticky="w", padx=(6, 12), pady=(4, 0))
-
-        for i, step in enumerate(ANGLE_NUDGE_STEPS):
-            label = f"{step:+.2f}\u00b0"
-            Button(deskew_frame, text=label, width=6,
-                   command=lambda s=step: self.nudge_angle(s)).grid(
-                row=1, column=2 + i, sticky="w", padx=2, pady=(4, 0))
-
-        Button(deskew_frame, text="Reset to 0\u00b0", command=self.reset_angle).grid(
-            row=1, column=6, sticky="w", padx=(12, 0), pady=(4, 0))
-        Button(deskew_frame, text="Refresh preview", command=self.update_preview,
-               bg="#68a", fg="white").grid(row=1, column=7, sticky="w", padx=(12, 0), pady=(4, 0))
 
         # -- table bounds section -------------------------------------------
         bounds_frame = Frame(top, relief="groove", borderwidth=1, padx=8, pady=4)
@@ -226,44 +369,56 @@ class RowSegmentationApp:
         Entry(bounds_frame, textvariable=self.table_right_var, width=8).grid(
             row=1, column=7, sticky="w", padx=(2, 0), pady=(3, 0))
 
+        click_row = Frame(bounds_frame)
+        click_row.grid(row=2, column=0, columnspan=8, sticky="w", pady=(4, 0))
+        Label(click_row, text="Click-set:", font=("Segoe UI", 8)).pack(side="left")
+        for _key in ("table_top", "table_bottom", "table_left", "table_right",
+                     "metadata_bottom", "header_box_top", "header_box_bottom"):
+            Button(click_row, text=self._BORDER_CLICK_BUTTON_LABELS[_key], width=14,
+                   command=lambda k=_key: self._start_border_click_mode(k)
+                   ).pack(side="left", padx=(6, 0))
+        self.border_click_status_label = Label(click_row, text="", font=("Segoe UI", 8), fg="#a04")
+        self.border_click_status_label.pack(side="left", padx=(10, 0))
+
         Button(bounds_frame, text="Auto-estimate top/bottom",
-               command=self.auto_estimate_extent).grid(row=2, column=0, columnspan=2,
+               command=self.auto_estimate_extent).grid(row=3, column=0, columnspan=2,
                                                           sticky="w", pady=(4, 3))
         Label(bounds_frame, text="(top/bottom only - set left/right by eye)",
-              font=("Segoe UI", 8), fg="#666").grid(row=2, column=2, columnspan=4,
+              font=("Segoe UI", 8), fg="#666").grid(row=3, column=2, columnspan=4,
                                                       sticky="w", pady=(4, 3))
 
-        Label(bounds_frame, text="Metadata bottom:").grid(row=3, column=0, sticky="w", pady=(3, 0))
+        Label(bounds_frame, text="Metadata bottom:").grid(row=4, column=0, sticky="w", pady=(3, 0))
         self.metadata_bottom_var = StringVar(value="")
         Entry(bounds_frame, textvariable=self.metadata_bottom_var, width=8).grid(
-            row=3, column=1, sticky="w", padx=(2, 8), pady=(3, 0))
+            row=4, column=1, sticky="w", padx=(2, 8), pady=(3, 0))
         Label(bounds_frame, text="splits above Top into metadata/headings - cyan line, optional",
-              font=("Segoe UI", 8), fg="#666").grid(row=3, column=2, columnspan=6,
+              font=("Segoe UI", 8), fg="#666").grid(row=4, column=2, columnspan=6,
                                                       sticky="w", pady=(3, 0))
 
-        Label(bounds_frame, text="Header box top:").grid(row=4, column=0, sticky="w", pady=(3, 0))
+        Label(bounds_frame, text="Header box top:").grid(row=5, column=0, sticky="w", pady=(3, 0))
         self.header_box_top_var = StringVar(value="")
         Entry(bounds_frame, textvariable=self.header_box_top_var, width=8).grid(
-            row=4, column=1, sticky="w", padx=(2, 16), pady=(3, 0))
-        Label(bounds_frame, text="Header box bottom:").grid(row=4, column=2, sticky="w", pady=(3, 0))
+            row=5, column=1, sticky="w", padx=(2, 16), pady=(3, 0))
+        Label(bounds_frame, text="Header box bottom:").grid(row=5, column=2, sticky="w", pady=(3, 0))
         self.header_box_bottom_var = StringVar(value="")
         Entry(bounds_frame, textvariable=self.header_box_bottom_var, width=8).grid(
-            row=4, column=3, sticky="w", padx=(2, 8), pady=(3, 0))
+            row=5, column=3, sticky="w", padx=(2, 8), pady=(3, 0))
         Label(bounds_frame, text="exact strip prepended to every row - magenta box, overrides Metadata bottom",
-              font=("Segoe UI", 8), fg="#666").grid(row=4, column=4, columnspan=4,
+              font=("Segoe UI", 8), fg="#666").grid(row=5, column=4, columnspan=4,
                                                       sticky="w", pady=(3, 0))
 
         Label(bounds_frame, text="[uniform_tile] Row 1 top:").grid(
-            row=5, column=0, sticky="w", pady=(3, 3))
+            row=6, column=0, sticky="w", pady=(3, 3))
         self.row1_top_var = StringVar(value="")
         Entry(bounds_frame, textvariable=self.row1_top_var, width=8).grid(
-            row=5, column=1, sticky="w", padx=(2, 16), pady=(3, 3))
-        Label(bounds_frame, text="Row 1 bottom:").grid(row=5, column=2, sticky="w", pady=(3, 3))
+            row=6, column=1, sticky="w", padx=(2, 16), pady=(3, 3))
+        Label(bounds_frame, text="Row 1 bottom:").grid(row=6, column=2, sticky="w", pady=(3, 3))
         self.row1_bottom_var = StringVar(value="")
         Entry(bounds_frame, textvariable=self.row1_bottom_var, width=8).grid(
-            row=5, column=3, sticky="w", padx=(2, 8), pady=(3, 3))
-        Label(bounds_frame, text="confirm via Refresh preview - yellow box - then tiled row_count times",
-              font=("Segoe UI", 8), fg="#666").grid(row=5, column=4, columnspan=4,
+            row=6, column=3, sticky="w", padx=(2, 8), pady=(3, 3))
+        Label(bounds_frame, text="confirm via Refresh preview - yellow box - then tiled row_count times "
+                                  "(precision field - manual only, no click-set)",
+              font=("Segoe UI", 8), fg="#666").grid(row=6, column=4, columnspan=4,
                                                       sticky="w", pady=(3, 3))
 
         # -- periodic-mode parameters (row count / search radius) -----------
@@ -342,6 +497,13 @@ class RowSegmentationApp:
             extract_row, text="Extract active column",
             command=self.extract_active_column, state=DISABLED, bg="#a62", fg="white")
         self.extract_button.pack(side="left")
+        # --debug-model-inputs (2026-07-24): same flag as run_row_extraction.py's
+        # CLI, exposed here so a UI-driven extraction can be debugged the
+        # same way - see core/debug_dump.py. Off by default, no effect on
+        # extraction results when unchecked.
+        self.debug_model_inputs_var = BooleanVar(value=False)
+        Checkbutton(extract_row, text="Debug model inputs",
+                    variable=self.debug_model_inputs_var).pack(side="left", padx=(8, 0))
         self.extract_status_label = Label(extract_row, text="", fg="#444")
         self.extract_status_label.pack(side="left", padx=(10, 0))
 
@@ -417,6 +579,8 @@ class RowSegmentationApp:
         canvas_frame.grid_rowconfigure(0, weight=1)
         canvas_frame.grid_columnconfigure(0, weight=1)
         self.preview_canvas.bind("<Button-1>", self._on_canvas_click)
+        self.preview_canvas.bind("<Motion>", self._on_canvas_motion)
+        root.bind("<Escape>", lambda e: self._cancel_border_click_mode())
 
         report_frame = Frame(main, width=320)
         report_frame.pack(side="left", fill="y", padx=(12, 0))
@@ -431,6 +595,9 @@ class RowSegmentationApp:
         # (and thus a lookup key) exists.
         self._ui_state = _load_ui_state()
         self._apply_general_settings(self._ui_state.get("last_general", {}))
+        # Not a Var (see select_image()), so restored directly here rather
+        # than through _apply_general_settings()'s Var-only mechanism.
+        self._last_image_dir = self._ui_state.get("last_general", {}).get("last_image_dir", "")
 
     # -- persistence ----------------------------------------------------------
 
@@ -514,6 +681,90 @@ class RowSegmentationApp:
         raw = var.get().strip()
         return float(raw) if raw else None
 
+    def _toggle_filter_params(self, param_frame: Frame, button: Button) -> None:
+        """
+        Shows/hides one expandable filter's parameter group (CLAHE/
+        Unsharp/Adaptive Threshold) - independent of whether the
+        filter itself is enabled, so a user can inspect/tune a
+        currently-disabled filter's settings before turning it on.
+
+        Compacted layout (2026-07-25): param_frame now packs INLINE in
+        the same row as its checkbox/toggle button (not a separate grid
+        row below), so re-showing must use pack(after=button) rather
+        than a bare pack() - Tkinter's pack manager otherwise appends
+        newly (re-)packed widgets to the END of their parent's packing
+        order, which would misplace it after whichever OTHER filter's
+        toggle happens to be expanded at the time, not back next to its
+        own button.
+        """
+        if param_frame.winfo_ismapped():
+            param_frame.pack_forget()
+            button.config(text="▶")  # collapsed
+        else:
+            param_frame.pack(side="left", after=button)
+            button.config(text="▼")  # expanded
+
+    def _safe_float(self, var: StringVar, default: float) -> float:
+        """Like _parse_optional_float, but a genuinely invalid (not
+        just blank) value falls back to `default` instead of raising -
+        used only for preprocessing params, where a live preview
+        refresh shouldn't crash over a field mid-edit (e.g. a stray
+        "2." typed on the way to "2.5")."""
+        raw = var.get().strip()
+        if not raw:
+            return default
+        try:
+            return float(raw)
+        except ValueError:
+            return default
+
+    def _safe_int(self, var: StringVar, default: int) -> int:
+        raw = var.get().strip()
+        if not raw:
+            return default
+        try:
+            return int(raw)
+        except ValueError:
+            return default
+
+    def _current_preprocessing_config(self) -> dict:
+        """
+        Reads the Preprocessing section's current checkbox/parameter
+        state into the shape core.image_preprocessing.apply_pipeline()
+        and core.row_segmentation.update_sidecar_preprocessing() both
+        expect. A blank/invalid parameter field falls back to that
+        filter's own default rather than raising - a preview refresh
+        shouldn't crash over a field the user hasn't finished typing
+        into yet.
+        """
+        return {
+            "grayscale": {"enabled": self.preproc_grayscale_var.get()},
+            "invert": {"enabled": self.preproc_invert_var.get()},
+            "clahe": {
+                "enabled": self.preproc_clahe_var.get(),
+                "clip_limit": self._safe_float(self.preproc_clahe_clip_var, 2.0),
+                "tile_size": self._safe_int(self.preproc_clahe_tile_var, 8),
+            },
+            "median": {
+                "enabled": self.preproc_median_var.get(),
+                "size": self._safe_int(self.preproc_median_size_var, 3),
+            },
+            "unsharp": {
+                "enabled": self.preproc_unsharp_var.get(),
+                "radius": self._safe_float(self.preproc_unsharp_radius_var, 1.5),
+                "amount": self._safe_float(self.preproc_unsharp_amount_var, 1.2),
+            },
+            "upscale": {
+                "enabled": self.preproc_upscale_var.get(),
+                "factor": self._safe_float(self.preproc_upscale_factor_var, 2.0),
+            },
+            "adaptive_threshold": {
+                "enabled": self.preproc_adaptive_threshold_var.get(),
+                "block_size": self._safe_int(self.preproc_at_block_size_var, 11),
+                "C": self._safe_float(self.preproc_at_c_var, 2.0),
+            },
+        }
+
     def _current_padding_kwargs(self) -> dict:
         """
         Row padding (2026-07-13, per Jon/GPT's suggestion) - fixed px
@@ -555,9 +806,22 @@ class RowSegmentationApp:
         path = filedialog.askopenfilename(
             title="Select census/table image",
             filetypes=[("Images", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp")],
+            initialdir=self._last_image_dir or None,
         )
         if not path:
             return
+        # Remembered across sessions (2026-07-26, Jon's direction) - so
+        # "Select image..." reopens in the same folder every time instead
+        # of always starting wherever the OS/tkinter default happens to
+        # land, since real usage is always working through one bucket/
+        # folder of scans at a time. Persisted immediately, independent
+        # of _save_current_settings() (which only runs once an image/
+        # geometry actually exists) so it survives even a session where
+        # nothing else gets saved.
+        self._last_image_dir = str(Path(path).resolve().parent)
+        self._ui_state.setdefault("last_general", {})["last_image_dir"] = self._last_image_dir
+        _save_ui_state(self._ui_state)
+
         self.image_path = path
         self.original_image = Image.open(path)
         self.image_path_label.config(text=path, fg="black")
@@ -574,6 +838,7 @@ class RowSegmentationApp:
         self.column_masks = {}
         self.active_column_var.set("")
         self._mask_click_start = None
+        self._cancel_border_click_mode()
         self._refresh_mask_count_label()
         self.last_result = None
         self.save_button.config(state=DISABLED)
@@ -684,6 +949,7 @@ class RowSegmentationApp:
     def _on_mask_mode_toggle(self):
         self._mask_click_start = None
         if self.mask_mode_var.get():
+            self._cancel_border_click_mode()
             self.mask_instruction_label.config(
                 text="Click the LEFT edge of the column to keep, then the RIGHT edge.")
         else:
@@ -700,8 +966,16 @@ class RowSegmentationApp:
         status) for names in this list is pulled in immediately so
         loading the list doesn't look like it reset progress.
         """
+        # Fixed default (2026-07-26, Jon's direction) - config/columns/ is
+        # the actual canonical location every real column list lives in
+        # (census_1931.txt, census_standard.txt, etc.), unlike Select
+        # image's "remember last used" behavior - this one should always
+        # start in the same real place, not wherever was last browsed to.
+        columns_dir = PROJECT_ROOT / "config" / "columns"
         path = filedialog.askopenfilename(
-            title="Select column names file", filetypes=[("Text", "*.txt")])
+            title="Select column names file", filetypes=[("Text", "*.txt")],
+            initialdir=str(columns_dir) if columns_dir.is_dir() else None,
+        )
         if not path:
             return
         names = [line.strip() for line in Path(path).read_text(encoding="utf-8").splitlines()
@@ -790,6 +1064,81 @@ class RowSegmentationApp:
         self._refresh_mask_count_label()
         self.update_preview()
 
+    # -- click-to-set table bounds (2026-07-26) ------------------------------
+
+    def _start_border_click_mode(self, key: str) -> None:
+        """
+        Arms crosshair mode for one border field (`key` is one of
+        _BORDER_CLICK_BUTTON_LABELS's keys) - the NEXT click on the
+        preview canvas sets that field directly from the clicked pixel,
+        instead of estimate/type/refresh/repeat. Mutually exclusive
+        with column-mask click mode (turning one on turns the other
+        off) so a click always has one unambiguous meaning.
+        """
+        if not self.original_image:
+            messagebox.showwarning("No image", "Select an image first.")
+            return
+        if self.mask_mode_var.get():
+            self.mask_mode_var.set(False)
+            self._on_mask_mode_toggle()
+        self._border_click_mode = key
+        self.preview_canvas.config(cursor="crosshair")
+        self.border_click_status_label.config(
+            text=f"Click the preview to {self._BORDER_CLICK_BUTTON_LABELS[key].lower()} "
+                 f"(Esc to cancel)."
+        )
+
+    def _cancel_border_click_mode(self) -> None:
+        if self._border_click_mode is None:
+            return
+        self._border_click_mode = None
+        self.preview_canvas.config(cursor="")
+        self._clear_border_guide()
+        self.border_click_status_label.config(text="")
+
+    def _clear_border_guide(self) -> None:
+        if self._border_guide_line_id is not None:
+            self.preview_canvas.delete(self._border_guide_line_id)
+            self._border_guide_line_id = None
+
+    def _on_canvas_motion(self, event) -> None:
+        """Live guide line following the mouse while a border-click mode
+        is armed - vertical for Left/Right, horizontal for Top/Bottom/
+        Metadata bottom/Header box top/bottom. No-op otherwise."""
+        if self._border_click_mode is None:
+            return
+        self._clear_border_guide()
+        canvas_x = self.preview_canvas.canvasx(event.x)
+        canvas_y = self.preview_canvas.canvasy(event.y)
+        w, h = self._preview_render_size
+        if self._BORDER_CLICK_ORIENTATION[self._border_click_mode] == "v":
+            self._border_guide_line_id = self.preview_canvas.create_line(
+                canvas_x, 0, canvas_x, h, fill="red", dash=(4, 2))
+        else:
+            self._border_guide_line_id = self.preview_canvas.create_line(
+                0, canvas_y, w, canvas_y, fill="red", dash=(4, 2))
+
+    def _handle_border_click(self, event) -> None:
+        """Reads the clicked pixel back into full deskewed-image
+        coordinates (same canvasx/canvasy + self._preview_scale
+        conversion _on_canvas_click's mask-click path already uses),
+        writes it straight into the target field's StringVar, and
+        refreshes the preview - the textbox stays live/editable
+        afterward for manual fine-adjustment."""
+        canvas_x = self.preview_canvas.canvasx(event.x)
+        canvas_y = self.preview_canvas.canvasy(event.y)
+        scale = self._preview_scale or 1.0
+        key = self._border_click_mode
+        if self._BORDER_CLICK_ORIENTATION[key] == "v":
+            value = int(round(canvas_x / scale))
+        else:
+            value = int(round(canvas_y / scale))
+        getattr(self, f"{key}_var").set(str(value))
+        label = self._BORDER_CLICK_BUTTON_LABELS[key]
+        self._cancel_border_click_mode()
+        self.status_label.config(text=f"{label} → {value} (click-set). Preview refreshed.")
+        self.update_preview()
+
     def _on_canvas_click(self, event):
         """
         Click-to-keep: first click marks the left edge of a column to
@@ -800,6 +1149,9 @@ class RowSegmentationApp:
         canvasy() which correctly account for the current scroll
         position, not just the click's raw widget-relative position).
         """
+        if self._border_click_mode is not None:
+            self._handle_border_click(event)
+            return
         if not self.mask_mode_var.get():
             return
         if self._active_column_name() is None:
@@ -838,7 +1190,28 @@ class RowSegmentationApp:
         if not self.original_image:
             return
         deskewed = apply_deskew_angle(self.original_image, self._current_angle())
-        overlay = deskewed.convert("RGB").copy()
+
+        # Preprocessing (2026-07-25): every filter EXCEPT upscale changes
+        # pixel VALUES only, so it's safe to apply before the overlay
+        # annotations below, which are drawn using bound-field
+        # coordinates in the ORIGINAL deskewed image's pixel space.
+        # Upscale changes canvas DIMENSIONS - applying it here too would
+        # misalign every rectangle/line drawn below (they'd need their
+        # own separate coordinate scaling). Applied instead AFTER
+        # annotations are drawn, at the very end, so the whole annotated
+        # overlay scales together and stays aligned with zero extra math.
+        preproc_config = self._current_preprocessing_config()
+        upscale_config = preproc_config.pop("upscale")
+        content = apply_pipeline(deskewed, preproc_config)
+        overlay = content.convert("RGB").copy()
+        # Captured BEFORE the optional upscale step below reassigns
+        # `overlay` - every bounds field (table_top_var etc.) and every
+        # column mask range is defined in THIS pre-upscale pixel space,
+        # so _render_preview must compute self._preview_scale relative
+        # to this width, not whatever (possibly 2x/4x larger) width the
+        # image ends up at after upscaling. See _render_preview's
+        # reference_width param docstring for the bug this fixes.
+        reference_width = overlay.width
         draw = ImageDraw.Draw(overlay)
 
         x0 = self._parse_optional_int(self.table_left_var)
@@ -927,12 +1300,30 @@ class RowSegmentationApp:
             draw.line([self._mask_click_start, 0, self._mask_click_start, overlay.height],
                        fill="lime", width=2)
 
-        self._render_preview(overlay)
+        if upscale_config.get("enabled"):
+            from core.image_preprocessing import upscale as _upscale_step
+            overlay = _upscale_step(overlay, factor=upscale_config.get("factor", 2.0))
 
-    def _render_preview(self, overlay: Image.Image):
+        self._render_preview(overlay, reference_width=reference_width)
+
+    def _render_preview(self, overlay: Image.Image, reference_width: int | None = None):
         """
         Shared rendering for both the cheap live preview and the post-
         refine full overlay.
+
+        `reference_width` (2026-07-26 bugfix): the pixel-space width
+        that bounds fields/mask ranges/click-set coordinates actually
+        mean. Defaults to overlay.width (correct for refine_rows' call
+        site below, whose overlay is never upscaled). update_preview()'s
+        call site passes the PRE-upscale width explicitly, because when
+        Upscale preprocessing is on (the default), `overlay` here is
+        ALREADY the upscaled image - using its width would make
+        self._preview_scale (and therefore every click-derived
+        coordinate: border click-set, column-mask clicking, the guide
+        line) silently inflated by the upscale factor relative to what
+        the textboxes/segment_rows_* functions actually operate on. This
+        is exactly the bug Jon hit: Bottom/Right values came out ~2x too
+        large after clicking with the (default-on) 2.0x Upscale enabled.
 
         REWRITTEN 2026-07-13 - the original version cropped a narrow
         strip auto-centered on whatever boundary field seemed relevant
@@ -947,6 +1338,9 @@ class RowSegmentationApp:
         before re-rendering and restored after, so refreshing a field
         no longer resets where you've scrolled to.
         """
+        if reference_width is None:
+            reference_width = overlay.width
+
         zoom = self.zoom_var.get()
         if zoom == "Fit":
             preview = overlay.copy()
@@ -963,8 +1357,10 @@ class RowSegmentationApp:
         # Tracked for click-to-mask coordinate inversion (2026-07-15) -
         # works uniformly for both Fit (thumbnail) and zoomed (explicit
         # factor) modes, since both just produce SOME preview.width
-        # relative to overlay.width.
-        self._preview_scale = preview.width / overlay.width if overlay.width else 1.0
+        # relative to reference_width (the PRE-upscale width - see this
+        # method's docstring).
+        self._preview_scale = preview.width / reference_width if reference_width else 1.0
+        self._preview_render_size = (preview.width, preview.height)
 
         # Save current scroll position (fractional) before tearing down
         # canvas content, restore it after - this is what actually
@@ -1227,6 +1623,7 @@ class RowSegmentationApp:
                     },
                     column_order=self._safe_column_order_seed(active_name),
                 )
+            update_sidecar_preprocessing(str(sidecar_path), self._current_preprocessing_config())
             return sidecar_path
 
         mode = self.mode_var.get()
@@ -1328,6 +1725,7 @@ class RowSegmentationApp:
                 column_order=self._safe_column_order_seed(active_name),
             )
 
+        update_sidecar_preprocessing(str(sidecar_path), self._current_preprocessing_config())
         return sidecar_path
 
     def save_result(self):
@@ -1487,22 +1885,31 @@ class RowSegmentationApp:
         self.next_column_button.config(state=DISABLED)
         self.extract_status_label.config(text=f"Extracting {active_name!r}... (model loading)")
 
+        debug_model_inputs = self.debug_model_inputs_var.get()
         thread = threading.Thread(
             target=self._extraction_worker,
-            args=(str(sidecar_path), model_name, active_name),
+            args=(str(sidecar_path), model_name, active_name, debug_model_inputs),
             daemon=True,
         )
         thread.start()
         self.root.after(200, self._poll_extraction_queue)
 
-    def _extraction_worker(self, sidecar_path: str, model_name: str, column_name: str) -> None:
+    def _extraction_worker(
+        self, sidecar_path: str, model_name: str, column_name: str,
+        debug_model_inputs: bool = False,
+    ) -> None:
         """Runs off the main thread - must not touch any Tk widget
         directly, only put results on the queue for the main thread
         (_poll_extraction_queue) to apply."""
         try:
             from core.row_extraction import run_single_column_extraction
+            from core.debug_dump import DebugModelInputRecorder
+            debug_recorder = DebugModelInputRecorder(enabled=debug_model_inputs)
             results = run_single_column_extraction(
-                sidecar_path, model_name, column_name=column_name, mark_done=True)
+                sidecar_path, model_name, column_name=column_name, mark_done=True,
+                debug_recorder=debug_recorder)
+            if debug_recorder.enabled:
+                print(f"Debug model-input capture: ON -> {debug_recorder.run_dir}")
             self._extraction_queue.put(("ok", sidecar_path, column_name, len(results)))
         except Exception as e:
             self._extraction_queue.put(("error", sidecar_path, column_name, str(e)))

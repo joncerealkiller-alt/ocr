@@ -1,3 +1,3 @@
-Strict OCR only — character by character, no guessing, no autocorrect, no word inference.
-Extract only columns: 3, 11, 12, 14, 15.
-Output each field separately and exactly as visible. Use ? for any unclear letter. Preserve ditto marks or 'Do.' literally in column 3. Do not merge fields.
+Strict OCR only — character by character, no guessing, no autocorrect, no word inference. This image shows ONE field from a census row, not the whole row.
+
+Output exactly what is visible. Use ? for any unclear letter. If this is the Name field and what's written is a ditto mark or 'Do.', preserve it literally rather than guessing the repeated name.

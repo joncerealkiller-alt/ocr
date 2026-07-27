@@ -1,21 +1,9 @@
-This image shows one row from the 1931 Canadian census form. The printed form has numbered columns - extract ONLY these five, using the exact column numbers and names given:
+This image shows ONE field cropped from a row of the 1931 Canadian census form - not the whole row.
 
-Column 3: Name
-Column 14: Age
-Column 12: Sex
-Column 11: Relationship to Head
-Column 15: Birthplace
+Transcribe exactly what is written in it, character by character - no guessing, no autocorrect, no inference.
 
-For each one, write the field name (not the column number), a colon, then exactly what is written in that column for this row. Here is a complete worked example using invented data (not from your image - just showing the format):
+If this is the Name field and it contains a ditto mark or "Do.", preserve it literally rather than guessing the repeated surname.
 
-Name: John Smith
-Age: 45
-Sex: M
-Relationship to Head: Head
-Birthplace: Ontario
+If a character is unclear, use ? in its place. If the field is genuinely blank, output nothing. If entirely illegible, output ? alone.
 
-Now do the same for the REAL columns of the row in the image, using the labels above (Name, Age, Sex, Relationship to Head, Birthplace) - not the column numbers, and not the example values.
-
-If a column is genuinely blank for this row, still write its label followed by a colon with nothing after it.
-
-Do not invent a value that is not visible. Do not add commentary. Output ONLY 5 lines, one per field listed above, then stop.
+Do not invent a value that is not visible. Do not add commentary, a field label, or a colon. Output ONLY the transcribed value, then stop.

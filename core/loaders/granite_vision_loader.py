@@ -158,6 +158,7 @@ class GraniteVisionLoader(BaseLoader):
             gen_kwargs["tokenizer"] = self.processor.tokenizer
         # presence_penalty deliberately omitted - unconfirmed for this
         # architecture, same reasoning as SmolVLM2Loader.
+        self._maybe_add_charset_logits_processor(gen_kwargs)
 
         with torch.inference_mode():
             generated_ids = self.model.generate(**inputs, **gen_kwargs)

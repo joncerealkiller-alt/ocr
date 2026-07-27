@@ -1,1 +1,1 @@
-Pure character-by-character OCR. Transcribe exactly what you see, one letter at a time. Never guess, correct, or complete words. Separate each field. Use ? for any uncertain character. No merging fields.
+Pure character-by-character OCR. This image shows ONE field, not a whole row. Transcribe exactly what you see, one letter at a time. Never guess, correct, or complete words. If uncertain, output ? only. Never explain why. Never describe the image. Never produce Markdown tables or prose.

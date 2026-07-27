@@ -33,12 +33,14 @@ page of that type.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from PIL import Image
 from pydantic import BaseModel
@@ -49,6 +51,7 @@ from core.row_segmentation import (
 from core.loader_registry import LOADER_REGISTRY
 from core.loaders.base_loader import load_model_config
 from core.schema import ConfidenceLevel
+from core.debug_dump import DebugModelInputRecorder, NOOP_RECORDER
 
 # Confirmed real bug (2026-07-16): Windows' default console encoding
 # (cp1252, a legacy Western-European codepage) cannot represent
@@ -74,6 +77,39 @@ CONFIDENCE_MAP = {
     "partial": ConfidenceLevel.PARTIAL,
     "unclear": ConfidenceLevel.UNCLEAR,
 }
+
+
+def _normalize_confidence_word(raw: str) -> ConfidenceLevel | None:
+    """
+    Tolerant lookup for the confidence word a model wrote, not just an
+    exact CONFIDENCE_MAP hit - real bug found 2026-07-24: qwen3vl4b's
+    stage-2 output on a real run used "uncLEAR" (mixed case - the naive
+    .lower() lookup DOES catch this one), "uncleared" and "uncleard"
+    (an extra/wrong trailing letter), and "unc lear"/"unc lea r" (stray
+    internal spaces) for what was clearly meant to be "unclear" every
+    time. CONFIDENCE_MAP.get() with only .lower() applied matched NONE
+    of the space-containing or suffix variants, so parse_row_output
+    silently DROPPED those fields entirely (not even "?"/unclear - just
+    missing, showing up as "Missing/dropped fields" in schema_error) -
+    a parser gap masquerading as a model-quality problem.
+
+    Same two-step tolerance _normalize_key already uses for column
+    names (strip ALL whitespace, not just leading/trailing, then
+    lowercase), plus a prefix match against each canonical word as a
+    second pass: "uncleared"/"uncleard" both start with "unclear" once
+    whitespace-stripped, so they resolve correctly. Deliberately does
+    NOT fuzzy-match unrelated words (e.g. "uncertain" does not start
+    with "unclear" and stays unmatched, returning None here) - this is
+    tolerance for near-miss SPELLING/SPACING of the three DOCUMENTED
+    confidence words, not a guess at what different words might mean.
+    """
+    cleaned = "".join(raw.split()).lower()
+    if cleaned in CONFIDENCE_MAP:
+        return CONFIDENCE_MAP[cleaned]
+    for word, level in CONFIDENCE_MAP.items():
+        if cleaned.startswith(word):
+            return level
+    return None
 
 
 class RowFieldValue(BaseModel):
@@ -179,6 +215,91 @@ _EXAMPLE_VALUES = {
 }
 
 
+_FIELD_TYPE_HINTS: dict[str, dict[str, Any]] = {
+    # Semantic context for build_structuring_prompt()'s {field_hint}
+    # placeholder (2026-07-25, per Jon's direction: give the model a
+    # sense of what KIND of value a field holds, without forcing it to
+    # a fixed vocabulary). REWORKED same day, second pass: the first
+    # version of this dict gave concrete candidate words per field
+    # (e.g. "Head, Wife, Son, Daughter, Boarder" for Relationship to
+    # Head) - Jon's call: that still risks seeding an answer, since a
+    # concrete word sitting right there in the prompt is a much easier
+    # thing for the model to reach for under low confidence than
+    # actually reading faint handwriting, no matter how the surrounding
+    # wording disclaims it. This version describes the CATEGORY and
+    # SHAPE of an acceptable answer (expected_content, typical_format)
+    # instead of ever naming a candidate value - "a family or household
+    # relationship, one or two words" tells the model what kind of
+    # thing to look for without handing it anything it could copy
+    # verbatim. No leakage-risk tradeoff to track here the way the
+    # examples-based version had.
+    "Name": {
+        "expected_content": "A personal name - given name and/or surname - as written.",
+        "typical_format": "One or more words.",
+        "notes": [
+            "May appear as a ditto mark or \"Do.\" meaning the same "
+            "surname as the row above - transcribe those literally, "
+            "do not expand them into a name.",
+        ],
+    },
+    "Age": {
+        "expected_content": "A numeric age.",
+        "typical_format": "A number.",
+        "notes": ["Infants may be recorded as fractions (e.g. \"2/12\" for two months old)."],
+    },
+    "Sex": {
+        "expected_content": "A sex/gender abbreviation as recorded on the form.",
+        "typical_format": "A single character.",
+        "notes": [],
+    },
+    "Relationship to Head": {
+        "expected_content": "A family or household relationship.",
+        "typical_format": "One or two words.",
+        "notes": [
+            "Do not infer the relationship from age, sex, or name. Only "
+            "transcribe what is visibly written. Return ? if unreadable.",
+        ],
+    },
+    "Birthplace": {
+        "expected_content": "A place name.",
+        "typical_format": "Town, county, province, state, or country.",
+        "notes": ["Preserve abbreviations exactly."],
+    },
+    "Occupation": {
+        "expected_content": "An occupation or trade.",
+        "typical_format": "One or a few words.",
+        "notes": [],
+    },
+    "Province": {
+        "expected_content": "A province or country name.",
+        "typical_format": "One or a few words.",
+        "notes": ["Preserve abbreviations exactly."],
+    },
+}
+
+
+def _format_field_hint(column_name: str) -> str:
+    """
+    Builds the optional semantic-context block for one field, or ""
+    when column_name has no entry in _FIELD_TYPE_HINTS (e.g. a form's
+    own column not yet covered here) - build_structuring_prompt()
+    degrades gracefully, this is never a hard requirement.
+
+    Deliberately never names a candidate VALUE (see _FIELD_TYPE_HINTS'
+    docstring comment) - only the category (expected_content), the
+    structural shape (typical_format), and any field-specific
+    transcription reminders (notes).
+    """
+    hint = _FIELD_TYPE_HINTS.get(column_name)
+    if not hint:
+        return ""
+    lines = [f"Expected content: {hint['expected_content']}"]
+    if hint.get("typical_format"):
+        lines.append(f"Typical format: {hint['typical_format']}")
+    lines.extend(hint.get("notes", []))
+    return "\n".join(lines)
+
+
 _ROW_FIELD_LINE = re.compile(r"^\s*(.+?)\s*:\s*(.*)$")
 
 
@@ -231,10 +352,11 @@ def parse_row_output(raw_output: str, column_names: list[str]) -> dict[str, RowF
             # confidence word - a genuine value that happens to start
             # with punctuation, or contains a confidence word as part
             # of real content, won't match this.
-            bare_conf = value_raw.lstrip(" :,;.-").strip().lower()
-            if bare_conf in CONFIDENCE_MAP:
+            bare_conf = value_raw.lstrip(" :,;.-").strip()
+            bare_conf_level = _normalize_confidence_word(bare_conf)
+            if bare_conf_level is not None:
                 result[real_column] = RowFieldValue(
-                    value="", confidence=CONFIDENCE_MAP[bare_conf])
+                    value="", confidence=bare_conf_level)
                 continue
 
             # Second confirmed near-miss shape (2026-07-21, granite_
@@ -254,7 +376,7 @@ def parse_row_output(raw_output: str, column_names: list[str]) -> dict[str, RowF
                     value=bare_value, confidence=CONFIDENCE_MAP["unclear"])
             continue
         value_part, _, conf_part = value_raw.rpartition("|")
-        confidence = CONFIDENCE_MAP.get(conf_part.strip().lower())
+        confidence = _normalize_confidence_word(conf_part.strip())
         if confidence is None:
             continue
         result[real_column] = RowFieldValue(value=value_part.strip(), confidence=confidence)
@@ -371,6 +493,8 @@ def _extract_region(
     tight_crop_padding_pct: float | None = None,
     upscale_target_height: int | None = None,
     upscale_max_width: int = 4096,
+    debug_recorder: DebugModelInputRecorder | None = None,
+    debug_item_id: str | None = None,
 ) -> RowExtractionResult:
     """
     Shared extraction logic for ONE region (a person row OR the page
@@ -409,9 +533,22 @@ def _extract_region(
     illegible digit) was dropped by stage 1 itself or by stage 2's
     structuring pass. Passed through here so it can be attached to the
     saved result for exactly this kind of diagnosis.
+
+    debug_recorder / debug_item_id (2026-07-24, --debug-model-inputs):
+    see core/debug_dump.py. debug_recorder defaults to None, which
+    core.debug_dump.DebugModelInputRecorder(enabled=False) also
+    satisfies (its .new_item() returns a no-op recorder) - either way,
+    every debug_* call below becomes a no-op and nothing is written to
+    disk unless a caller explicitly passes an ENABLED recorder.
+    debug_item_id defaults to a "row_NNNN" / "header" name derived from
+    row_index when not given explicitly.
     """
     start = time.time()
     prompt = build_row_prompt(field_names)
+
+    item_id = debug_item_id or (f"row_{row_index:04d}" if row_index else "header")
+    debug_item = (debug_recorder or NOOP_RECORDER).new_item(item_id)
+
     region_image = crop_region_from_source(
         source_path, bbox, deskew_angle, mask_ranges,
         tight_crop_keep_ranges=tight_crop_keep_ranges,
@@ -419,9 +556,29 @@ def _extract_region(
         tight_crop_padding_pct=tight_crop_padding_pct,
         upscale_target_height=upscale_target_height,
         upscale_max_width=upscale_max_width,
+        debug_stage_callback=debug_item.stage_callback(),
     )
     if region_image.mode != "RGB":
         region_image = region_image.convert("RGB")
+
+    debug_item.set_prompt(prompt)
+    debug_item.set_meta(
+        source_image_path=source_path,
+        row_index=row_index,
+        bbox=bbox,
+        model=model_profile_name,
+        reasoning_enabled=getattr(loader.config, "reasoning_enabled", None),
+        generation_config_hash=(
+            loader.config.content_hash() if hasattr(loader.config, "content_hash") else None
+        ),
+        preprocessing={
+            "tight_crop_keep_ranges": tight_crop_keep_ranges,
+            "tight_crop_padding_px": tight_crop_padding_px,
+            "tight_crop_padding_pct": tight_crop_padding_pct,
+            "upscale_target_height": upscale_target_height,
+            "upscale_max_width": upscale_max_width,
+        },
+    )
 
     try:
         raw_output = loader._run_generate(region_image, prompt)
@@ -429,11 +586,13 @@ def _extract_region(
         missing = set(field_names) - set(fields.keys())
         schema_pass = len(missing) == 0
         schema_error = f"Missing/dropped fields: {missing}" if missing else None
+        debug_item.finalize(raw_output=raw_output)
     except Exception as e:
         raw_output = f"[ERROR: {e}]"
         fields = {}
         schema_pass = False
         schema_error = str(e)
+        debug_item.finalize(raw_output=None, error=e)
 
     return RowExtractionResult(
         row_index=row_index, bbox=bbox, fields=fields, raw_output=raw_output,
@@ -490,47 +649,57 @@ def _release_model(loader) -> None:
         torch.cuda.empty_cache()
 
 
-_DEFAULT_STRUCTURING_TEMPLATE = """Below is a raw OCR reading of ONE ROW from a census/tabular record, produced by a different tool. The image of that same row is also provided to you directly.
+_DEFAULT_STRUCTURING_TEMPLATE = """Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular record - produced by a different tool. The image shown to you is that SAME field crop, not the whole row and not any other column.
 
-Raw OCR reading:
+Raw OCR reading of this field:
 \"\"\"
 {raw_ocr_text}
 \"\"\"
 
-Your job: organize the information above into the columns listed below, using the actual image to check or correct the raw OCR reading where it looks wrong, incomplete, or ambiguous - do not just copy the raw reading blindly if the image shows something different.
+Your job: report this ONE field's real value, using the actual image as the authoritative source - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the image shows. Do not just copy the raw reading blindly if the image shows something different, and do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all - that kind of text is noise, not evidence.
 
-The columns, in order, are: {columns_str}
+The field is: {columns_str}
+{field_hint}
 
-For each column, write the column name, a colon, the value, a pipe character, then a confidence word. Here is a complete worked example using invented data (not from your image - just showing the format):
+Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete worked example using invented data (not from your image - just showing the format):
 
 {example_lines}
 
-Now do the same thing for the REAL columns of this row, using the values actually visible in the image and supported by the raw OCR reading above - not the example values.
+Now do the same thing for the REAL field shown in the image ({columns_str}), using the value actually visible there - not the example value.
 
 Confidence must be exactly one of: confirmed, partial, unclear
 - confirmed: every character is clearly readable with no doubt
 - partial: mostly readable, some uncertainty
 - unclear: not legible enough to read with confidence
 
-If a column is genuinely blank for this row, write the column name and colon followed immediately by the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+If the field is genuinely blank on the form, write the field name and colon followed immediately by the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
 
-If the raw OCR reading above is empty, garbled, or clearly unrelated to this field, do NOT treat that as evidence the field is blank on the form. Look at the image directly and read it yourself; if you genuinely cannot determine a value from the image either, write ? as the value with confidence unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g. an unrelated sentence, a description of a different kind of image entirely), ignore it completely - it is not evidence about what's on the form. Look at the image directly and read it yourself; if you genuinely cannot determine a value from the image either, write ? as the value with confidence unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
 
-Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation not shown in the example. Output ONLY {num_columns} line{plural}, one per column, then stop."""
+Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation not shown in the example. Output ONLY {num_columns} line{plural}, nothing else, then stop."""
 
 
 def build_structuring_prompt(
     raw_ocr_text: str, column_names: list[str], template_override: str | None = None
 ) -> str:
     """
-    Stage 2 of the two-stage pipeline (2026-07-13): takes a raw OCR
-    reading (from a fixed-task engine like Chandra, which can't produce
-    our column schema natively) and asks an instruction-following model
-    to organize it into our actual columns. The row IMAGE is passed
-    alongside this prompt too (not text-only) - see run_two_stage_
-    extraction() - so this stage can cross-reference the source
-    directly if the raw OCR reading looks incomplete or ambiguous,
-    rather than being blind to everything except stage 1's text.
+    Stage 2 of the two-stage pipeline (2026-07-13, redesigned per-FIELD
+    2026-07-25): takes ONE column's raw OCR reading (from a fixed-task
+    engine like Chandra, which can't produce our column schema
+    natively) and asks an instruction-following model to confirm or
+    correct it into that one column's real value. That column's own
+    tightly-cropped, upscaled field IMAGE is passed alongside this
+    prompt too (not text-only) - see run_two_stage_extraction() - so
+    this stage can cross-reference the source directly if the raw OCR
+    reading looks incomplete, ambiguous, or (a real observed failure,
+    2026-07-25) entirely unrelated to a form field at all, rather than
+    being blind to everything except stage 1's text.
+
+    column_names is still accepted as a list (not a single str) for
+    build_row_prompt-style flexibility and test_stage2_isolated.py's
+    multi-column experiments, but run_two_stage_extraction() always
+    calls this with exactly one column now - the template wording below
+    is written for that single-field case first.
 
     Uses the same concrete-worked-example format proven necessary for
     single-stage extraction (see build_row_prompt's docstring - two
@@ -543,13 +712,22 @@ def build_structuring_prompt(
     same session, which required a code edit + redeploy just to test a
     wording change. If given, must be a str.format()-style template
     containing at minimum {raw_ocr_text}, {columns_str}, and
-    {example_lines} placeholders (num_columns and plural are also
-    available, matching the default template's own usage) - see
-    config/prompts/structuring_stage2_default.txt for a real, working
-    starting point (the exact template below, extracted to a file so
-    editing it doesn't require touching this module). Falls back to
-    the hardcoded default when None (unchanged behavior from before
-    this parameter existed).
+    {example_lines} placeholders (num_columns, plural, and field_hint
+    are also available, matching the default template's own usage) -
+    see config/prompts/structuring_stage2_default.txt for a real,
+    working starting point (the exact template below, extracted to a
+    file so editing it doesn't require touching this module). Falls
+    back to the hardcoded default when None (unchanged behavior from
+    before this parameter existed).
+
+    field_hint (2026-07-25, per Jon's direction, reworked same day to
+    drop candidate words entirely - see _FIELD_TYPE_HINTS' docstring
+    comment): optional semantic context for the single field being
+    asked about - expected content and typical format, never a
+    candidate VALUE, from _FIELD_TYPE_HINTS/_format_field_hint() above.
+    Only populated when column_names has exactly one entry (the only
+    case a per-field hint makes sense for) and that column has a
+    registered hint; otherwise "".
 
     A malformed template (missing a required placeholder, or a stray
     single brace) raises a clear ValueError naming the problem rather
@@ -562,21 +740,77 @@ def build_structuring_prompt(
         f"{name}: {_EXAMPLE_VALUES.get(name, 'Zzyx')}|confirmed"
         for name in column_names
     )
+    field_hint = _format_field_hint(column_names[0]) if len(column_names) == 1 else ""
     template = template_override if template_override is not None else _DEFAULT_STRUCTURING_TEMPLATE
     try:
         return template.format(
             raw_ocr_text=raw_ocr_text, columns_str=columns_str, example_lines=example_lines,
             num_columns=len(column_names), plural="s" if len(column_names) != 1 else "",
+            field_hint=field_hint,
         )
     except KeyError as e:
         raise ValueError(
             f"Structuring prompt template references an unknown placeholder {e} - "
             f"available placeholders are: raw_ocr_text, columns_str, example_lines, "
-            f"num_columns, plural.") from e
+            f"num_columns, plural, field_hint.") from e
     except (IndexError, ValueError) as e:
         raise ValueError(
             f"Structuring prompt template has malformed {{}} syntax (a stray single "
             f"brace? use {{{{ and }}}} for a literal brace): {e}") from e
+
+
+def _field_bbox_from_keep_ranges(
+    row_bbox: list[int], keep_ranges: list[tuple[int, int]],
+) -> list[int]:
+    """Full-image-coordinate bbox spanning the union of keep_ranges (x)
+    and the row's own y-range - a real bbox for debug metadata, not just
+    the raw range list, since keep_ranges alone doesn't carry the row's
+    y0/y1 or make the union explicit."""
+    xs = [x for r in keep_ranges for x in r]
+    return [min(xs), row_bbox[1], max(xs), row_bbox[3]]
+
+
+def _plain_text_reading(raw_reading: str) -> str:
+    """
+    Unwraps FlorenceLoader's task-token JSON format (e.g.
+    '{"<OCR>": "actual text"}', see core/loaders/florence_loader.py's
+    _run_generate - it always returns json.dumps(parsed, ...), by
+    design, so the assessment tool can show region/bbox data for
+    <OCR_WITH_REGION> too) down to the plain text value, when a stage-1
+    OCR reading looks like that shape.
+
+    Real bug found 2026-07-24: without this, a raw Florence reading like
+    {"<OCR>": "Hawthana fume"} got embedded VERBATIM into stage 2's
+    combined_reading/prompt as "the raw OCR text" - with the literal
+    token "<OCR>" sitting right next to the real content. Stage 2
+    (smolvlm2_2b) then echoed "<OCR>" back as its own answer for every
+    field on that row, rather than the actual transcribed text - a
+    prompt-format mismatch, not a cropping/plumbing bug (that layer was
+    already fixed and confirmed correct via --debug-model-inputs).
+
+    Deliberately narrow and defensive: only unwraps a dict with EXACTLY
+    ONE key that looks like a Florence task token ("<...>"), and only
+    when its value is a plain string (not a nested dict/list, as
+    <OCR_WITH_REGION>'s value would be - unwrapping that into "plain
+    text" would silently discard the region data, and produce a
+    confusing stringified-dict fragment instead of an error, so it's
+    left untouched instead - stage 2 seeing an odd dict-shaped string in
+    that case is still more informative than a HALF-unwrapped one).
+    Every other loader's plain-text output fails json.loads() and is
+    returned completely unchanged - this has zero effect on any stage-1
+    model except Florence.
+    """
+    try:
+        parsed = json.loads(raw_reading)
+    except (json.JSONDecodeError, TypeError):
+        return raw_reading
+    if (
+        isinstance(parsed, dict) and len(parsed) == 1
+        and isinstance(value := next(iter(parsed.values())), str)
+        and next(iter(parsed.keys())).startswith("<") and next(iter(parsed.keys())).endswith(">")
+    ):
+        return value
+    return raw_reading
 
 
 def run_two_stage_extraction(
@@ -587,89 +821,267 @@ def run_two_stage_extraction(
     max_rows: int | None = None,
     ocr_prompt: str = "",
     structuring_prompt_template: str | None = None,
-    upscale_target_height: int | None = None,
-    upscale_max_width: int = 4096,
+    stage1_upscale_target_height: int | None = 160,
+    stage1_upscale_max_width: int = 4096,
+    stage2_upscale_target_height: int | None = 160,
+    stage2_upscale_max_width: int = 4096,
+    tight_crop_padding_px: int = 20,
+    tight_crop_padding_pct: float | None = None,
+    debug_recorder: DebugModelInputRecorder | None = None,
 ) -> list[RowExtractionResult]:
     """
     Two-stage pipeline (2026-07-13, per Jon's direction): stage 1 runs
     a fixed-task OCR engine (e.g. Chandra) that can't follow our column
-    schema natively, producing raw text; stage 2 runs an instruction-
-    following model (e.g. Qwen3-VL-4B, Gemma) given BOTH the row image
-    and stage 1's raw text, structuring the result into our actual
-    columns.
+    schema natively; stage 2 runs an instruction-following model (e.g.
+    Qwen3-VL-4B, Gemma) given BOTH a row image and stage 1's raw
+    reading(s), structuring the result into our actual columns.
+
+    FIELD-LEVEL STAGE 1 (redesigned 2026-07-24, replacing a real bug):
+    stage 1 previously ran ONE OCR call per row against the FULL row
+    crop (e.g. 3155x38px) with unwanted columns painted white, asking
+    the model to find the wanted columns itself within that wide, mostly
+    -blank image - confirmed via --debug-model-inputs output showing
+    original_crop_dimensions == final_crop_dimensions (no cropping/
+    upscaling ever applied) and a model_input.png only a few dozen
+    pixels tall. That is NOT the intended pipeline: stage 1 must instead
+    make ONE OCR call PER SELECTED COLUMN, each against that column's
+    OWN tightly-cropped, independently-upscaled field image - exactly
+    the same per-field crop shown to a human labeler in
+    ground_truth_labeling_ui.py and the same crop run_single_column_
+    extraction sends the model when running one column at a time. This
+    function now reuses that identical logic via
+    _resolve_column_field_mask() rather than reinventing it - see that
+    function's docstring for why sidecar["columns"][name] (a REAL name
+    -> boundary mapping) is the correct source, and NOT sidecar
+    ["columns"]["__multi__"] (a single flat, unlabeled union of
+    x-ranges with no per-column identity - can't drive per-field crops
+    at all, and is no longer used anywhere in this function - see
+    stage 2 below, also fixed 2026-07-24 to stop depending on it).
+
+    Each column named in column_names MUST already have its own mask
+    saved in the sidecar (row_segmentation_ui.py: select that column,
+    NOT "__multi__", drag to define its kept range, Save or Next
+    column) - checked upfront, before any model loads, so a missing
+    mask fails fast with an actionable message rather than partway
+    through a long run or (worse) silently falling back to a full-row
+    OCR call.
 
     ocr_prompt (2026-07-13, per Jon's direction to compare stage-1
-    prompts): passed to stage 1's _run_generate() as-is. Default ""
+    prompts): passed to EVERY per-field stage-1 call as-is. Default ""
     preserves the ORIGINAL behavior - a real finding from testing
     (Jon, same date): a general instruction-following VLM used for
     stage 1 with NO prompt at all still organized fields more usefully
-    for stage 2 than Chandra's raw fixed-task markdown did, suggesting
-    even minimal guidance might help further. Note: fixed-task engines
-    like ChandraLoader IGNORE this entirely regardless of what's passed
-    (see that loader's _build_prompt docstring) - this parameter only
-    has an effect when ocr_model_profile_name points to a genuine
-    instruction-following loader.
+    for stage 2 than Chandra's raw fixed-task markdown did. Note: fixed
+    -task engines like ChandraLoader IGNORE this entirely regardless of
+    what's passed (see that loader's _build_prompt docstring).
 
     structuring_prompt_template (2026-07-22): passed straight through
     to build_structuring_prompt()'s template_override - see that
-    function's docstring. Lets stage 2's INSTRUCTIONAL wording be
-    swapped per-run without editing this module, mirroring ocr_prompt's
-    existing swappability for stage 1.
+    function's docstring.
 
-    upscale_target_height (2026-07-23): unlike run_single_column_
-    extraction, defaults to None (off) here rather than 160 - the real
-    79x36px evidence behind that default change was measured on
-    TIGHTLY-CROPPED single-column crops specifically; this legacy
-    multi-column path deliberately does NOT tight-crop (several kept
-    ranges can be spread across one row - see crop_region_from_source's
-    docstring), so its crops are typically the full row width already
-    and less likely to be as resolution-starved. Available to opt into
-    for a controlled comparison, but not defaulted on without directly
-    measured evidence for THIS path specifically.
+    stage1_upscale_target_height / stage1_upscale_max_width (2026-07-24,
+    replaces the old single shared upscale_target_height param): stage 1's
+    field crops are now tightly-cropped exactly like run_single_column_
+    extraction's, so they need the SAME upscale-by-default treatment and
+    the SAME justification (real crops measured as small as 79x36px -
+    see run_single_column_extraction's docstring) - defaults to 160,
+    not None.
+
+    stage2_upscale_target_height / stage2_upscale_max_width: stage 2 is
+    now FIELD-LEVEL, same as stage 1 (2026-07-25, replacing the
+    2026-07-24 "tighten to the padded UNION of every selected column"
+    design) - real evidence (Jon, same date) showed that even a
+    tightened union crop still contains every selected column's own
+    inter-column gutter whitespace, leaving stage 2 to solve two
+    problems at once: reading the handwriting, AND figuring out which
+    region of one shared image corresponds to which of up to 5 output
+    columns. Stage 2 now gets the EXACT SAME per-field crop stage 1
+    gets for that column (same tight_crop_ranges from
+    column_field_masks), just upscaled with stage 2's own params
+    instead of stage 1's - so it needs the same upscale-by-default
+    treatment and the same justification as stage 1's default (real
+    crops measured as small as 79x36px). Defaults to 160, not None.
+
+    (For context: between 2026-07-24 and 2026-07-25 stage 2 briefly
+    used a single per-row union-of-columns image instead of per-field
+    crops, and for part of that window defaulted this upscale to None/
+    off - real --debug-model-inputs captures from that period showed
+    the union crop coming out at the same un-upscaled native row height
+    as stage 1's crops used to before ITS upscale-by-default fix, e.g.
+    original_crop_dimensions [3155, 38] -> final_crop_dimensions
+    [1339, 38], and stage 2 falling back to "?|unclear" on nearly every
+    field as a result. Both the union-crop design and its missing
+    upscale are gone now, superseded by the field-level redesign above.)
+
+    tight_crop_padding_px / tight_crop_padding_pct: padding around each
+    field's own kept range, same meaning and defaults as run_single_
+    column_extraction's identically-named parameters (passed straight
+    through to the same tight_crop_to_ranges() underneath).
 
     Loads BOTH models for the duration of the run (not one at a time
-    per row) - stage 1 processes every row first, then stage 1's model
-    is released before stage 2 loads, avoiding having two models
-    resident in VRAM simultaneously on top of everything else tested
-    this session (most of it was already tight on a single model).
+    per row) - stage 1 processes every row (now: every column of every
+    row) first, then stage 1's model is released before stage 2 loads,
+    avoiding having two models resident in VRAM simultaneously.
+
+    debug_recorder (2026-07-24, --debug-model-inputs; stage 2 naming
+    updated 2026-07-25 for the field-level redesign above): see
+    core/debug_dump.py. BOTH stages now get ONE debug item PER FIELD -
+    "row_NNNN/column_NN_stage1" and "row_NNNN/column_NN_stage2"
+    (column_NN from the field's position in sidecar["column_order"]
+    when available, matching the real page layout's own column
+    numbering, else its position within column_names) - not one per
+    row. Each item's metadata includes column_index, column_name,
+    row_bbox, and field_bbox (the field's own full-image-coordinate
+    bounding box), on top of the fields every debug item already
+    carries.
     """
     sidecar = load_sidecar(sidecar_path)
     source_path = sidecar["source_image_path"]
     deskew_angle = sidecar["deskew_angle"]
     rows = sidecar["rows"]
-    row_masks, _header_masks_unused = _compute_scoped_masks(sidecar)
     if max_rows is not None:
         rows = rows[:max_rows]
 
-    # Stage 1: raw OCR reading per row, using a FRESH loader instance,
-    # released before stage 2 loads (see docstring - avoid two models
-    # resident in VRAM at once).
+    # Fail fast, before loading either model: every requested column
+    # must have its OWN per-column mask (sidecar["columns"][name]), not
+    # just be present in the unrelated "__multi__" scratch mask - see
+    # this function's docstring for why those are not interchangeable.
+    column_order = sidecar.get("column_order", [])
+    sidecar_columns = sidecar.get("columns", {})
+    missing = [
+        name for name in column_names
+        if not sidecar_columns.get(name, {}).get("mask_keep_ranges")
+    ]
+    # Also required: mask_apply_rows must actually be on for each column,
+    # or _resolve_column_field_mask() below returns tight_crop_ranges=None
+    # despite mask_keep_ranges being non-empty (mask_apply_rows=False
+    # means "this mask isn't applied to rows" - a valid state for
+    # run_single_column_extraction's more general use, but one this
+    # mandatory-field-level path can't proceed with, since every column
+    # here MUST tighten to its own range).
+    disabled = [
+        name for name in column_names
+        if name not in missing and not sidecar_columns[name].get("mask_apply_rows", True)
+    ]
+    if missing or disabled:
+        problems = []
+        if missing:
+            problems.append(f"no saved mask: {missing}")
+        if disabled:
+            problems.append(f"mask saved but \"apply to rows\" is off: {disabled}")
+        raise ValueError(
+            f"Field-level stage 1 requires each column to have its OWN saved, "
+            f"row-applied mask - {'; '.join(problems)}. Mask each of these "
+            f"individually in row_segmentation_ui.py (select the column BY "
+            f"NAME - not \"__multi__\" - drag to define its kept range, check "
+            f"\"Rows\", then Save or Next column) before running two-stage "
+            f"extraction. \"__multi__\" masks (used for stage 2's own "
+            f"whole-row image) do not carry per-column identity and cannot "
+            f"be used here."
+        )
+    column_field_masks = {
+        name: _resolve_column_field_mask(sidecar, sidecar_columns[name])
+        for name in column_names
+    }
+    column_index_map = {
+        name: (column_order.index(name) + 1 if name in column_order
+               else i + 1)
+        for i, name in enumerate(column_names)
+    }
+
+    # Stage 1: one OCR call PER SELECTED COLUMN per row, using a FRESH
+    # loader instance, released before stage 2 loads (see docstring -
+    # avoid two models resident in VRAM at once).
     ocr_config = load_model_config(ocr_model_profile_name)
     ocr_loader_cls = LOADER_REGISTRY.get(ocr_config.loader_class)
     if ocr_loader_cls is None:
         raise ValueError(f"No loader registered for {ocr_config.loader_class!r}")
     ocr_loader = ocr_loader_cls(ocr_config)
 
-    raw_readings: dict[int, str] = {}
+    # row_index -> {column_name: raw_reading}
+    raw_readings: dict[int, dict[str, str]] = {}
     try:
         ocr_loader.initialize_model_and_tokenizer()
         for row in rows:
-            row_image = crop_region_from_source(
-                source_path, row["bbox"], deskew_angle, row_masks,
-                upscale_target_height=upscale_target_height,
-                upscale_max_width=upscale_max_width,
-            )
-            if row_image.mode != "RGB":
-                row_image = row_image.convert("RGB")
-            try:
-                raw_readings[row["index"]] = ocr_loader._run_generate(row_image, ocr_prompt)
-            except Exception as e:
-                raw_readings[row["index"]] = f"[STAGE 1 ERROR: {e}]"
-            print(f"Stage 1 (OCR) row {row['index']}: {raw_readings[row['index']]!r}")
+            raw_readings[row["index"]] = {}
+            for column_name in column_names:
+                _row_masks_unused, _mask_active, tight_crop_ranges = column_field_masks[column_name]
+                col_idx = column_index_map[column_name]
+                debug_item = (debug_recorder or NOOP_RECORDER).new_item(
+                    f"row_{row['index']:04d}/column_{col_idx:02d}_stage1"
+                )
+                field_image = crop_region_from_source(
+                    source_path, row["bbox"], deskew_angle,
+                    tight_crop_keep_ranges=tight_crop_ranges,
+                    tight_crop_padding_px=tight_crop_padding_px,
+                    tight_crop_padding_pct=tight_crop_padding_pct,
+                    upscale_target_height=stage1_upscale_target_height,
+                    upscale_max_width=stage1_upscale_max_width,
+                    debug_stage_callback=debug_item.stage_callback(),
+                )
+                if field_image.mode != "RGB":
+                    field_image = field_image.convert("RGB")
+                debug_item.set_prompt(ocr_prompt)
+                debug_item.set_meta(
+                    source_image_path=source_path, row_index=row["index"],
+                    column_index=col_idx, column_name=column_name,
+                    row_bbox=row["bbox"],
+                    field_bbox=_field_bbox_from_keep_ranges(row["bbox"], tight_crop_ranges),
+                    model=ocr_model_profile_name,
+                    reasoning_enabled=getattr(ocr_config, "reasoning_enabled", None),
+                    generation_config_hash=(
+                        ocr_config.content_hash() if hasattr(ocr_config, "content_hash") else None
+                    ),
+                    preprocessing={
+                        "tight_crop_padding_px": tight_crop_padding_px,
+                        "tight_crop_padding_pct": tight_crop_padding_pct,
+                        "upscale_target_height": stage1_upscale_target_height,
+                        "upscale_max_width": stage1_upscale_max_width,
+                    },
+                    stage="stage1_ocr_field",
+                )
+                try:
+                    reading = ocr_loader._run_generate(field_image, ocr_prompt)
+                    # Stored (and combined into stage 2's prompt) as
+                    # PLAIN TEXT - the debug item still records the true,
+                    # unmodified raw model output below, for anyone who
+                    # needs to see exactly what came back. See
+                    # _plain_text_reading()'s docstring for why this
+                    # unwrap matters (a real bug, not a defensive guess).
+                    raw_readings[row["index"]][column_name] = _plain_text_reading(reading)
+                    debug_item.finalize(raw_output=reading)
+                except Exception as e:
+                    raw_readings[row["index"]][column_name] = f"[STAGE 1 ERROR: {e}]"
+                    debug_item.finalize(raw_output=None, error=e)
+                print(f"Stage 1 (OCR) row {row['index']} [{column_name}]: "
+                      f"{raw_readings[row['index']][column_name]!r}")
     finally:
         _release_model(ocr_loader)
 
-    # Stage 2: structure each row's raw reading + image into our columns.
+    # Stage 2: structure each FIELD separately (2026-07-25, replacing the
+    # 2026-07-24 "whole selected-columns union" design) - real evidence
+    # (Jon, same date) showed the union crop, even tightened, still left
+    # every selected column's own inter-column gutter whitespace sitting
+    # inside a single image, forcing stage 2 to both (a) read the
+    # handwriting AND (b) figure out which region of that one image
+    # belongs to which of the up-to-5 columns it was asked to fill in -
+    # a second task stage 1 doesn't have to do at all, since stage 1
+    # already gets ONE column's own tightly-cropped, upscaled field
+    # image per call. Stage 2 now gets the EXACT SAME per-field image
+    # (same column_field_masks[name] tight_crop_ranges, same
+    # stage2_upscale_target_height/max_width in place of stage 1's own
+    # upscale params) plus ONLY that field's own stage-1 raw reading as
+    # the OCR hint - not all 5 fields' readings, which would reintroduce
+    # the same "which text belongs to this image" ambiguity from the
+    # hint side even with a single-column image. build_structuring_
+    # prompt() and parse_row_output() already generalize correctly to a
+    # single-column column_names list (verified: example_lines/
+    # {num_columns}/{plural} all degrade correctly to one line), so no
+    # separate single-field prompt builder was needed.
+    #
+    # Debug items are now "row_NNNN/column_NN_stage2", mirroring stage
+    # 1's "row_NNNN/column_NN_stage1" naming exactly - stage 2 is
+    # field-level evidence on disk now too, not row-level.
     struct_config = load_model_config(structuring_model_profile_name)
     struct_loader_cls = LOADER_REGISTRY.get(struct_config.loader_class)
     if struct_loader_cls is None:
@@ -681,28 +1093,83 @@ def run_two_stage_extraction(
         struct_loader.initialize_model_and_tokenizer()
         for row in rows:
             start = time.time()
-            row_image = crop_region_from_source(
-                source_path, row["bbox"], deskew_angle, row_masks,
-                upscale_target_height=upscale_target_height,
-                upscale_max_width=upscale_max_width,
-            )
-            if row_image.mode != "RGB":
-                row_image = row_image.convert("RGB")
+            fields: dict[str, RowFieldValue] = {}
+            per_field_raw_output: dict[str, str] = {}
+            for column_name in column_names:
+                _row_masks_unused, _mask_active, tight_crop_ranges = column_field_masks[column_name]
+                col_idx = column_index_map[column_name]
+                debug_item = (debug_recorder or NOOP_RECORDER).new_item(
+                    f"row_{row['index']:04d}/column_{col_idx:02d}_stage2"
+                )
+                field_image = crop_region_from_source(
+                    source_path, row["bbox"], deskew_angle,
+                    tight_crop_keep_ranges=tight_crop_ranges,
+                    tight_crop_padding_px=tight_crop_padding_px,
+                    tight_crop_padding_pct=tight_crop_padding_pct,
+                    upscale_target_height=stage2_upscale_target_height,
+                    upscale_max_width=stage2_upscale_max_width,
+                    debug_stage_callback=debug_item.stage_callback(),
+                )
+                if field_image.mode != "RGB":
+                    field_image = field_image.convert("RGB")
 
-            prompt = build_structuring_prompt(
-                raw_readings[row["index"]], column_names,
-                template_override=structuring_prompt_template)
-            try:
-                raw_output = struct_loader._run_generate(row_image, prompt)
-                fields = parse_row_output(raw_output, column_names)
-                missing = set(column_names) - set(fields.keys())
-                schema_pass = len(missing) == 0
-                schema_error = f"Missing/dropped fields: {missing}" if missing else None
-            except Exception as e:
-                raw_output = f"[STAGE 2 ERROR: {e}]"
-                fields = {}
-                schema_pass = False
-                schema_error = str(e)
+                field_reading = raw_readings[row["index"]].get(column_name, "")
+                # No "ColumnName: " label prefix (2026-07-26, per Jon's
+                # direction) - a leftover from the pre-field-level design,
+                # where stage2 saw a combined multi-field raw OCR block and
+                # needed each line labeled to tell fields apart. Now stage2
+                # gets exactly one field's own crop + prompt (which already
+                # states "Field: {name}" explicitly), so relabeling the raw
+                # OCR hint here is pure redundancy - and the same class of
+                # risk as the "FieldName" literal-label bug already fixed
+                # in the templates: an extra label sitting right next to
+                # the value invites the model to echo it back unnecessarily
+                # instead of just reporting the field's real value.
+                prompt = build_structuring_prompt(
+                    field_reading, [column_name],
+                    template_override=structuring_prompt_template)
+                debug_item.set_prompt(prompt)
+                debug_item.set_meta(
+                    source_image_path=source_path, row_index=row["index"],
+                    column_index=col_idx, column_name=column_name,
+                    row_bbox=row["bbox"],
+                    field_bbox=_field_bbox_from_keep_ranges(row["bbox"], tight_crop_ranges),
+                    model=structuring_model_profile_name,
+                    reasoning_enabled=getattr(struct_config, "reasoning_enabled", None),
+                    generation_config_hash=(
+                        struct_config.content_hash() if hasattr(struct_config, "content_hash") else None
+                    ),
+                    preprocessing={
+                        "tight_crop_padding_px": tight_crop_padding_px,
+                        "tight_crop_padding_pct": tight_crop_padding_pct,
+                        "upscale_target_height": stage2_upscale_target_height,
+                        "upscale_max_width": stage2_upscale_max_width,
+                    },
+                    stage="stage2_structure_field",
+                    stage1_raw_reading=field_reading,
+                )
+                try:
+                    raw_output = struct_loader._run_generate(field_image, prompt)
+                    parsed = parse_row_output(raw_output, [column_name])
+                    fields.update(parsed)
+                    per_field_raw_output[column_name] = raw_output
+                    debug_item.finalize(raw_output=raw_output)
+                except Exception as e:
+                    per_field_raw_output[column_name] = f"[STAGE 2 ERROR: {e}]"
+                    debug_item.finalize(raw_output=None, error=e)
+                print(f"Stage 2 (structure) row {row['index']} [{column_name}]: "
+                      f"{fields.get(column_name)!r}")
+
+            combined_reading = "\n".join(
+                f"{name}: {raw_readings[row['index']].get(name, '')}"
+                for name in column_names
+            )
+            raw_output = "\n".join(
+                f"{name}: {per_field_raw_output.get(name, '')}" for name in column_names
+            )
+            missing_fields = set(column_names) - set(fields.keys())
+            schema_pass = len(missing_fields) == 0
+            schema_error = f"Missing/dropped fields: {missing_fields}" if missing_fields else None
 
             results.append(RowExtractionResult(
                 row_index=row["index"], bbox=row["bbox"], fields=fields,
@@ -711,7 +1178,7 @@ def run_two_stage_extraction(
                 ),
                 runtime_seconds=time.time() - start,
                 schema_pass=schema_pass, schema_error=schema_error,
-                stage1_raw_output=raw_readings[row["index"]],
+                stage1_raw_output=combined_reading,
             ))
             print(f"Stage 2 (structure) row {row['index']}: "
                   f"{'OK' if schema_pass else 'INCOMPLETE'} "
@@ -730,6 +1197,7 @@ def run_row_extraction(
     bucket_config_overrides: dict | None = None,
     max_rows: int | None = None,
     header_field_names: list[str] | None = None,
+    debug_recorder: DebugModelInputRecorder | None = None,
 ) -> tuple[RowExtractionResult | None, list[RowExtractionResult]]:
     """
     Main orchestration: loads the sidecar, loads the model ONCE (not
@@ -752,6 +1220,11 @@ def run_row_extraction(
 
     max_rows: optional cap for a quick test run (e.g. first 5 rows)
     before committing to a full 50-row pass.
+
+    debug_recorder (2026-07-24, --debug-model-inputs): see
+    core/debug_dump.py. None (default) means no debug capture - passed
+    straight through to _extract_region() for both the header call and
+    every row.
 
     Returns (header_result_or_None, row_results).
     """
@@ -805,6 +1278,7 @@ def run_row_extraction(
                     header_field_names, row_index=0,
                     model_profile_name=model_profile_name,
                     mask_ranges=header_masks,
+                    debug_recorder=debug_recorder, debug_item_id="header",
                 )
                 print(f"Header: {'OK' if header_result.schema_pass else 'INCOMPLETE'} "
                       f"({len(header_result.fields)}/{len(header_field_names)} fields) - "
@@ -815,6 +1289,7 @@ def run_row_extraction(
                 loader, source_path, deskew_angle, row["bbox"], column_names,
                 row_index=row["index"], model_profile_name=model_profile_name,
                 mask_ranges=row_masks,
+                debug_recorder=debug_recorder,
             )
             results.append(result)
             print(f"Row {row['index']}: {'OK' if result.schema_pass else 'INCOMPLETE'} "
@@ -842,6 +1317,53 @@ def _column_state_or_raise(sidecar: dict, sidecar_path: str, column_name: str) -
     return state
 
 
+def _resolve_column_field_mask(
+    sidecar: dict, column_state: dict,
+) -> tuple[list[tuple[int, int]], bool, list[tuple[int, int]] | None]:
+    """
+    Returns (row_masks, mask_active, tight_crop_ranges) for ONE column,
+    reading that column's OWN persisted mask - sidecar["columns"]
+    [column_name]["mask_keep_ranges"] - the same per-column, NAME-TAGGED
+    boundary data run_single_column_extraction and
+    ground_truth_labeling_ui.py already read to show "the exact crop
+    the model/a human labeler sees" for a given field.
+
+    2026-07-24: extracted out of run_single_column_extraction (which
+    had this inline) so run_two_stage_extraction's field-level stage-1
+    pass (see that function's docstring) can reuse the IDENTICAL logic
+    instead of a second, possibly-diverging interpretation of what "this
+    column's boundary" means - a real risk flagged directly: this
+    project already has a SEPARATE, differently-shaped mask concept
+    (sidecar["columns"]["__multi__"]["mask_keep_ranges"]) that must NOT
+    be confused with this one. __multi__ is a single flat, UNLABELED
+    union of x-ranges (row_segmentation_ui.py's "Select column to keep"
+    multi-mask mode appends every click-drag to one shared list with no
+    per-column identity retained) - useful for PAINTING several wanted
+    columns' worth of area in one whole-row image, but it cannot tell
+    you which sub-range belongs to which named column, so it cannot
+    drive per-field cropping. Only sidecar["columns"][name] (the
+    persistent per-column architecture from the 2026-07-21/22 sidecar
+    redesign) carries a real name -> boundary mapping - that's what
+    this function reads, and it is a required input (not an optional
+    enhancement) for real field-level extraction.
+
+    row_masks: exclude-ranges suitable for apply_column_mask() (paint
+    everything outside this column's range white) - not used for the
+    field-level crop itself (tight_crop_ranges narrows the image
+    instead, so there's no "everything else" left to paint), but kept
+    for callers that want a masked-not-narrowed view (e.g. showing the
+    same field within a wider row image).
+    """
+    width = sidecar["deskewed_image_size"][0]
+    keep_ranges = [tuple(k) for k in column_state.get("mask_keep_ranges", [])]
+    mask_active = bool(keep_ranges) and column_state.get("mask_apply_rows", True)
+    row_masks = compute_exclude_ranges(keep_ranges, width) if mask_active else []
+    # Only tighten when a mask is actually active - with no mask, the
+    # whole row is the intended input and there's nothing to tighten to.
+    tight_crop_ranges = keep_ranges if mask_active else None
+    return row_masks, mask_active, tight_crop_ranges
+
+
 def run_single_column_extraction(
     sidecar_path: str,
     model_profile_name: str,
@@ -852,6 +1374,7 @@ def run_single_column_extraction(
     tight_crop_padding_pct: float | None = None,
     upscale_target_height: int | None = 160,
     upscale_max_width: int = 4096,
+    debug_recorder: DebugModelInputRecorder | None = None,
 ) -> list[RowExtractionResult]:
     """
     Extracts ONE column (using that column's OWN stored mask, not a
@@ -909,6 +1432,9 @@ def run_single_column_extraction(
     caller, same as run_row_extraction) for tooling that reads those
     directly - this doesn't replace that, it adds the sidecar as a
     second, persistent destination for the same results.
+
+    debug_recorder (2026-07-24, --debug-model-inputs): see
+    core/debug_dump.py. None (default) means no debug capture.
     """
     sidecar = load_sidecar(sidecar_path)
     if column_name is None:
@@ -927,14 +1453,7 @@ def run_single_column_extraction(
     if max_rows is not None:
         rows = rows[:max_rows]
 
-    width = sidecar["deskewed_image_size"][0]
-    keep_ranges = [tuple(k) for k in column_state.get("mask_keep_ranges", [])]
-    mask_active = bool(keep_ranges) and column_state.get("mask_apply_rows", True)
-    row_masks = compute_exclude_ranges(keep_ranges, width) if mask_active else []
-    # Only tighten when a mask is actually active - with no mask, the
-    # whole row is the intended input and there's nothing to tighten to.
-    tight_crop_ranges = keep_ranges if mask_active else None
-
+    row_masks, mask_active, tight_crop_ranges = _resolve_column_field_mask(sidecar, column_state)
 
     config = load_model_config(model_profile_name)
     loader_cls = LOADER_REGISTRY.get(config.loader_class)
@@ -956,6 +1475,7 @@ def run_single_column_extraction(
                 tight_crop_padding_pct=tight_crop_padding_pct,
                 upscale_target_height=upscale_target_height,
                 upscale_max_width=upscale_max_width,
+                debug_recorder=debug_recorder,
             )
             results.append(result)
             field = result.fields.get(column_name)
@@ -1000,6 +1520,17 @@ def run_single_column_extraction(
                 "upscale_target_height": upscale_target_height,
                 "upscale_max_width": upscale_max_width if upscale_target_height else None,
             },
+            # 2026-07-24: same distinguishability principle as
+            # tight_crop_applied/preprocessing above - whether
+            # constrained decoding (core/loaders/constrained_decoding.py)
+            # was active for this batch, so results with and without it
+            # stay comparable/auditable later. Unlike the document-level
+            # ExtractionResult (core/schema.py), RowExtractionResult
+            # carries no generation_config_hash field at all - this
+            # sidecar-level extraction_meta flag is the ONLY record of
+            # this setting for row-level results, not a redundant copy
+            # of something already traceable elsewhere.
+            "restrict_output_charset": config.restrict_output_charset,
         },
     }
     if mark_done:

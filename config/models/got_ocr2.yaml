@@ -14,9 +14,9 @@ do_sample: false
 temperature: 0.7
 top_p: 0.9
 top_k: 20
-repetition_penalty: 1.15
-no_repeat_ngram_size: 5
-max_new_tokens: 512
+repetition_penalty: 1.5
+no_repeat_ngram_size: 3
+max_new_tokens: 200
 
 attn_implementation: null
 
@@ -29,6 +29,14 @@ keywords_max_new_tokens: 80
 
 reasoning_toggle_mechanism: unsupported
 reasoning_enabled: false
+
+# Constrained decoding (2026-07-24) - masks generation to only allow
+# expected-script characters (Latin/accented-Latin letters, digits, this
+# project's own output-format punctuation), preventing off-script token
+# fallback (e.g. a stray Cyrillic fragment under low visual confidence -
+# real evidence, see core/loaders/constrained_decoding.py). Opt-in like
+# reasoning_enabled - default false, not a silent behavior change.
+restrict_output_charset: false
 
 prompt_version: v1
 prompt_text: ""

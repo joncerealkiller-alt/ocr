@@ -1,5 +1,5 @@
 """
-Scores a run_two_stage_extraction.py (or run_single_column_extraction's
+Scores a scripts/run_two_stage_extraction.py (or run_single_column_extraction's
 CSV/JSON, or the GUI panels that shell out to either) result file against
 your own human-verified ground_truth_log.jsonl - built because there is
 NO existing evidence in this project for which stage1/stage2 model
@@ -11,7 +11,7 @@ guess, this turns each candidate pairing you try into a real accuracy
 number against labels you already trust.
 
 CLI usage:
-    python score_two_stage_against_ground_truth.py \
+    python benchmark/score_two_stage_against_ground_truth.py \
         --results-json data/outputs/row_segmentation/<n>_twostage_extraction.json \
         --ground-truth-log data/outputs/ground_truth_log.jsonl \
         --sidecar-path data/outputs/row_segmentation/<n>_sidecar.json

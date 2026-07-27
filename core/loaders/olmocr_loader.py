@@ -191,6 +191,11 @@ class OlmOcrLoader(BaseLoader):
             gen_kwargs["repetition_penalty"] = self.config.repetition_penalty
         if self.config.no_repeat_ngram_size:
             gen_kwargs["no_repeat_ngram_size"] = self.config.no_repeat_ngram_size
+        # This loader's output is genuine JSON (parsed via json.loads()
+        # further down) - confirmed the default allowed charset in
+        # constrained_decoding.py includes {}[] specifically so this
+        # stays representable under the mask.
+        self._maybe_add_charset_logits_processor(gen_kwargs)
 
         with torch.inference_mode():
             generated_ids = self.model.generate(**inputs, **gen_kwargs)

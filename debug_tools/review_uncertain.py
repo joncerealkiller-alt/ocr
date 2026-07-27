@@ -33,7 +33,8 @@ from pathlib import Path
 from tkinter import Tk, Frame, Label, Button, StringVar, messagebox
 from PIL import Image, ImageTk
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+# Moved into debug_tools/ (2026-07-25) - one directory deeper than repo root.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BUCKET_DIR = PROJECT_ROOT / "data" / "buckets"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "outputs"
 
@@ -82,9 +83,15 @@ MAX_PREVIEW_SIZE = (500, 650)
 
 
 class ReviewApp:
-    def __init__(self, root: Tk, rows: list[dict]):
+    def __init__(self, root: Tk, rows: list[dict], error_rows: list[dict] | None = None):
         self.root = root
         self.rows = rows
+        # Hard pipeline-failure rows (e.g. classifier parse errors) -
+        # never shown in this review UI and never mutated by accept/
+        # skip/ignore, but must round-trip back into uncertain_review.
+        # csv unchanged via save_remaining() - see load_uncertain_rows()'s
+        # docstring for the real data-loss bug this fixes.
+        self.error_rows = error_rows or []
         self.index = 0
         self.reviewer_name = StringVar(value="jonny")
 
@@ -293,39 +300,74 @@ class ReviewApp:
         self.load_current()
 
     def save_remaining(self):
-        """Rewrites uncertain_review.csv with whatever's left (assigned/ignored
-        rows removed, skipped rows retained)."""
+        """
+        Rewrites uncertain_review.csv with whatever's left (assigned/
+        ignored rows removed, skipped rows retained) PLUS every
+        error_rows entry, unchanged - error rows are never shown or
+        mutated by this review UI, but must still round-trip back into
+        the file rather than being dropped (real bug, fixed 2026-07-25 -
+        see load_uncertain_rows()'s docstring).
+        """
         with open(UNCERTAIN_CSV, "w", newline="", encoding="utf-8") as f:
             fieldnames = BUCKET_CSV_FIELDS + ["error"]
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            for row in self.rows:
+            for row in self.error_rows + self.rows:
                 out_row = {k: row.get(k, "") for k in fieldnames}
                 writer.writerow(out_row)
 
 
-def load_uncertain_rows() -> list[dict]:
+def load_uncertain_rows() -> tuple[list[dict], list[dict]]:
+    """
+    Returns (reviewable_rows, error_rows) - split, not filtered down to
+    one list. error_rows (hard pipeline failures, e.g. a classifier
+    parse error - see core/loaders/gemma_loader.py's _parse_kv_block)
+    aren't classification-ambiguity calls for a human to adjudicate
+    here (core/extractor.py's own gate check applies the identical
+    `not row.get("error")` split and deliberately does NOT block
+    extraction on them, for the same reason), so they're excluded from
+    the accept/reject review UI.
+
+    REAL BUG FIXED HERE (2026-07-25, found via a live run): this used
+    to return ONLY the reviewable rows, discarding error_rows outright
+    at load time. save_remaining() rewrites uncertain_review.csv from
+    the in-memory row list on every close - since error rows were never
+    loaded into that list, simply opening this tool, doing anything at
+    all (even just Skip on an unrelated row), and closing it silently
+    and permanently deleted every hard-error row from the CSV, with no
+    logging and no recovery path - confirmed by reproducing exactly
+    this against a real run's uncertain_review.csv. error_rows must be
+    carried through untouched and written back by save_remaining(),
+    not just excluded from the reviewable list.
+    """
     if not UNCERTAIN_CSV.exists():
-        return []
+        return [], []
     with open(UNCERTAIN_CSV, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        # Skip rows with no file_path or that recorded a hard error
-        # (e.g. file not found) - those aren't classification calls
-        # to review, they're pipeline failures. Surface them separately.
-        return [
-            row for row in reader
-            if row.get("file_path") and not row.get("error")
-        ]
+        all_rows = [row for row in reader if row.get("file_path")]
+    reviewable = [row for row in all_rows if not row.get("error")]
+    error_rows = [row for row in all_rows if row.get("error")]
+    return reviewable, error_rows
 
 
 def main():
-    rows = load_uncertain_rows()
+    rows, error_rows = load_uncertain_rows()
+
+    if error_rows:
+        print(f"\n{len(error_rows)} row(s) in uncertain_review.csv recorded a hard "
+              f"pipeline error (not reviewable here - these need the underlying bug "
+              f"fixed, not a bucket reassignment; left untouched, not extraction-"
+              f"gate-blocking either, matching core/extractor.py's own gate check):")
+        for row in error_rows:
+            print(f"  - {row.get('file_path')}: {row.get('error', '')[:150]}")
+
     if not rows:
-        print("uncertain_review.csv is empty or contains no reviewable rows. Nothing to do.")
+        if not error_rows:
+            print("uncertain_review.csv is empty or contains no reviewable rows. Nothing to do.")
         return
 
     root = Tk()
-    app = ReviewApp(root, rows)
+    app = ReviewApp(root, rows, error_rows)
 
     def on_close():
         app.save_remaining()

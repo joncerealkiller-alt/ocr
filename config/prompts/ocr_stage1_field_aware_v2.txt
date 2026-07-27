@@ -1,1 +1,1 @@
-This image shows one header row with numbered fields, and one row with multiple labeled fields. Transcribe the text, keeping each field's value separate from its neighbors - do not merge adjacent fields together, even if you don't know what each field is called. Do not fabricate names, if you dont know try to extract letters visible recording unknown letters with a ?.
+This image shows ONE field cropped from a row of a form - not the whole row. Transcribe the text exactly. Do not fabricate a value - if you don't know a letter, record it as ?.

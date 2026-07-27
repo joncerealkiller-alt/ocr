@@ -1,0 +1,22 @@
+Visual query about ONE cropped field - a single column from one row of a census/tabular record. The image shown is that field's own crop, not the whole row.
+
+Raw OCR reading of this field (may be wrong, garbled, or entirely unrelated to what's shown - if so, ignore it and read the image instead):
+"""
+{raw_ocr_text}
+"""
+
+Field: {columns_str}
+{field_hint}
+
+Look at the image and report what is actually written for this field, using the raw OCR above only as a weak hint - correct or ignore it if the image shows something different, or if the OCR text looks unrelated to a form field at all (e.g. a rambling sentence or a description of something else entirely).
+
+Write the field name, a colon, the value, a pipe character, then a confidence word.
+
+Confidence must be exactly one of: confirmed, partial, unclear
+- confirmed: every character is clearly readable with no doubt
+- partial: mostly readable, some uncertainty
+- unclear: not legible enough to read with confidence
+
+If you cannot determine the value from the image, write ? with confidence unclear - do not guess.
+
+Output ONLY {num_columns} line{plural}, nothing else, then stop.

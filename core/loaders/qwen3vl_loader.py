@@ -264,6 +264,7 @@ class Qwen3VLLoader(BaseLoader):
             # just at model init) to match the string across token boundaries.
             gen_kwargs["stop_strings"] = [self.config.stop_string]
             gen_kwargs["tokenizer"] = self.processor.tokenizer
+        self._maybe_add_charset_logits_processor(gen_kwargs)
 
         with torch.inference_mode():
             try:

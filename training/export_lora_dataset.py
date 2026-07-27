@@ -1,0 +1,469 @@
+"""
+LoRA Training Set Export — converts ground_truth_log.jsonl (from
+ui/ground_truth_labeling_ui.py) into image+target-text training pairs.
+
+Per project scope: the first LoRA should improve cursive recognition,
+literal transcription, and uncertainty handling - NOT formatting or
+structured output. This export reflects that directly: each target is
+a single field's honest value (including "illegible"/"blank"/partial-
+with-?), not a full structured multi-field record. Teaching the model
+to produce a confident-looking complete record is explicitly the wrong
+training signal for this project's goal (finding aid, not source of
+truth) - a LoRA trained on cleaned-up/completed targets would actively
+un-teach the abstention behavior the pipeline needs.
+
+Usage:
+    python training/export_lora_dataset.py [--log-file PATH] [--out-dir PATH]
+        [--min-examples-per-status N] [--export-all]
+
+Outputs to --out-dir (default: data/outputs/lora_dataset/):
+    images/<uuid>.png          - one cropped row image per example
+    train.jsonl                 - one record per line:
+                                   {"image": "images/<uuid>.png",
+                                    "column": "Age", "row_index": 12,
+                                    "target": "unclear" | "34" | "3?" | ""}
+    dataset_report.txt          - counts per status/column, so it's
+                                   visible before training whether the
+                                   set is skewed (e.g. almost no
+                                   "illegible" examples means the LoRA
+                                   won't learn that behavior at all)
+
+Incremental by default (2026-07-26, per Jon's direction): re-running
+this script as ground_truth_log.jsonl grows used to re-crop and re-save
+EVERY record from scratch every time, under a fresh random filename -
+harmless but wasteful, and confirmed to have piled up ~1500 duplicate
+image files across repeated exports of a growing log. Now, a record is
+only (re-)cropped if it's genuinely new OR its previously-exported image
+file has gone missing since the last export (self-heals from accidental
+loss, same spirit as core/dewarp.py's corner-sidecar recovery) - an
+unchanged, still-present image is reused as-is, with only its target/
+status/notes refreshed from the current ground truth log (so a
+corrected label always shows up without needing to regenerate the
+geometrically-unchanged crop). Pass --export-all to bypass this entirely
+and force a full rebuild (e.g. after changing --upscale-target-height or
+other preprocessing params that DO change the image content).
+
+Target text format (deliberately NOT the pipe-delimited "value|
+confidence" convention used elsewhere in this project): a LoRA teaching
+literal transcription should produce literal transcription, not learn
+to also emit a confidence tag it wasn't shown a real signal for -
+confidence is a downstream structuring-stage concern (see
+build_structuring_prompt), not a stage-1 recognition concern. Statuses
+map to plain text:
+    readable            -> the typed value, as-is
+    partially_readable   -> the typed value (already contains any ?)
+    illegible            -> the literal string "illegible"
+    blank                -> the literal string "blank"
+This mirrors ocr_stage1_birthplace_field.txt's DITTO convention -
+a recognizable literal token for a real, meaningful non-value, not an
+empty string a training pipeline might collapse or drop silently.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import sys
+import uuid
+from collections import Counter, defaultdict
+from pathlib import Path
+
+# Moved into training/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the `core.*`
+# import below will resolve.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from core.row_segmentation import load_sidecar, crop_region_from_source, compute_exclude_ranges
+DEFAULT_LOG = PROJECT_ROOT / "data" / "outputs" / "ground_truth_log.jsonl"
+DEFAULT_OUT = PROJECT_ROOT / "data" / "outputs" / "lora_dataset"
+
+STATUS_TO_TARGET = {
+    "illegible": "illegible",
+    "blank": "blank",
+    # readable / partially_readable use the record's own typed value
+}
+
+
+def _load_records(log_path: Path) -> list[dict]:
+    """
+    Loads every line, then deduplicates by (sidecar_path, row_index,
+    column), keeping only the LAST occurrence. ground_truth_log.jsonl is
+    append-only (ui/ground_truth_labeling_ui.py never rewrites a prior
+    line), so if a field was ever re-labeled the log can contain more
+    than one line for the same key - the last one written is the
+    corrected, authoritative answer, matching the "latest wins"
+    convention already used elsewhere in this project (e.g.
+    benchmark_db.load_latest_scores()). Without this, a re-labeled field
+    would silently produce two conflicting training examples instead of
+    one corrected one.
+    """
+    raw = []
+    with open(log_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                raw.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+    latest_by_key: dict[tuple, dict] = {}
+    for rec in raw:
+        key = (rec.get("sidecar_path"), rec.get("row_index"), rec.get("column"))
+        latest_by_key[key] = rec
+    return list(latest_by_key.values())
+
+
+def _load_existing_export_index(train_path: Path, images_dir: Path) -> dict[tuple, dict]:
+    """
+    Maps (sidecar_path, row_index, column) -> that key's record from the
+    PREVIOUS export, for every entry whose image file still actually
+    exists on disk. An entry whose image is missing (accidental
+    deletion, disk issue) is deliberately left OUT of this index, so
+    export() below treats it as needing a fresh crop - this is the
+    actual self-heal-from-loss behavior Jon asked for, not just a speed
+    optimization for the common case.
+
+    Skips any record missing row_index entirely (2026-07-26 fix, found
+    via a real migration run) - train.jsonl records written before this
+    incremental-export feature existed have no row_index at all, so
+    naively building a key from a missing field would collapse EVERY
+    row of the same (sidecar, column) pair onto the identical
+    `(sidecar, None, column)` key, silently keeping only the last one
+    seen and - worse - risking a future record being wrongly matched
+    and reused for the WRONG row's image. Confirmed harmless this time
+    (the mismatch just meant nothing got reused, forcing one legitimate
+    full re-crop to backfill row_index everywhere), but excluding these
+    up front is the correct fix, not just relying on luck.
+    """
+    index: dict[tuple, dict] = {}
+    if not train_path.exists():
+        return index
+    with open(train_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if rec.get("row_index") is None:
+                continue
+            image_name = Path(rec.get("image", "")).name
+            if not image_name or not (images_dir / image_name).exists():
+                continue
+            key = (rec.get("source_sidecar"), rec.get("row_index"), rec.get("column"))
+            index[key] = rec
+    return index
+
+
+def _record_to_target(record: dict) -> str | None:
+    """
+    Returns the training target text, or None if this record shouldn't
+    be included (e.g. 'readable' status with an empty value somehow
+    slipped through - the labeling UI shouldn't allow this, but this
+    export doesn't trust that invariant blindly at the boundary between
+    two separately-run tools).
+    """
+    status = record.get("status")
+    if status in STATUS_TO_TARGET:
+        return STATUS_TO_TARGET[status]
+    if status in ("readable", "partially_readable"):
+        value = (record.get("value") or "").strip()
+        return value if value else None
+    return None
+
+
+def _sidecar_cache_get(cache: dict, sidecar_path: str) -> dict | None:
+    if sidecar_path not in cache:
+        try:
+            cache[sidecar_path] = load_sidecar(sidecar_path)
+        except Exception as e:
+            print(f"WARNING: could not load sidecar {sidecar_path}: {e}")
+            cache[sidecar_path] = None
+    return cache[sidecar_path]
+
+
+def export(
+    log_path: Path, out_dir: Path, min_examples_per_status: int = 0,
+    tight_crop_padding_px: int = 20, tight_crop_padding_pct: float | None = None,
+    upscale_target_height: int | None = 160, upscale_max_width: int = 4096,
+    export_all: bool = False,
+) -> None:
+    records = _load_records(log_path)
+    if not records:
+        print(f"No records found in {log_path}. Nothing to export.")
+        return
+
+    images_dir = out_dir / "images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+    train_path = out_dir / "train.jsonl"
+    report_path = out_dir / "dataset_report.txt"
+
+    existing_index: dict[tuple, dict] = (
+        {} if export_all else _load_existing_export_index(train_path, images_dir)
+    )
+    if export_all:
+        print("--export-all: ignoring any previous export, re-cropping everything fresh.")
+    elif existing_index:
+        print(f"Incremental export: {len(existing_index)} example(s) already have an intact "
+              f"exported image and will be reused as-is (only target/status/notes refreshed "
+              f"from the current log). Pass --export-all to force a full rebuild instead.")
+
+    sidecar_cache: dict[str, dict] = {}
+    status_counts: Counter = Counter()
+    column_counts: defaultdict = defaultdict(Counter)
+    skipped_no_target = 0
+    skipped_bad_row = 0
+    written = 0
+    reused = 0
+
+    with open(train_path, "w", encoding="utf-8") as train_f:
+        for record in records:
+            target = _record_to_target(record)
+            if target is None:
+                skipped_no_target += 1
+                continue
+
+            sidecar_path = record.get("sidecar_path")
+            row_index = record.get("row_index")
+            column = record.get("column", "")
+            key = (sidecar_path, row_index, column)
+
+            existing = existing_index.get(key)
+            if existing is not None:
+                # Image is unaffected by re-labeling text (it's purely
+                # geometric - same sidecar/row/column mask), so reuse it
+                # untouched; only the human-editable fields get a fresh
+                # read from the current log, so a corrected label always
+                # shows up without wasting a new duplicate image file.
+                train_f.write(json.dumps({
+                    **existing,
+                    "target": target,
+                    "status": record.get("status"),
+                    "notes": record.get("notes", ""),
+                }, ensure_ascii=False) + "\n")
+                status_counts[record.get("status")] += 1
+                column_counts[column][record.get("status")] += 1
+                written += 1
+                reused += 1
+                continue
+
+            sidecar = _sidecar_cache_get(sidecar_cache, sidecar_path)
+            if sidecar is None:
+                skipped_bad_row += 1
+                continue
+
+            row = next((r for r in sidecar["rows"] if r["index"] == row_index), None)
+            if row is None:
+                print(f"WARNING: row {row_index} not found in {sidecar_path} - skipping "
+                      f"this example (sidecar may have been regenerated since labeling).")
+                skipped_bad_row += 1
+                continue
+
+            source_path = sidecar["source_image_path"]
+            deskew_angle = sidecar["deskew_angle"]
+            # BUG FIX (2026-07-22): this used to read the sidecar's
+            # LEGACY top-level mask_keep_ranges/mask_apply_rows fields -
+            # which are empty/unused for any sidecar created under the
+            # per-column architecture. That meant EVERY exported
+            # training image was the same unmasked full row, regardless
+            # of which column the label was for - confirmed via a real
+            # export where Name's and Age's images for the same row
+            # were byte-identical. Now reads the per-column mask that
+            # was ACTUALLY used at extraction time, matching
+            # core.row_extraction.run_single_column_extraction exactly.
+            column_state = sidecar.get("columns", {}).get(column)
+            if column_state is not None:
+                keep_ranges = [tuple(k) for k in column_state.get("mask_keep_ranges", [])]
+                apply_rows = column_state.get("mask_apply_rows", True)
+            else:
+                keep_ranges = [tuple(k) for k in sidecar.get("mask_keep_ranges", [])]
+                apply_rows = sidecar.get("mask_apply_rows", False)
+            width = sidecar["deskewed_image_size"][0]
+            mask_active = bool(keep_ranges) and apply_rows
+            row_masks = compute_exclude_ranges(keep_ranges, width) if mask_active else []
+
+            try:
+                crop = crop_region_from_source(
+                    source_path, row["bbox"], deskew_angle, row_masks,
+                    # Tight-crop (2026-07-22): the mask above only PAINTS
+                    # outside the kept range white, it doesn't narrow the
+                    # image - without this, a masked crop was still the
+                    # FULL row width (~3800px) with real content in maybe
+                    # 9% of it. Only tightens when a mask is actually
+                    # active; a column with no mask exports the full row
+                    # as before (nothing to tighten to).
+                    tight_crop_keep_ranges=keep_ranges if mask_active else None,
+                    tight_crop_padding_px=tight_crop_padding_px,
+                    tight_crop_padding_pct=tight_crop_padding_pct,
+                    # Upscale (2026-07-23): defaults to 160 - matching
+                    # run_single_column_extraction's own default exactly,
+                    # deliberately, so LoRA training images match what
+                    # real extraction actually sends the model. Training
+                    # on tiny 79x36px crops while extraction sends 351x160
+                    # would teach the LoRA a different input distribution
+                    # than it's actually used against at inference time.
+                    upscale_target_height=upscale_target_height,
+                    upscale_max_width=upscale_max_width,
+                )
+            except Exception as e:
+                print(f"WARNING: could not crop row {row_index} from {source_path}: {e} - skipping.")
+                skipped_bad_row += 1
+                continue
+
+            if crop.mode != "RGB":
+                crop = crop.convert("RGB")
+
+            image_name = f"{uuid.uuid4().hex}.png"
+            crop.save(images_dir / image_name)
+
+            train_f.write(json.dumps({
+                "image": f"images/{image_name}",
+                "column": column,
+                # 2026-07-26: needed (alongside source_sidecar/column) to
+                # form the stable (sidecar, row, column) identity key
+                # _load_existing_export_index() uses to detect "already
+                # exported" on a future run - wasn't stored before this,
+                # so incremental skip/reuse couldn't have worked without
+                # a full-log re-derivation. Harmless additive field for
+                # any older consumer that ignores it.
+                "row_index": row_index,
+                "target": target,
+                "status": record.get("status"),
+                "notes": record.get("notes", ""),
+                # 2026-07-22: identifies which source page this example
+                # came from - needed for a PAGE-level train/val split
+                # (see train_lora.py) rather than a row-level one. A
+                # random row-level split would let near-identical
+                # handwriting from the same page/enumerator leak into
+                # both train and val, producing a falsely optimistic
+                # validation signal. Sidecar path is a stable per-page
+                # identifier already available on every record.
+                "source_sidecar": sidecar_path,
+            }, ensure_ascii=False) + "\n")
+
+            status_counts[record.get("status")] += 1
+            column_counts[column][record.get("status")] += 1
+            written += 1
+
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(f"LoRA training set export report\n{'=' * 40}\n\n")
+        f.write(f"Source log: {log_path}\n")
+        f.write(f"Total records in log: {len(records)}\n")
+        f.write(f"Written to training set: {written} "
+                f"({reused} reused from a previous export, {written - reused} freshly cropped)\n")
+        f.write(f"Skipped (no usable target, e.g. empty 'readable' value): {skipped_no_target}\n")
+        f.write(f"Skipped (sidecar/row lookup failed): {skipped_bad_row}\n\n")
+        f.write(
+            f"Preprocessing: upscale_target_height="
+            f"{upscale_target_height if upscale_target_height else 'off'}"
+            f"{f', upscale_max_width={upscale_max_width}' if upscale_target_height else ''}\n\n"
+        )
+
+        f.write("Status distribution (overall):\n")
+        for status, count in status_counts.most_common():
+            f.write(f"  {status}: {count}\n")
+        f.write("\n")
+
+        f.write("Per-column status breakdown:\n")
+        for column in sorted(column_counts.keys()):
+            f.write(f"  {column}:\n")
+            for status, count in column_counts[column].most_common():
+                f.write(f"    {status}: {count}\n")
+        f.write("\n")
+
+        # Explicit warning, not just a number buried in the report - a
+        # training set with near-zero illegible/blank examples will not
+        # teach the LoRA to abstain, regardless of how good the readable
+        # examples are. This is the single most important check before
+        # training, given the project's stated priority (uncertainty
+        # handling over polish).
+        f.write("Coverage warnings:\n")
+        any_warning = False
+        for status in ("illegible", "blank", "partially_readable"):
+            count = status_counts.get(status, 0)
+            if count < min_examples_per_status:
+                f.write(f"  LOW COVERAGE: only {count} '{status}' example(s) "
+                        f"(threshold: {min_examples_per_status}). The LoRA is "
+                        f"unlikely to learn this behavior reliably without more.\n")
+                any_warning = True
+        if not any_warning:
+            f.write("  None - all tracked statuses meet the minimum threshold.\n")
+
+    print(f"Wrote {written} training examples to {train_path} "
+          f"({reused} reused, {written - reused} newly cropped)")
+    print(f"Images saved to {images_dir}")
+    print(f"Report: {report_path}")
+    if status_counts.get("illegible", 0) < min_examples_per_status or \
+       status_counts.get("blank", 0) < min_examples_per_status:
+        print("\nWARNING: low coverage on illegible/blank examples - see report. "
+              "Training now risks a LoRA that still prefers plausible-looking "
+              "guesses over honest abstention, which is the opposite of this "
+              "project's goal.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--log-file", type=str, default=str(DEFAULT_LOG),
+                         help=f"Path to ground_truth_log.jsonl. Default: {DEFAULT_LOG}")
+    parser.add_argument("--out-dir", type=str, default=str(DEFAULT_OUT),
+                         help=f"Output directory. Default: {DEFAULT_OUT}")
+    parser.add_argument("--min-examples-per-status", type=int, default=15,
+                         help="Minimum example count for illegible/blank/partial "
+                              "statuses before the report flags a coverage warning. "
+                              "Default: 15 (arbitrary starting floor, not evidence-"
+                              "based - adjust once you have a sense of real class "
+                              "balance in a first batch).")
+    parser.add_argument("--tight-crop-padding-px", type=int, default=20,
+                         help="Fixed pixel padding around each column's kept mask "
+                              "range for the exported training image (default: 20). "
+                              "Ignored if --tight-crop-padding-pct is given.")
+    parser.add_argument("--tight-crop-padding-pct", type=float, default=None,
+                         help="Padding as a fraction of the kept range's own width "
+                              "(e.g. 0.1 = 10%%), instead of a fixed pixel margin - "
+                              "useful when column widths vary a lot across the page. "
+                              "Overrides --tight-crop-padding-px if given.")
+    parser.add_argument("--upscale-target-height", type=int, default=160,
+                         help="Upscales each exported crop (aspect-preserving, "
+                              "LANCZOS) so its height reaches at least this many "
+                              "pixels. Default: 160 - matches run_single_column_"
+                              "extraction's own default exactly, so training images "
+                              "match what real extraction actually sends the model "
+                              "(training on a different input distribution than "
+                              "inference uses would teach the LoRA the wrong thing). "
+                              "Pass 0 to disable and reproduce exact pre-2026-07-23 "
+                              "behavior.")
+    parser.add_argument("--upscale-max-width", type=int, default=4096,
+                         help="Caps the upscaled image's width (default: 4096). "
+                              "Only relevant if --upscale-target-height is nonzero.")
+    parser.add_argument("--export-all", action="store_true",
+                         help="Ignore any previous export - re-crop and re-save EVERY "
+                              "record fresh under a new filename, even ones whose image "
+                              "already exists on disk. Default is incremental: only "
+                              "genuinely new records, or ones whose previously-exported "
+                              "image has gone missing, get (re-)cropped. Use this after "
+                              "changing a preprocessing param that changes image content "
+                              "(e.g. --upscale-target-height), or for a full rebuild after "
+                              "suspected corruption/loss.")
+    args = parser.parse_args()
+
+    log_path = Path(args.log_file)
+    if not log_path.exists():
+        print(f"ERROR: log file not found: {log_path}")
+        return
+
+    export(log_path, Path(args.out_dir), args.min_examples_per_status,
+           tight_crop_padding_px=args.tight_crop_padding_px,
+           tight_crop_padding_pct=args.tight_crop_padding_pct,
+           upscale_target_height=args.upscale_target_height or None,
+           upscale_max_width=args.upscale_max_width,
+           export_all=args.export_all)
+
+
+if __name__ == "__main__":
+    main()

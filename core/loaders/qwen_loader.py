@@ -95,7 +95,13 @@ class QwenLoader(BaseLoader):
 
         self.model = model
         self.processor = processor
-        return model, None, processor
+        # Previously left as the BaseLoader default (None) - real gap
+        # found 2026-07-24 wiring restrict_output_charset support: every
+        # OTHER loader in this project sets self.tokenizer = processor.
+        # tokenizer, and _maybe_add_charset_logits_processor() (base_
+        # loader.py) needs it. Brought in line rather than special-cased.
+        self.tokenizer = processor.tokenizer
+        return model, self.tokenizer, processor
 
     def _build_prompt(self, task: str) -> str:
         if task != "extract":
@@ -157,6 +163,7 @@ class QwenLoader(BaseLoader):
             gen_kwargs["repetition_penalty"] = self.config.repetition_penalty
         if self.config.no_repeat_ngram_size:
             gen_kwargs["no_repeat_ngram_size"] = self.config.no_repeat_ngram_size
+        self._maybe_add_charset_logits_processor(gen_kwargs)
 
         with torch.inference_mode():
             generated_ids = self.model.generate(**inputs, **gen_kwargs)

@@ -10,7 +10,7 @@ non-prompt OCR engine... use a VLM or LLM to combine them after
 extraction."
 
 Usage:
-    python run_two_stage_extraction.py <sidecar.json> <columns.txt> \\
+    python scripts/run_two_stage_extraction.py <sidecar.json> <columns.txt> \\
         --ocr-model chandra --structure-model qwen3vl4b [--max-rows N]
 
 Outputs to --out (default: same directory as the sidecar):
@@ -29,7 +29,13 @@ import argparse
 import sys
 from pathlib import Path
 
+# Moved into scripts/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the `core.*`
+# imports below will resolve.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from core.row_extraction import run_two_stage_extraction, save_results_csv, save_results_json
+from core.debug_dump import DebugModelInputRecorder
 
 
 def _load_field_list(path: Path, label: str) -> list[str]:
@@ -76,22 +82,58 @@ def main():
                               "Added 2026-07-22 so stage 2's instructional wording "
                               "can be iterated on without editing core/"
                               "row_extraction.py.")
-    parser.add_argument("--upscale-target-height", type=int, default=0,
-                         help="Upscales each row crop (aspect-preserving, LANCZOS) "
-                              "so its height reaches at least this many pixels "
-                              "before either stage sees it. Default: 0 (off) - "
-                              "unlike single-column extraction, this path doesn't "
-                              "tight-crop (it can keep several ranges spread across "
-                              "one row), so its crops are typically already full-"
-                              "row-width; the 79x36px evidence behind single-column "
-                              "extraction's upscale-by-default was measured on "
-                              "tightly-cropped images specifically, not this path. "
-                              "Set explicitly (e.g. 160) to test upscaling here too.")
-    parser.add_argument("--upscale-max-width", type=int, default=4096,
-                         help="Caps the upscaled image's width (default: 4096). "
-                              "Only relevant if --upscale-target-height is set.")
+    parser.add_argument("--tight-crop-padding-px", type=int, default=20,
+                         help="Fixed pixel padding around each field's own kept "
+                              "mask range for stage 1's per-column crop (default: "
+                              "20). Ignored if --tight-crop-padding-pct is given. "
+                              "Same meaning as run_row_extraction.py's identically-"
+                              "named flag.")
+    parser.add_argument("--tight-crop-padding-pct", type=float, default=None,
+                         help="Padding as a fraction of each field's own kept "
+                              "range width, instead of a fixed pixel margin. "
+                              "Overrides --tight-crop-padding-px if given.")
+    parser.add_argument("--stage1-upscale-target-height", type=int, default=160,
+                         help="Upscales each PER-COLUMN field crop (aspect-"
+                              "preserving, LANCZOS) so its height reaches at least "
+                              "this many pixels before stage 1 (OCR) sees it. "
+                              "Default: 160 - stage 1 now runs one OCR call per "
+                              "selected column against that column's own tightly-"
+                              "cropped image (2026-07-24 fix - it previously ran "
+                              "one call against the full, mostly-blank row), so it "
+                              "needs the same upscale-by-default treatment as "
+                              "single-column extraction (real crops measured as "
+                              "small as 79x36px). Pass 0 to disable.")
+    parser.add_argument("--stage1-upscale-max-width", type=int, default=4096,
+                         help="Caps stage 1's upscaled field crop width (default: "
+                              "4096). Only relevant if --stage1-upscale-target-"
+                              "height is set.")
+    parser.add_argument("--stage2-upscale-target-height", type=int, default=160,
+                         help="Upscales each PER-COLUMN field crop stage 2 sees "
+                              "(aspect-preserving, LANCZOS) so its height reaches "
+                              "at least this many pixels. Default: 160, matching "
+                              "stage 1 - stage 2 now runs one structuring call per "
+                              "selected column against that SAME column's own "
+                              "tightly-cropped image stage 1 used (2026-07-25 fix: "
+                              "previously one call against all selected columns "
+                              "unioned into one image, which still left inter-"
+                              "column gutter whitespace for the model to sort "
+                              "through). Pass 0 to disable.")
+    parser.add_argument("--stage2-upscale-max-width", type=int, default=4096,
+                         help="Caps stage 2's upscaled field crop width (default: "
+                              "4096). Only relevant if --stage2-upscale-target-"
+                              "height is set.")
     parser.add_argument("--out", type=str, default=None,
                          help="Output directory. Default: same directory as the sidecar.")
+    parser.add_argument("--debug-model-inputs", action="store_true",
+                         help="Save the exact image crop, prompt, and raw output for "
+                              "every stage-1/stage-2 model call to "
+                              "data/debug_model_inputs/<run_id>/ - see "
+                              "scripts/run_row_extraction.py --help for the full "
+                              "explanation. Off by default; has no effect on "
+                              "extraction results when omitted.")
+    parser.add_argument("--debug-dir", type=str, default="data/debug_model_inputs",
+                         help="Base directory for --debug-model-inputs output "
+                              "(default: data/debug_model_inputs/).")
     args = parser.parse_args()
 
     sidecar_path = Path(args.sidecar_path)
@@ -121,21 +163,33 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     name = sidecar_path.stem.replace("_sidecar", "")
 
+    debug_recorder = DebugModelInputRecorder(
+        enabled=args.debug_model_inputs, base_dir=args.debug_dir,
+    )
+    if debug_recorder.enabled:
+        print(f"Debug model-input capture: ON -> {debug_recorder.run_dir}")
+
     print(f"Sidecar: {sidecar_path}")
     print(f"Columns ({len(column_names)}): {', '.join(column_names)}")
     print(f"Stage 1 (OCR): {args.ocr_model}")
     print(f"Stage 1 prompt: {args.ocr_prompt_file or '(none - empty)'}")
     print(f"Stage 2 (structure): {args.structure_model}")
     print(f"Stage 2 prompt template: {args.structuring_prompt_file or '(none - built-in default)'}")
-    print(f"Upscale target height: {args.upscale_target_height or '(off)'}")
+    print(f"Stage 1 upscale target height (per-field crop): {args.stage1_upscale_target_height or '(off)'}")
+    print(f"Stage 2 upscale target height (per-field crop): {args.stage2_upscale_target_height or '(off)'}")
     print(f"{'='*60}")
 
     results = run_two_stage_extraction(
         str(sidecar_path), args.ocr_model, args.structure_model,
         column_names, max_rows=args.max_rows, ocr_prompt=ocr_prompt,
         structuring_prompt_template=structuring_prompt_template,
-        upscale_target_height=args.upscale_target_height or None,
-        upscale_max_width=args.upscale_max_width,
+        stage1_upscale_target_height=args.stage1_upscale_target_height or None,
+        stage1_upscale_max_width=args.stage1_upscale_max_width,
+        stage2_upscale_target_height=args.stage2_upscale_target_height or None,
+        stage2_upscale_max_width=args.stage2_upscale_max_width,
+        tight_crop_padding_px=args.tight_crop_padding_px,
+        tight_crop_padding_pct=args.tight_crop_padding_pct,
+        debug_recorder=debug_recorder,
     )
 
     csv_path = out_dir / f"{name}_twostage_extraction.csv"

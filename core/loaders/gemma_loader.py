@@ -63,7 +63,13 @@ class GemmaLoader(BaseLoader):
 
         self.model = model
         self.processor = processor
-        return model, None, processor
+        # Previously left as the BaseLoader default (None) - real gap
+        # found 2026-07-24 wiring restrict_output_charset support: every
+        # OTHER loader in this project sets self.tokenizer = processor.
+        # tokenizer, and _maybe_add_charset_logits_processor() (base_
+        # loader.py) needs it. Brought in line rather than special-cased.
+        self.tokenizer = processor.tokenizer
+        return model, self.tokenizer, processor
 
     def _build_prompt(self, task: str) -> str:
         if task != "classify":
@@ -76,7 +82,7 @@ class GemmaLoader(BaseLoader):
         if not base_prompt:
             raise ValueError(
                 "config.prompt_text is empty — load it from "
-                "config/prompts/classify_v1.txt before calling classify()."
+                "config/prompts/classifier_classify_v1.txt before calling classify()."
             )
         return base_prompt
 
@@ -151,6 +157,7 @@ class GemmaLoader(BaseLoader):
             gen_kwargs["repetition_penalty"] = self.config.repetition_penalty
         if self.config.no_repeat_ngram_size:
             gen_kwargs["no_repeat_ngram_size"] = self.config.no_repeat_ngram_size
+        self._maybe_add_charset_logits_processor(gen_kwargs)
 
         with torch.inference_mode():
             outputs = self.model.generate(**inputs, **gen_kwargs)
@@ -178,12 +185,24 @@ class GemmaLoader(BaseLoader):
         recognized key (strips leaked reasoning/preamble) and stops at
         the first blank line after keys begin, so trailing commentary
         doesn't get absorbed into a field value.
+
+        Tolerates an optional leading "-"/"*" markdown bullet marker
+        before the key (2026-07-25, real bug found via a live
+        classification run: Gemma formatted its ENTIRE response as a
+        bullet list - "- category: dense_tabular_rows", "- confidence:
+        1.0", etc. - and the original whitespace-only prefix regex
+        rejected every single line, not just the ones that ended up
+        "missing": all 8 fields were present and readable, but zero
+        matched, so every field silently failed to parse and the
+        image was routed to uncertain_review with a "missing required
+        fields" error that named only the 3 REQUIRED keys, masking
+        that this was a 100% parse failure, not a partial one).
         """
         result: dict[str, str] = {}
         lines = raw_output.splitlines()
         started = False
         for line in lines:
-            match = re.match(r"^\s*([a-zA-Z_]+)\s*:\s*(.*)$", line)
+            match = re.match(r"^\s*[-*]?\s*([a-zA-Z_]+)\s*:\s*(.*)$", line)
             if match:
                 key, value = match.group(1).lower(), match.group(2).strip()
                 result[key] = value

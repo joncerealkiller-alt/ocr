@@ -1,3 +1,4 @@
 ﻿__pycache__/
 *.pyc
 data/outputs/
+data/debug_model_inputs/

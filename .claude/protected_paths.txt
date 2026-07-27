@@ -18,3 +18,4 @@ data/outputs/dewarped
 data/outputs/row_segmentation
 data/outputs/lora_dataset
 data/outputs/scoring_reports
+data/outputs/lora_checkpoints

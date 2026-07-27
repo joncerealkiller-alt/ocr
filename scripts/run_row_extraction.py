@@ -1,11 +1,11 @@
 """
 Row-level extraction CLI - the OCR-integration step that consumes a
-segmentation sidecar JSON (from test_row_segmentation.py or
-row_segmentation_ui.py) and runs structured extraction on each row.
+segmentation sidecar JSON (from diagnostics/test_row_segmentation.py or
+ui/row_segmentation_ui.py) and runs structured extraction on each row.
 
 Two modes:
 
-1. SINGLE-COLUMN (2026-07-22, matches row_segmentation_ui.py's
+1. SINGLE-COLUMN (2026-07-22, matches ui/row_segmentation_ui.py's
    mask -> Next -> mask -> Next persistent-sidecar workflow): extracts
    just ONE column, using that column's own stored mask from the
    sidecar's columns[name], and writes results straight into
@@ -13,7 +13,7 @@ Two modes:
    core.row_segmentation.update_sidecar). This is the default when no
    columns.txt is given - the sidecar's own active_column is used.
 
-       python run_row_extraction.py <sidecar.json> --model qwen3vl2b \
+       python scripts/run_row_extraction.py <sidecar.json> --model qwen3vl2b \
            [--column NAME] [--max-rows N] [--no-mark-done]
 
 2. LEGACY MULTI-COLUMN (original behavior, unchanged): all columns
@@ -22,7 +22,7 @@ Two modes:
    still useful for a whole-row pass where isolating one column isn't
    needed. Triggered by passing a columns.txt.
 
-       python run_row_extraction.py <sidecar.json> <columns.txt> \
+       python scripts/run_row_extraction.py <sidecar.json> <columns.txt> \
            --model qwen3vl2b [--max-rows N] [--header-fields <fields.txt>]
 
 Example columns.txt for a standard census form:
@@ -60,10 +60,16 @@ import json
 import sys
 from pathlib import Path
 
+# Moved into scripts/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the `core.*`
+# imports below will resolve.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from core.row_extraction import (
     run_row_extraction, run_single_column_extraction, save_results_csv, save_results_json,
 )
 from core.row_segmentation import load_sidecar
+from core.debug_dump import DebugModelInputRecorder
 
 
 def _load_field_list(path: Path, label: str) -> list[str]:
@@ -133,6 +139,20 @@ def main():
                               "same model load as the row pass.")
     parser.add_argument("--out", type=str, default=None,
                          help="Output directory. Default: same directory as the sidecar.")
+    parser.add_argument("--debug-model-inputs", action="store_true",
+                         help="Save the exact image crop, prompt, and raw output for "
+                              "every model call to data/debug_model_inputs/<run_id>/ - "
+                              "the original bbox crop AND the final preprocessed image "
+                              "actually handed to the model (after masking/tight-crop/"
+                              "upscale), plus per-item metadata. Off by default; has "
+                              "no effect on extraction results when omitted. Use this "
+                              "to answer 'what exact image did the model receive?' "
+                              "when output is blank or clearly wrong.")
+    parser.add_argument("--debug-dir", type=str, default="data/debug_model_inputs",
+                         help="Base directory for --debug-model-inputs output "
+                              "(default: data/debug_model_inputs/). Each run gets its "
+                              "own timestamped subdirectory - never overwrites a prior "
+                              "run.")
     args = parser.parse_args()
 
     sidecar_path = Path(args.sidecar_path)
@@ -144,13 +164,19 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     name = sidecar_path.stem.replace("_sidecar", "")
 
+    debug_recorder = DebugModelInputRecorder(
+        enabled=args.debug_model_inputs, base_dir=args.debug_dir,
+    )
+    if debug_recorder.enabled:
+        print(f"Debug model-input capture: ON -> {debug_recorder.run_dir}")
+
     if args.columns_path is None:
         # -- single-column mode -------------------------------------------
         sidecar = load_sidecar(str(sidecar_path))
         column_name = args.column or sidecar.get("active_column")
         if column_name is None:
             print("ERROR: no --column given and sidecar has no active_column set "
-                  "(mask a column in row_segmentation_ui.py first, or pass "
+                  "(mask a column in ui/row_segmentation_ui.py first, or pass "
                   "--column NAME, or pass a columns.txt for legacy multi-column mode).")
             sys.exit(1)
 
@@ -167,6 +193,7 @@ def main():
             tight_crop_padding_pct=args.tight_crop_padding_pct,
             upscale_target_height=args.upscale_target_height or None,
             upscale_max_width=args.upscale_max_width,
+            debug_recorder=debug_recorder,
         )
 
         csv_path = out_dir / f"{name}_{column_name}_extraction.csv"
@@ -206,6 +233,7 @@ def main():
     header_result, results = run_row_extraction(
         str(sidecar_path), args.model, column_names,
         max_rows=args.max_rows, header_field_names=header_field_names,
+        debug_recorder=debug_recorder,
     )
 
     csv_path = out_dir / f"{name}_extraction.csv"

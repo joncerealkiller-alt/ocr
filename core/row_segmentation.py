@@ -484,12 +484,23 @@ def crop_rows(
     x1: int | None = None,
 ) -> tuple[list[Image.Image], Image.Image | None]:
     """
-    Crops each detected row band into its own image. If header_band is
-    given, prepends that header strip to EVERY row crop (redundant, but
-    per the agreed first-prototype approach: avoids header-mapping
-    errors while testing whether row isolation itself improves
-    extraction - optimize away the redundancy later once the core
-    approach is proven).
+    Crops each detected row band into its own image. header_band (if
+    given) is cropped and returned separately as header_crop, but is NO
+    LONGER prepended to every row crop (2026-07-26, per Jon's direction -
+    this is exactly the "optimize away the redundancy later" this
+    docstring already flagged as a known first-prototype-only
+    compromise). Prepending the header image to every row made sense
+    while extraction still needed the header's column labels visible
+    inside a whole-row image to identify which field was which; it's
+    genuinely redundant now that stage1/stage2 both operate per-FIELD,
+    with the field's identity given explicitly via the prompt (Field:
+    {name}), not inferred visually from a stacked header band - real
+    extraction never used this combined image anyway (row["bbox"] in the
+    sidecar/RowDetectionResult is always the row-only band, see
+    build_sidecar() below), so this only ever affected the human-facing
+    debug row crops (row_segmentation_ui.py's "Also save individual row
+    PNGs" checkbox) - needless extra image height for a reviewer to
+    scroll past, no benefit.
 
     x0/x1 (optional): crop to this column range instead of always full
     image width - added 2026-07-13 so left/right bounds are actually
@@ -531,15 +542,7 @@ def crop_rows(
         y1p = max(0, min(image.height, y1 + bottom_pad))
         y1p = max(y0p, y1p)  # final safety net - never pass an inverted box
         row_crop = image.crop((x0, y0p, x1, y1p))
-        if header_crop is not None:
-            combined = Image.new(
-                "RGB", (x1 - x0, header_crop.height + row_crop.height), "white"
-            )
-            combined.paste(header_crop.convert("RGB"), (0, 0))
-            combined.paste(row_crop.convert("RGB"), (0, header_crop.height))
-            crops.append(combined)
-        else:
-            crops.append(row_crop)
+        crops.append(row_crop)
     return crops, header_crop
 
 
@@ -1309,6 +1312,33 @@ def update_sidecar(path, column_name: str, patch: dict, column_order: list[str] 
     return sidecar
 
 
+def update_sidecar_preprocessing(path, preprocessing: dict) -> dict:
+    """
+    Writes `preprocessing` (see core.image_preprocessing.apply_pipeline's
+    config shape) into the sidecar's top-level "preprocessing" key and
+    saves atomically - a small page-level sibling to update_sidecar()
+    above, which is column-scoped and doesn't fit this (preprocessing
+    is a whole-page display/legibility choice, not tied to any one
+    column's mask or extraction state).
+
+    WHOLESALE replace, not a deep merge like update_sidecar() uses for
+    column patches - ui/row_segmentation_ui.py always sends its full
+    current checkbox/parameter state here, never a partial patch, so a
+    merge would only risk leaving stale keys around from a filter that
+    was since removed from the UI's own config shape.
+
+    Never touches columns/column_order/active_column/progress or any
+    geometry field (rows/table_bbox/etc.) - safe to call independently
+    of whether "Refine rows" has ever been run for this image, so
+    choosing/adjusting preprocessing doesn't require re-running
+    detection first.
+    """
+    sidecar = load_sidecar(path)
+    sidecar["preprocessing"] = preprocessing
+    save_sidecar(sidecar, path)
+    return sidecar
+
+
 def advance_column(sidecar: dict, mark_current_done: bool = True) -> dict:
     """
     Pure state transition (does not save) - marks the current
@@ -1553,6 +1583,7 @@ def crop_region_from_source(
     tight_crop_padding_pct: float | None = None,
     upscale_target_height: int | None = None,
     upscale_max_width: int = 4096,
+    debug_stage_callback=None,
 ) -> Image.Image:
     """
     Loads the ORIGINAL source image fresh and crops a region using
@@ -1618,6 +1649,20 @@ def crop_region_from_source(
     the in-memory image this function RETURNS is affected; the
     sidecar's own coordinate records stay full-row/original-resolution,
     so nothing downstream that relies on those coordinates is affected.
+
+    debug_stage_callback (2026-07-24, --debug-model-inputs support):
+    optional callable(stage_name: str, image: Image.Image) -> None,
+    invoked after each preprocessing stage actually runs. This is the
+    single instrumented point every extraction path already funnels
+    through, so debug capture doesn't need duplicating per loader/
+    caller - see core/debug_dump.py (DebugItemRecorder.stage_callback())
+    for the real implementation. Two stages matter for that feature:
+    "bbox_crop" (right after the initial bbox crop, before any masking/
+    tightening/upscaling - the "original crop before preprocessing")
+    and "final" (the exact return value of this function, i.e. the
+    exact image object handed to loader._run_generate() - the "model
+    input" save point). None (default) means no callback - zero
+    overhead/behavior change for every existing caller.
     """
     image = Image.open(source_image_path)
     if deskew_angle != 0.0:
@@ -1627,6 +1672,8 @@ def crop_region_from_source(
         )
     x0, y0, x1, y1 = bbox
     cropped = image.crop((x0, y0, x1, y1))
+    if debug_stage_callback:
+        debug_stage_callback("bbox_crop", cropped)
     if mask_ranges:
         cropped = apply_column_mask(cropped, mask_ranges, crop_x0=x0)
     if tight_crop_keep_ranges:
@@ -1638,6 +1685,8 @@ def crop_region_from_source(
         cropped = upscale_to_target_height(
             cropped, target_height=upscale_target_height, max_width=upscale_max_width,
         )
+    if debug_stage_callback:
+        debug_stage_callback("final", cropped)
     return cropped
 
 

@@ -175,8 +175,8 @@ def parse_pipe_entries(value: str) -> list[tuple[str, ConfidenceLevel]]:
 def parse_keyword_list(value: str, max_len: int = 60) -> list[str]:
     """
     Splits subject_keywords on EITHER comma or semicolon - not just one.
-    The original convention (extract_census_v1/v2/v3.txt) used commas;
-    later prompts (extract_printed_v2.txt and others, both Jon's edits
+    The original convention (extractor_census_v1/v2/v3.txt) used commas;
+    later prompts (extractor_printed_v2.txt and others, both Jon's edits
     and Claude's proposed versions independently) drifted to semicolons,
     matching the delimiter every other list field already uses. Rather
     than pick one and silently break whichever prompts use the other -

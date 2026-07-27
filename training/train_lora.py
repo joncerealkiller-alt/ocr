@@ -36,7 +36,7 @@ LoRA application fails to find any matching modules.
 Usage (defaults tuned for a first run, per Jon's "new to this, get a
 clean working run before optimizing" direction):
 
-    python train_lora.py --model smolvlm2_2b \\
+    python training/train_lora.py --model smolvlm2_2b \\
         --dataset-dir data/outputs/lora_dataset \\
         --out-dir data/outputs/lora_checkpoints
 
@@ -62,9 +62,15 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import sys
 import time
 from pathlib import Path
+
+# Moved into training/ (2026-07-25) - one directory deeper than repo
+# root, so repo root must be put back on sys.path before the lazy
+# `core.*` imports further down (inside main()) will resolve.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 def _load_train_records(dataset_dir: Path) -> list[dict]:
@@ -191,11 +197,42 @@ def main():
                               "(runs model.generate() over the full val set, slower "
                               "than the per-epoch loss-only check). Loss is still "
                               "computed every epoch regardless of this flag.")
+    parser.add_argument("--resume-from", type=str, default=None,
+                         help="Path to a previous epoch_N checkpoint directory (e.g. "
+                              "data/outputs/lora_checkpoints/epoch_2) to continue "
+                              "training from, instead of initializing a brand-new "
+                              "adapter - lets a full multi-epoch run be split across "
+                              "separate sessions (one epoch per session, inspect the "
+                              "checkpoint with training/test_lora_checkpoint.py between "
+                              "each, then --resume-from the last one to continue). "
+                              "--epochs means 'how many MORE epochs this session', and "
+                              "epoch numbering continues from N+1. --lora-rank/--lora-"
+                              "alpha/--lora-dropout/--lora-target-modules are IGNORED "
+                              "when resuming - the checkpoint's own saved adapter config "
+                              "governs its shape, not these CLI defaults. NOTE: optimizer "
+                              "state (AdamW momentum/variance) is NOT saved/restored "
+                              "between sessions - each resumed session warm-starts a "
+                              "fresh optimizer from the adapter's current weights rather "
+                              "than a byte-exact continuation. Common, generally low-risk "
+                              "for LoRA fine-tuning, but worth knowing.")
     args = parser.parse_args()
 
     dataset_dir = Path(args.dataset_dir)
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    start_epoch = 1
+    if args.resume_from:
+        resume_path = Path(args.resume_from).resolve()
+        m = re.search(r"epoch_(\d+)$", str(resume_path).rstrip("/\\"))
+        if not m:
+            print(f"ERROR: --resume-from path {args.resume_from!r} doesn't end in "
+                  f"'epoch_<N>' - can't infer which epoch number to continue from.")
+            sys.exit(1)
+        if not resume_path.is_dir():
+            print(f"ERROR: --resume-from path {resume_path} doesn't exist.")
+            sys.exit(1)
+        start_epoch = int(m.group(1)) + 1
 
     records = _load_train_records(dataset_dir)
     if args.max_examples:
@@ -214,7 +251,7 @@ def main():
     try:
         import torch
         from PIL import Image
-        from peft import LoraConfig, get_peft_model
+        from peft import LoraConfig, get_peft_model, PeftModel
     except ImportError as e:
         print(f"ERROR: missing training dependency ({e}). This script requires "
               f"torch, transformers, peft, and pillow installed.")
@@ -234,17 +271,47 @@ def main():
     loader.initialize_model_and_tokenizer()
     model = loader.model
     processor = loader.processor
+
+    # Force bf16 for training regardless of what the loader's torch_dtype=
+    # "auto" resolved to at load time (2026-07-26, real measurement on
+    # smolvlm2_2b/RTX 5060 Ti - a very new GPU architecture, compute
+    # capability 12.0): a smoke test's single optimizer step over 8
+    # examples took 5484s. Every model parameter was already confirmed on
+    # cuda:0 (no CPU offload at all - that was the first suspect and it was
+    # ruled out directly), so the bottleneck wasn't placement. It was dtype:
+    # "auto" fell back to float32 here because this checkpoint's config.json
+    # doesn't declare a preferred dtype, and fp32 forward/backward on this
+    # hardware measured ~30-40x slower than bf16 for the identical model/
+    # input (0.84s -> 0.2-0.6s forward, 11.71s -> 0.3s backward) - almost
+    # certainly missing/unoptimized fp32 kernels for this new architecture,
+    # not a training-correctness issue. bf16 is standard, essentially
+    # lossless-for-training precision for a modern VLM (not the same as
+    # int8/nf4 quantization), so this is applied unconditionally rather
+    # than gated behind a flag - there's no real scenario where training
+    # this kind of model in fp32 is actually preferable to bf16 here.
+    if next(model.parameters()).dtype == torch.float32:
+        print("Base model loaded in float32 - casting to bfloat16 for training "
+              "(fp32 forward/backward measured ~30-40x slower on this hardware).")
+        model = model.to(torch.bfloat16)
+        loader._model_dtype = torch.bfloat16
+
     model.train()
 
-    lora_config = LoraConfig(
-        r=args.lora_rank,
-        lora_alpha=args.lora_alpha,
-        lora_dropout=args.lora_dropout,
-        target_modules=[m.strip() for m in args.lora_target_modules.split(",") if m.strip()],
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
-    model = get_peft_model(model, lora_config)
+    if args.resume_from:
+        print(f"Resuming from {resume_path} - continuing as epoch {start_epoch}. "
+              f"--lora-rank/--lora-alpha/--lora-dropout/--lora-target-modules are "
+              f"ignored; the checkpoint's own saved adapter config governs shape.")
+        model = PeftModel.from_pretrained(model, str(resume_path), is_trainable=True)
+    else:
+        lora_config = LoraConfig(
+            r=args.lora_rank,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            target_modules=[m.strip() for m in args.lora_target_modules.split(",") if m.strip()],
+            bias="none",
+            task_type="CAUSAL_LM",
+        )
+        model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
     trainable_params = [p for p in model.parameters() if p.requires_grad]
@@ -276,7 +343,20 @@ def main():
                 {"type": "text", "text": TRANSCRIBE_PROMPT},
             ],
         }
-        full_messages = [user_msg, {"role": "assistant", "content": target}]
+        # CRITICAL BUG FIX (2026-07-27, found via a real training collapse -
+        # both this run and the pre-refactor epoch_1 before it silently
+        # trained on ZERO real signal): SmolVLM2's chat template only
+        # renders assistant content given as a list of typed dicts (matching
+        # user_msg's own shape above) - a bare string here gets silently
+        # DROPPED entirely by apply_chat_template, confirmed directly:
+        # rendered output was "Assistant: <end_of_utterance>\n" with the
+        # actual target text completely absent, regardless of what `target`
+        # was. Every supervised example was therefore training the model to
+        # predict the SAME fixed 3-token closing sequence no matter the
+        # input - trivially low loss, and the model never once saw gradient
+        # signal for the real transcription task, exactly matching the
+        # observed collapse to universal silence at generation time.
+        full_messages = [user_msg, {"role": "assistant", "content": [{"type": "text", "text": target}]}]
 
         prompt_only = processor.apply_chat_template(
             [user_msg], add_generation_prompt=True, tokenize=True,
@@ -364,11 +444,25 @@ def main():
         model.train()
         return by_status
 
-    print(f"\nTraining: {len(train_records)} examples, {args.epochs} epochs, "
-          f"effective batch size {args.grad_accum_steps} (grad accumulation).\n")
+    end_epoch = start_epoch + args.epochs - 1
+    print(f"\nTraining: {len(train_records)} examples, {args.epochs} epoch(s) this "
+          f"session (epoch {start_epoch} through {end_epoch}), effective batch size "
+          f"{args.grad_accum_steps} (grad accumulation).\n")
 
-    rng = random.Random(args.seed)
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, end_epoch + 1):
+        # Seeded from (args.seed, epoch NUMBER) rather than one rng object
+        # advancing across the loop (2026-07-26 fix) - the original version
+        # seeded once before the loop and let one rng's internal state
+        # carry across epochs, which only gives each epoch a genuinely
+        # different shuffle order within a SINGLE continuous invocation.
+        # Once a multi-epoch run can be split across separate --resume-from
+        # sessions (each its own fresh process), every session would
+        # otherwise reseed identically and reuse the exact same first-
+        # shuffle order every time, regardless of which epoch number it's
+        # actually training - this keeps the shuffle order for epoch N
+        # identical whether the whole run happens in one sitting or N
+        # separate sessions.
+        rng = random.Random(args.seed + epoch)
         epoch_start = time.time()
         order = list(train_records)
         rng.shuffle(order)
@@ -393,7 +487,7 @@ def main():
         avg_train_loss = running_loss / step_count if step_count else float("nan")
         val_loss = run_val_loss(val_records) if val_records else float("nan")
         elapsed = time.time() - epoch_start
-        print(f"Epoch {epoch}/{args.epochs}: train_loss={avg_train_loss:.4f} "
+        print(f"Epoch {epoch}: train_loss={avg_train_loss:.4f} "
               f"val_loss={val_loss:.4f} ({elapsed:.0f}s)")
 
         checkpoint_dir = out_dir / f"epoch_{epoch}"
