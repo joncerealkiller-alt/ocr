@@ -1,1 +1,5 @@
 file_path,category,confidence,text_density,handwriting,table_layout,faces,map_like,reason,model,prompt_version
+J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_t2185.798.jpg,handwritten_ledger,0.95,0.8,True,False,False,False,"The image consists of dense, unstructured handwritten entries typical of a ledger or register.",gemma,v1
+J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-06 023609.png,handwritten_ledger,0.95,0.8,True,False,False,False,"The image consists of dense, continuous handwritten entries without a clear printed form structure.",gemma,v1
+J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-12 011628.png,handwritten_ledger,0.95,0.8,True,False,False,False,"The image consists of a list of names and numbers written in a continuous, non-tabular handwritten format.",gemma,v1
+J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-13 180241.png,handwritten_ledger,0.95,0.4,True,True,False,False,The image consists of handwritten entries in a ledger or register format without a clear printed structure.,gemma,v1

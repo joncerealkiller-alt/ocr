@@ -828,8 +828,23 @@ def run_two_stage_extraction(
     tight_crop_padding_px: int = 20,
     tight_crop_padding_pct: float | None = None,
     debug_recorder: DebugModelInputRecorder | None = None,
+    ocr_checkpoint: str | None = None,
+    structure_checkpoint: str | None = None,
 ) -> list[RowExtractionResult]:
     """
+    ocr_checkpoint / structure_checkpoint (2026-07-28): optional path to
+    a saved LoRA adapter dir (data/outputs/<model>_lora_checkpoints/
+    epoch_N/, see training/train_lora.py) applied on top of the stage-1/
+    stage-2 base model respectively, via BaseLoader.apply_checkpoint()
+    (core/loaders/base_loader.py) - same PeftModel.from_pretrained()
+    mechanism training/test_lora_checkpoint.py already uses. Applied
+    AFTER initialize_model_and_tokenizer(), before any generation calls.
+    Only meaningful for in-process loaders (self.model is a real HF
+    object) - raises clearly if pointed at a subprocess-backed loader
+    (MoondreamLoader, DeepseekVL2Loader, HunyuanOcrLoader), since no
+    LoRA training has targeted those and apply_checkpoint() has no way
+    to reach a separate worker process's own model.
+
     Two-stage pipeline (2026-07-13, per Jon's direction): stage 1 runs
     a fixed-task OCR engine (e.g. Chandra) that can't follow our column
     schema natively; stage 2 runs an instruction-following model (e.g.
@@ -1002,6 +1017,8 @@ def run_two_stage_extraction(
     raw_readings: dict[int, dict[str, str]] = {}
     try:
         ocr_loader.initialize_model_and_tokenizer()
+        if ocr_checkpoint:
+            ocr_loader.apply_checkpoint(ocr_checkpoint)
         for row in rows:
             raw_readings[row["index"]] = {}
             for column_name in column_names:
@@ -1091,6 +1108,8 @@ def run_two_stage_extraction(
     results: list[RowExtractionResult] = []
     try:
         struct_loader.initialize_model_and_tokenizer()
+        if structure_checkpoint:
+            struct_loader.apply_checkpoint(structure_checkpoint)
         for row in rows:
             start = time.time()
             fields: dict[str, RowFieldValue] = {}
@@ -1171,11 +1190,12 @@ def run_two_stage_extraction(
             schema_pass = len(missing_fields) == 0
             schema_error = f"Missing/dropped fields: {missing_fields}" if missing_fields else None
 
+            ocr_label = f"{ocr_model_profile_name}[{ocr_checkpoint}]" if ocr_checkpoint else ocr_model_profile_name
+            struct_label = (f"{structuring_model_profile_name}[{structure_checkpoint}]"
+                             if structure_checkpoint else structuring_model_profile_name)
             results.append(RowExtractionResult(
                 row_index=row["index"], bbox=row["bbox"], fields=fields,
-                raw_output=raw_output, model=(
-                    f"{ocr_model_profile_name}+{structuring_model_profile_name}"
-                ),
+                raw_output=raw_output, model=f"{ocr_label}+{struct_label}",
                 runtime_seconds=time.time() - start,
                 schema_pass=schema_pass, schema_error=schema_error,
                 stage1_raw_output=combined_reading,
@@ -1198,8 +1218,19 @@ def run_row_extraction(
     max_rows: int | None = None,
     header_field_names: list[str] | None = None,
     debug_recorder: DebugModelInputRecorder | None = None,
+    checkpoint: str | None = None,
 ) -> tuple[RowExtractionResult | None, list[RowExtractionResult]]:
     """
+    checkpoint (2026-07-28): optional path to a saved LoRA adapter dir
+    (data/outputs/<model>_lora_checkpoints/epoch_N/, see training/
+    train_lora.py) applied on top of model_profile_name via
+    BaseLoader.apply_checkpoint() (core/loaders/base_loader.py) - same
+    mechanism core.row_extraction.run_two_stage_extraction()'s own
+    ocr_checkpoint/structure_checkpoint params use. Applied immediately
+    after initialize_model_and_tokenizer(), before header or row
+    extraction. Must have been trained from model_profile_name
+    specifically - see apply_checkpoint()'s own docstring.
+
     Main orchestration: loads the sidecar, loads the model ONCE (not
     once per row - same VRAM-lifecycle discipline as model_assessment.py,
     see _release_model there), crops each row from the ORIGINAL source
@@ -1251,6 +1282,15 @@ def run_row_extraction(
 
     try:
         loader.initialize_model_and_tokenizer()
+        if checkpoint:
+            loader.apply_checkpoint(checkpoint)
+        # Audit-trail label (see RowExtractionResult.model) - same
+        # "model[checkpoint]" convention run_two_stage_extraction() uses,
+        # passed as model_profile_name to _extract_region() below since
+        # that's the exact string it stores verbatim as .model - the
+        # loader itself was already built from the real model_profile_name
+        # above, so relabeling here doesn't affect what actually runs.
+        model_label = f"{model_profile_name}[{checkpoint}]" if checkpoint else model_profile_name
 
         if header_field_names:
             table_bbox = sidecar.get("table_bbox")
@@ -1276,7 +1316,7 @@ def run_row_extraction(
                 header_result = _extract_region(
                     loader, source_path, deskew_angle, header_bbox,
                     header_field_names, row_index=0,
-                    model_profile_name=model_profile_name,
+                    model_profile_name=model_label,
                     mask_ranges=header_masks,
                     debug_recorder=debug_recorder, debug_item_id="header",
                 )
@@ -1287,7 +1327,7 @@ def run_row_extraction(
         for row in rows:
             result = _extract_region(
                 loader, source_path, deskew_angle, row["bbox"], column_names,
-                row_index=row["index"], model_profile_name=model_profile_name,
+                row_index=row["index"], model_profile_name=model_label,
                 mask_ranges=row_masks,
                 debug_recorder=debug_recorder,
             )
@@ -1375,8 +1415,13 @@ def run_single_column_extraction(
     upscale_target_height: int | None = 160,
     upscale_max_width: int = 4096,
     debug_recorder: DebugModelInputRecorder | None = None,
+    checkpoint: str | None = None,
 ) -> list[RowExtractionResult]:
     """
+    checkpoint (2026-07-28): optional LoRA adapter path applied on top
+    of model_profile_name - same convention as run_row_extraction()'s
+    own checkpoint param, see that function's docstring.
+
     Extracts ONE column (using that column's OWN stored mask, not a
     global one) across every row, and writes the results straight into
     the sidecar's persistent columns[column_name]["results"] via
@@ -1465,10 +1510,13 @@ def run_single_column_extraction(
 
     try:
         loader.initialize_model_and_tokenizer()
+        if checkpoint:
+            loader.apply_checkpoint(checkpoint)
+        model_label = f"{model_profile_name}[{checkpoint}]" if checkpoint else model_profile_name
         for row in rows:
             result = _extract_region(
                 loader, source_path, deskew_angle, row["bbox"], [column_name],
-                row_index=row["index"], model_profile_name=model_profile_name,
+                row_index=row["index"], model_profile_name=model_label,
                 mask_ranges=row_masks,
                 tight_crop_keep_ranges=tight_crop_ranges,
                 tight_crop_padding_px=tight_crop_padding_px,

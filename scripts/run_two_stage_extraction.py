@@ -134,6 +134,15 @@ def main():
     parser.add_argument("--debug-dir", type=str, default="data/debug_model_inputs",
                          help="Base directory for --debug-model-inputs output "
                               "(default: data/debug_model_inputs/).")
+    parser.add_argument("--ocr-checkpoint", type=str, default=None,
+                         help="Optional path to a saved LoRA adapter dir (data/outputs/"
+                              "<model>_lora_checkpoints/epoch_N/, see training/train_lora.py) "
+                              "applied on top of --ocr-model. Must have been trained from "
+                              "--ocr-model specifically - loading a checkpoint trained "
+                              "against a different base model will fail or silently "
+                              "produce garbage.")
+    parser.add_argument("--structure-checkpoint", type=str, default=None,
+                         help="Same as --ocr-checkpoint, applied to --structure-model instead.")
     args = parser.parse_args()
 
     sidecar_path = Path(args.sidecar_path)
@@ -171,9 +180,11 @@ def main():
 
     print(f"Sidecar: {sidecar_path}")
     print(f"Columns ({len(column_names)}): {', '.join(column_names)}")
-    print(f"Stage 1 (OCR): {args.ocr_model}")
+    print(f"Stage 1 (OCR): {args.ocr_model}"
+          + (f"  [checkpoint: {args.ocr_checkpoint}]" if args.ocr_checkpoint else ""))
     print(f"Stage 1 prompt: {args.ocr_prompt_file or '(none - empty)'}")
-    print(f"Stage 2 (structure): {args.structure_model}")
+    print(f"Stage 2 (structure): {args.structure_model}"
+          + (f"  [checkpoint: {args.structure_checkpoint}]" if args.structure_checkpoint else ""))
     print(f"Stage 2 prompt template: {args.structuring_prompt_file or '(none - built-in default)'}")
     print(f"Stage 1 upscale target height (per-field crop): {args.stage1_upscale_target_height or '(off)'}")
     print(f"Stage 2 upscale target height (per-field crop): {args.stage2_upscale_target_height or '(off)'}")
@@ -190,6 +201,8 @@ def main():
         tight_crop_padding_px=args.tight_crop_padding_px,
         tight_crop_padding_pct=args.tight_crop_padding_pct,
         debug_recorder=debug_recorder,
+        ocr_checkpoint=args.ocr_checkpoint,
+        structure_checkpoint=args.structure_checkpoint,
     )
 
     csv_path = out_dir / f"{name}_twostage_extraction.csv"

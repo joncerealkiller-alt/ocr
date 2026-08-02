@@ -77,6 +77,19 @@ buckets:
     model: null   # no automated pass - human review queue only
     prompt_file: null
 
+  website_screenshot:
+    # Added 2026-08-01. Different reason for model: null than
+    # uncertain_review above: this isn't "the classifier doesn't know
+    # what this is" - it's "this is definitely a website screenshot,
+    # and website screenshots don't need OCR/vision extraction at all"
+    # (the text is already crisp, digitally-rendered webpage text, not
+    # a photographed/scanned document). If this data is ever wanted,
+    # the right tool is page-text scraping, not this pipeline's
+    # vision-model extraction - not built here since nothing has asked
+    # for it yet.
+    model: null
+    prompt_file: null
+
 # Anomaly detection pass, run across each bucket's output after
 # extraction completes, before anything is written to the vector DB.
 anomaly_checks:

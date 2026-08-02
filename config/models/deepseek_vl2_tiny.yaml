@@ -1,0 +1,44 @@
+model_name: deepseek_vl2_tiny
+repo_id: deepseek-ai/deepseek-vl2-tiny
+loader_class: DeepseekVL2Loader
+
+# PREP/SANITY-TEST CANDIDATE ONLY (2026-07-28) - not wired into
+# config/pipeline.yaml. See core/loaders/deepseek_vl2_loader.py and
+# core/loaders/_deepseek_vl2_worker.py docstrings for the full,
+# confirmed compatibility story and the .venv_deepseek_vl2 setup this
+# loader depends on.
+#
+# Smoke test findings (30807_A000676-00099(1)_dewarped.jpg, printed
+# manifest): load ~7s, ~6.5GB VRAM for weights alone (bf16), ~8.6GB
+# peak during a real generate() call - comfortable on this machine's
+# 16GB RTX 5060 Ti. Image grounding is real (a plain descriptive
+# prompt got a coherent, mostly-accurate description of the actual
+# manifest content) - but this project's own extractor_printed_v2.txt
+# prompt (the one with an explicit "example of correct output" block)
+# got ECHOED BACK VERBATIM instead of a real per-image extraction, on
+# the one sample tried. Unconfirmed whether that's this model's small
+# (3B total / ~1B active) capacity failing to follow a complex/
+# contrastive-example prompt, or something narrower - needs testing
+# across more samples and probably a simplified prompt variant before
+# trusting this model on the project's real extraction schema.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.1
+no_repeat_ngram_size: null
+max_new_tokens: 512
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

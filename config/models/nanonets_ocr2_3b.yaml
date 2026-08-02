@@ -1,0 +1,63 @@
+model_name: nanonets_ocr2_3b
+repo_id: nanonets/Nanonets-OCR2-3B
+loader_class: NanonetsOcr2Loader
+
+# PREP/CANDIDATE-QUALIFICATION CANDIDATE ONLY (2026-07-28) - not wired
+# into config/pipeline.yaml. This is a fine-tune of Qwen/Qwen2.5-VL-3B-
+# Instruct (confirmed via config.json: architectures
+# ["Qwen2_5_VLForConditionalGeneration"], model_type "qwen2_5_vl", no
+# auto_map, no custom code), so it initially looked like a config-only
+# reuse of the existing QwenLoader - but this specific checkpoint has a
+# real, confirmed config export bug (its config.json nests
+# tie_word_embeddings under "text_config" instead of the base model's
+# top-level placement, which this project's installed transformers
+# doesn't pick up for this class) that causes the output layer to load
+# RANDOMLY INITIALIZED instead of correctly tied to the checkpoint's own
+# trained embeddings - confirmed via direct test: plain QwenLoader
+# produces complete incoherent gibberish on this checkpoint. See
+# core/loaders/nanonets_ocr2_loader.py's docstring for the full bug
+# story and the one-method fix (a thin QwenLoader subclass, QwenLoader
+# itself untouched).
+#
+# Real, established release: 807K downloads, 512 likes, published
+# benchmarks (DocVQA 89.4%, ChartQA 78.6%, olmOCR-bench 69.5%),
+# OCR-specialized (equations, tables, signatures, watermarks, flowcharts).
+# With the fix applied, this produced the strongest raw output quality of
+# every candidate checked this session - a faithful, well-structured
+# markdown/HTML table reconstruction of a real historical passenger
+# manifest (correct ship name, date, port, company, column structure).
+# Does NOT follow this project's kv-block extraction schema on the
+# current prompt (outputs markdown tables instead, matching its own
+# pdf2markdown training) - a prompt-adaptation question, not a quality
+# problem; worth a dedicated prompt/parser before judging further.
+#
+# LICENSE NOT STATED anywhere in the repo (no frontmatter tag, no LICENSE
+# file, no README mention) despite the popularity - base model
+# (Qwen2.5-VL-3B-Instruct) is Apache 2.0, but Nanonets hasn't published
+# their own terms for the fine-tune. Worth Jon's own judgment call before
+# any real use, not resolved here.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+# Same range already proven for qwen3b.yaml/qwen25_vl_7b.yaml - not
+# re-derived blind, this is the same underlying architecture's own
+# documented default range.
+min_pixels: 200704    # 256*28*28
+max_pixels: 1003520   # 1280*28*28
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+restrict_output_charset: true
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

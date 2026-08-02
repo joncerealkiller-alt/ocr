@@ -308,6 +308,41 @@ class BaseLoader(ABC):
         """
         pass
 
+    def apply_checkpoint(self, checkpoint_path: str) -> None:
+        """
+        Wraps self.model with a saved LoRA adapter (data/outputs/
+        lora_checkpoints/epoch_N/, see training/train_lora.py) - the
+        SAME mechanism training/test_lora_checkpoint.py already uses
+        (PeftModel.from_pretrained(model, checkpoint_path)), shared here
+        so any in-process loader can apply a checkpoint without its own
+        copy of this logic. Added 2026-07-28 per Jon's direction, so
+        debug_tools/workflow_gui.py's extraction tabs could offer a real
+        checkpoint option, not a UI stub.
+
+        Must be called AFTER initialize_model_and_tokenizer() has set a
+        real self.model - raises clearly rather than silently no-op'ing
+        if called too early, same "loud error over silent wrong
+        behavior" discipline as _maybe_add_charset_logits_processor's
+        own tokenizer check below.
+
+        Not implemented for subprocess-backed loaders (MoondreamLoader,
+        DeepseekVL2Loader, HunyuanOcrLoader) - self.model is always None
+        for those (the real model lives in a separate worker process/
+        venv entirely), so this raises rather than silently doing
+        nothing. Applying a checkpoint to one of those would need the
+        adapter loaded INSIDE that worker script instead, not built
+        here since no LoRA training has targeted those models.
+        """
+        if self.model is None:
+            raise RuntimeError(
+                f"{type(self).__name__}.apply_checkpoint() called before "
+                "initialize_model_and_tokenizer() (or this loader runs its "
+                "model in a separate subprocess/venv, so self.model is never "
+                "set here at all - see this method's own docstring)."
+            )
+        from peft import PeftModel
+        self.model = PeftModel.from_pretrained(self.model, checkpoint_path)
+
     def _maybe_add_charset_logits_processor(self, gen_kwargs: dict) -> None:
         """
         Mutates gen_kwargs IN PLACE, adding an AllowedCharsLogitsProcessor

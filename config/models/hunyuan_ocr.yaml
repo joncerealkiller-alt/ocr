@@ -1,0 +1,55 @@
+model_name: hunyuan_ocr
+repo_id: tencent/HunyuanOCR
+loader_class: HunyuanOcrLoader
+
+# PREP/SANITY-TEST CANDIDATE ONLY (2026-07-28) - not wired into
+# config/pipeline.yaml. See core/loaders/hunyuan_ocr_loader.py and
+# core/loaders/_hunyuan_ocr_worker.py docstrings for the full,
+# confirmed compatibility story and the .venv_hunyuan_ocr setup this
+# loader depends on.
+#
+# Smoke test findings (30807_A000676-00099(1)_dewarped.jpg, printed
+# manifest): load ~2s, ~1.9GB VRAM for weights (bf16, dense 1.1B
+# params - genuinely tiny), ~4.2GB peak during a real generate() call -
+# very light on this machine's 16GB RTX 5060 Ti, far lighter than
+# pixtral or deepseek-vl2-tiny. Real transformers-native class
+# (HunYuanVLForConditionalGeneration, no trust_remote_code needed).
+#
+# Output quality: genuinely strong, well-grounded OCR - read real
+# passenger names, addresses, and manifest column headers off the one
+# sample tried, clearly consistent with the actual document content
+# (an OCR-specialized model doing exactly what it's built for). BUT it
+# ignored this project's structured extraction prompt format entirely
+# and free-form-dumped transcribed text/markdown instead of filling
+# document_type:/personal_names:/etc. fields - schema parsing failed
+# on the raw output as-is. Needs either a prompt written to this
+# model's actual strength (ask it to transcribe, not to fill a
+# contrastive-example kv-schema) or a two-pass approach (this model's
+# raw OCR dump feeding a second structuring pass) before it's usable
+# against the real pipeline schema - Jon's call which direction to try.
+#
+# Also needed repetition_penalty/no_repeat_ngram_size to avoid the same
+# loop degeneration every other model in this project hit without them
+# (see pixtral_12b.yaml's comment) - the model card's own bare example
+# (no penalty) looped on the first real test.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

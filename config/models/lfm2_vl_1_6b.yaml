@@ -1,0 +1,53 @@
+model_name: lfm2_vl_1_6b
+repo_id: LiquidAI/LFM2-VL-1.6B
+loader_class: Lfm2VlLoader
+
+# PREP/SANITY-TEST CANDIDATE ONLY (2026-07-28) - not wired into
+# config/pipeline.yaml. See core/loaders/lfm2_vl_loader.py's docstring
+# for the full compatibility story. This is the only candidate evaluated
+# this round that runs fully in-process, in the main venv, with no
+# trust_remote_code and no separate isolated venv - transformers 5.12.1
+# already satisfies its declared >=4.57 requirement.
+#
+# UPDATED after 3-sample diagnostics/test_lfm2_vl_smoke.py run: on 2 of
+# 3 real images (1911 census, handwritten manifest), this model echoed/
+# mutated extractor_printed_v2.txt's own "Example of CORRECT output"
+# block (Marriage Certificate/John Doe/Toronto/1942) instead of reading
+# the actual image - the EXACT SAME failure mode independently seen from
+# deepseek-vl2-tiny on this same prompt (see models.md). Two different
+# small models now converging on the same template-echo behavior against
+# this one prompt is a real signal the prompt's explicit contrastive
+# example may itself be the common factor for smaller models, not
+# something specific to either model - worth Jon revisiting the prompt,
+# not just the model, before writing this off. On the one image that
+# didn't get contaminated (printed manifest), the earlier single-sample
+# finding held: real document type/date/column headers, then a
+# fabricated tail of nonexistent fields.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+# Constrained decoding (see core/loaders/constrained_decoding.py) - not
+# enabled by default here yet. Worth trying given the fabrication seen
+# in the initial smoke test involved plausible-but-invented ENGLISH
+# field names, not off-script characters, so this specific mechanism
+# wouldn't have caught it - left off rather than implying it would help.
+restrict_output_charset: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

@@ -49,6 +49,15 @@ prompt_text: ""
 # extraction is the opposite use case the model card describes.
 extra:
   image_token_budget: 140
+  # Moved out of core/loaders/gemma_loader.py's _run_generate() 2026-07-30
+  # (was hardcoded there, applied to every call through this loader
+  # regardless of config - see that file's own comment at the point
+  # this is now read from, and docs/CODE_MAP.md's "config owns behavior"
+  # section, for the real bug this caused). This is GemmaLoader's only
+  # classifier-role config - keep this wording in sync with what
+  # config/prompts/classifier_classify_v1.txt's own instructions assume
+  # the model's persona to be.
+  system_prompt: "You are a strict, non-interpretive archival routing classifier."
 
 # System RAM ceiling for CPU offload if VRAM budget is exceeded.
 vram_headroom_gb: 1.5

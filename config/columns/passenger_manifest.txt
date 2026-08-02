@@ -1,5 +1,2 @@
 Name
-Embarkation
-Arrival
-Occupation
-Destination
+

@@ -1,0 +1,93 @@
+# See canada_census_1921.yaml for the full field-by-field explanation of
+# this schema - kept there rather than repeated per-file.
+#
+# Calibrated 2026-07-27 against data/outputs/row_segmentation/
+# 1931_174-e011707164_dewarped_sidecar.json (3988x2509): metadata_bottom
+# 184/2509=0.073, table_top 562/2509=0.224, table_bottom 2277/2509=0.907,
+# table_left 73/3988=0.018, table_right 3930/3988=0.986.
+
+doc_type: canada_census_1931
+display_name: "Canada Census 1931"
+
+# See canada_census_1921.yaml's columns_file comment for the full
+# explanation.
+columns_file: census_core_fields.txt
+
+# See canada_census_1921.yaml's row_strategy comment for why this is
+# "fixed_periodic" and not per-row refinement - this is the exact doc
+# type/sample (1931_174-e011707164, Dauphin page 6) where per-row
+# refinement produced the real rows 19/20 squeeze that motivated the
+# change.
+row_strategy: fixed_periodic
+expected_row_count: 50
+
+# The real 1931 form prints far more columns than 1911/1921 (see
+# config/columns/census_1931.txt for the full ~40-field list this
+# project has previously transcribed by hand) - expected_columns here
+# deliberately stays to the same core fields as the other census
+# templates rather than seeding all 40, since that full list was never
+# actually run through the per-column masking UI in this project and
+# there's no reason to assume every field is wanted for a given
+# extraction pass. Widen this list per Jon's direction once a real
+# 1931 masking pass defines which of the extra fields matter.
+expected_columns:
+  - Name
+  - Age
+  - Sex
+  - Relationship to Head
+  - Birthplace
+  - Occupation
+
+# See canada_census_1921.yaml's own column_regions_approx comment for
+# the full explanation. Calibrated from the SAME real reference sidecar
+# (width 3988): Name [234,590], Age [1324,1375], Sex [1247,1286],
+# Relationship to Head [1124,1246], Birthplace [1377,1567]. Occupation
+# has no entry - not in that sidecar's own column_order either.
+# CHANGED BASIS 2026-07-29 - x_frac is now relative to the TABLE's own
+# left-right span (table_left=73, table_right=3930 on this 3988px-wide
+# reference), not full page width - see canada_census_1911.yaml's own
+# column_regions_approx comment for the full explanation. Same real
+# pixel ranges as before (Name [234,590], Age [1324,1375], Sex
+# [1247,1286], Relationship to Head [1124,1246], Birthplace
+# [1377,1567]), re-derived against table width (3857) instead of page
+# width (3988).
+column_regions_approx:
+  Name: {x_frac: [0.0417, 0.1340]}
+  Age: {x_frac: [0.3243, 0.3376]}
+  Sex: {x_frac: [0.3044, 0.3145]}
+  Relationship to Head: {x_frac: [0.2725, 0.3041]}
+  Birthplace: {x_frac: [0.3381, 0.3873]}
+
+# See canada_census_1921.yaml's number_row_approx comment for the full
+# explanation. Measured on THIS sample: thin rule at y=522-527, number
+# row y=531-547 (top_offset=567-531=36px, bottom_offset=567-547=20px
+# from table_top=567), gap, then the thick rule at y=558-565 leading
+# into table_top. Fractions on a 2509px-tall page: 0.0143/0.0080.
+number_row_approx:
+  top_offset_frac: 0.0143
+  bottom_offset_frac: 0.0080
+
+# Real row height (35.0px on a 2509px-tall page) - see
+# canada_census_1921.yaml's expected_row_height_frac comment.
+expected_row_height_frac: 0.01395
+
+regions_approx:
+  metadata:
+    y_frac: [0.0, 0.073]
+  header:
+    y_frac: [0.073, 0.224]
+  table:
+    y_frac: [0.224, 0.907]
+    x_frac: [0.018, 0.986]
+
+# aspect_ratio: 1931 sample measured 1.589
+# vertical_ruling_lines: 1931 sample measured ~41 (the highest of the
+# three census years by a wide margin, consistent with it printing far
+# more columns), measured through the real pipeline path at
+# run_ratio_threshold=0.35 - see canada_census_1921.yaml's
+# classification comment and classify_document()'s own docstring for
+# why this specific threshold/measurement path matters.
+classification:
+  aspect_ratio_range: [1.40, 1.75]
+  row_count_range: [44, 56]
+  column_count_range: [30, 55]

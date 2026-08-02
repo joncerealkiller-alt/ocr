@@ -1,0 +1,11 @@
+#Dwelling Number
+Family Number
+Name
+#Address
+Sex
+Relationship to Head
+Marital Status
+Month of Birth
+Year 
+Age
+#Links

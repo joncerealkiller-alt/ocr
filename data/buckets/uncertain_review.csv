@@ -1,2 +1,3 @@
 file_path,category,confidence,text_density,handwriting,table_layout,faces,map_like,reason,model,prompt_version,error
-J:\Screenshots\Knott_Ancestry\Knott\SchPL002303534f.jpg,uncertain_review,0.75,0.1,False,False,False,False,The image is a photograph of wreckage and does not fit the criteria for any specific document or visual category.,gemma,v1,
+J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 224650.png,uncertain_review,0.7,0.0,False,False,False,False,"The image contains food items in a container, which does not fit the defined archival document categories.",gemma,v1,
+J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-06 212515.png,uncertain_review,0.5,0.0,False,False,False,False,The image is a close-up texture and does not clearly fit any defined archival document category.,gemma,v1,

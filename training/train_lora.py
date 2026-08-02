@@ -37,8 +37,15 @@ Usage (defaults tuned for a first run, per Jon's "new to this, get a
 clean working run before optimizing" direction):
 
     python training/train_lora.py --model smolvlm2_2b \\
-        --dataset-dir data/outputs/lora_dataset \\
-        --out-dir data/outputs/lora_checkpoints
+        --dataset-dir data/outputs/lora_dataset
+
+--out-dir defaults to data/outputs/<model>_lora_checkpoints/ (per base
+model, not one shared directory) - changed 2026-07-28 after a real
+near-miss: training a second base model with the old shared default
+(data/outputs/lora_checkpoints/epoch_N) would have overwritten an
+earlier model's checkpoints at the same epoch_N path, since neither
+model name nor any other disambiguator was in the directory name.
+Override with --out-dir explicitly if a different location is wanted.
 
 Train/val split (page-level, not row-level): a random row-level split
 would let near-identical handwriting from the same page/enumerator
@@ -143,6 +150,27 @@ TRANSCRIBE_PROMPT = (
 )
 
 
+def _strip_thinking_prefix(text: str) -> str:
+    """
+    "Thinking"-variant models (e.g. qwen3vl2b_thinking) always close their
+    reasoning block with a literal '</think>' marker before the real
+    answer, even when that reasoning block is empty - confirmed 2026-07-28
+    via training/test_lora_checkpoint.py --show-all on a real run: every
+    single prediction came back as '</think>\\n\\n<the actually correct
+    answer>', which a raw string comparison scores as 100% wrong even
+    though the model read the field correctly. Strips everything up to
+    and including the LAST '</think>' (in case the model emits actual
+    reasoning content containing the substring elsewhere) - a no-op for
+    any model that doesn't use this convention, so this is safe to apply
+    unconditionally to every model's output, not just Thinking variants.
+    """
+    marker = "</think>"
+    idx = text.rfind(marker)
+    if idx == -1:
+        return text
+    return text[idx + len(marker):].strip()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                       formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -154,8 +182,11 @@ def main():
                               "in config/models/. Determines both the base weights AND "
                               "which loader class handles preprocessing, matching "
                               "real inference exactly.")
-    parser.add_argument("--out-dir", type=str, default="data/outputs/lora_checkpoints",
-                         help="Where to save a LoRA adapter checkpoint after each epoch.")
+    parser.add_argument("--out-dir", type=str, default=None,
+                         help="Where to save a LoRA adapter checkpoint after each epoch. "
+                              "Default: data/outputs/<model>_lora_checkpoints/ - per base "
+                              "model, so training a different --model doesn't overwrite an "
+                              "earlier model's checkpoints at the same epoch_N path.")
     parser.add_argument("--epochs", type=int, default=4,
                          help="Default: 4. Small dataset, small model - a first run "
                               "shouldn't need more; compare checkpoints across epochs "
@@ -199,7 +230,7 @@ def main():
                               "computed every epoch regardless of this flag.")
     parser.add_argument("--resume-from", type=str, default=None,
                          help="Path to a previous epoch_N checkpoint directory (e.g. "
-                              "data/outputs/lora_checkpoints/epoch_2) to continue "
+                              "data/outputs/smolvlm2_2b_lora_checkpoints/epoch_2) to continue "
                               "training from, instead of initializing a brand-new "
                               "adapter - lets a full multi-epoch run be split across "
                               "separate sessions (one epoch per session, inspect the "
@@ -218,7 +249,7 @@ def main():
     args = parser.parse_args()
 
     dataset_dir = Path(args.dataset_dir)
-    out_dir = Path(args.out_dir)
+    out_dir = Path(args.out_dir) if args.out_dir else Path(f"data/outputs/{args.model}_lora_checkpoints")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     start_epoch = 1
@@ -434,6 +465,7 @@ def main():
                 generated = model.generate(**inputs, max_new_tokens=64, do_sample=False)
                 trimmed = generated[0][inputs["input_ids"].shape[1]:]
                 predicted = processor.decode(trimmed, skip_special_tokens=True).strip()
+                predicted = _strip_thinking_prefix(predicted)
 
                 expected = rec["target"].strip()
                 status = rec.get("status", "unknown")

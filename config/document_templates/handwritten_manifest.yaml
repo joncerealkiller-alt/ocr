@@ -1,0 +1,117 @@
+# Added 2026-07-27 after Jon showed a handwritten ship manifest
+# (S.S. Empress of Britain, "Instructions to Pursers" form) that's
+# structurally a different doc type from printed_manifest.yaml, not
+# just a messier version of the same one - real printed column grid,
+# irregular family-bracketed multi-line entries, busier multi-block
+# header (ship name/date stamp, an instructions paragraph, page
+# number, THEN column headers).
+#
+# CALIBRATED 2026-07-27 (same day, later) against a 13-file folder Jon
+# provided (J:\Screenshots\Knott_Ancestry\Knott\Manifests) as a spread
+# to check against - NOT just the one pasted image. That folder turned
+# out to contain TWO structurally distinct forms, not one:
+#   (a) Landscape "Instructions to Pursers" form (Name/Age/Children/
+#       Married/Country of Birth/Race/Destination/Occupation/Religious
+#       Denomination columns) - this is what Jon's original pasted
+#       image was, and what THIS template is calibrated against.
+#       9 of the 13 files reduce to 6 unique pages of this type:
+#       CANIMM1913PLIST_2000908421-00487, IMCANQC1865_T4821-00622,
+#       e003559198 (= Jon's original example), e003566165, and one
+#       page scanned 3x (S3HY-65JC-4X / e003686369 / image(3)) and one
+#       scanned 2x (e003558130 / e003558130(1)).
+#   (b) Portrait "2nd/3rd Cabin" form (Railway Order or Contract
+#       Ticket #/Cash/Name/Age/Children/Read-Write/Married/Profession/
+#       Country of Birth[/Counties in British Isles]/Birth-Death at
+#       Sea/Destination columns) - genuinely different layout AND
+#       orientation. 4 of the 13 files reduce to 3 unique pages:
+#       S3HY-6LL2-RG (= e003667909, same page 2x), S3HY-6LLL-8L,
+#       image(1). NOT covered by this template - would need its own
+#       (doc_type e.g. "handwritten_manifest_cabin"), not built yet,
+#       flagged rather than guessed at to avoid repeating the same
+#       "guessed and got it measurably wrong" mistake this file's
+#       first version already made once (see below).
+#
+# regions_approx measured against real density profiles (not visual
+# guess this time - the first version of this file WAS a guess, and
+# printed_manifest.yaml's own history this same day is the reason not
+# to repeat that: its guessed table_top was later found to be off by
+# ~90px once actually measured). On CANIMM1913PLIST_2000908421-00487
+# (3647x2174): a real printed rule sits at y=233-239 (0.107-0.110),
+# but that's followed by column-header TEXT (numbers, labels) that
+# doesn't finish until y~425-430 (0.195-0.198) - real data starts
+# there, not at the rule, the same "header is taller than the first
+# rule suggests" pattern printed_manifest.yaml hit.
+
+doc_type: handwritten_manifest
+display_name: "Handwritten Passenger Manifest (Instructions to Pursers form)"
+
+# See core/document_templates.py's DocumentTemplate.columns_file
+# comment - the curated, ordered field list ui/quarantine_review_ui.py
+# offers for manual column masking (config/columns/*.txt), distinct
+# from expected_columns below.
+columns_file: passenger_manifest.txt
+
+# Irregular, multi-line, family-bracketed entries (confirmed visually
+# across multiple samples in the folder, e.g. the Ingham/Jones/Nokham
+# groups) rule out a fixed row count/uniform tiling, same reasoning as
+# printed_manifest.yaml.
+row_strategy: detect
+expected_row_count: null
+
+expected_columns:
+  - Name
+  - Age
+  - Birthplace
+  - Destination
+  - Occupation
+
+regions_approx:
+  metadata:
+    y_frac: [0.0, 0.09]
+  header:
+    y_frac: [0.09, 0.20]
+  table:
+    y_frac: [0.20, 0.98]
+    x_frac: [0.02, 0.98]
+
+# Measured 2026-07-27 across 3 real unique pages of this cluster
+# (CANIMM1913PLIST_2000908421-00487, e003559198, e003558130), through
+# the actual pipeline path (deskew -> measure), same method
+# classify_document()'s own docstring describes:
+#   aspect_ratio: 1.678, 1.658, 1.673 - a tight cluster, distinct from
+#     printed_manifest's portrait 0.879.
+#   vertical_ruling_lines: 1, 1, 3 - LOWER than expected given these
+#     pages visibly have a printed grid; likely these older/lower-
+#     resolution/faded scans don't clear the run-ratio threshold as
+#     reliably as a crisp modern scan would. Close to printed_manifest's
+#     measured 0, so aspect_ratio (not column_count) is this template's
+#     real discriminator against printed_manifest - column_count_range
+#     below mainly exists to stay clear of the CENSUS templates
+#     (measured 11-41), not to separate the two manifest types from
+#     each other.
+#   row_count_estimate: 37, 18, 8 (plus 13, ~12, 4, 3 from other unique
+#     pages in the cluster) - wide spread, real per-page passenger-count
+#     variation, not a useful discriminator - kept generously wide like
+#     printed_manifest's own row_count_range.
+#
+# column_count_range: tried widening 0-6 -> 0-10 to fix a tie (a 4th
+# sample, e003566165, measured 9 ruling lines and scored an exact
+# 0.8/0.8 tie against canada_census_1921 - see git history / the
+# conversation this was built in for the full breakdown). REVERTED: that
+# widening caused a real regression on the real, ground-truth-verified
+# canada_census_1921 SAMPLE ITSELF - its own measured column_count (11)
+# and aspect_ratio (1.568) both sit inside handwritten's widened ranges
+# too (aspect_ratio_range below already overlaps every census template's
+# landscape range, unavoidably - see that field's own comment), and
+# row_count_estimate (unreliable for BOTH doc types via the same
+# undercounting mechanism, not a real discriminator here) tipped the
+# combined score to 0.96 in handwritten's favor, misclassifying a
+# working, previously-correct sample. Kept at [0,6]: costs one known
+# edge case (e003566165, an explicitly lower-quality/noisy scan) rather
+# than risk breaking the multi-sample-verified census classification -
+# the right tradeoff given this is the FIRST regression this branch's
+# testing has caused, and it landed on the more load-bearing template.
+classification:
+  aspect_ratio_range: [1.50, 1.85]
+  row_count_range: [2, 60]
+  column_count_range: [0, 6]

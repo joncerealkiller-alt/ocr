@@ -1,5 +1,23 @@
 model_name: qwen2b
-repo_id: Qwen/Qwen2.5-VL-2B-Instruct
+# repo_id fixed 2026-07-28 (diagnostics/audit_model_loaders.py): the
+# original Qwen/Qwen2.5-VL-2B-Instruct no longer exists on the Hub -
+# confirmed 404/RepositoryNotFoundError, not a transient outage (caused
+# a real training-chain failure the same night). No 2B-parameter
+# Qwen2.5-VL release exists anymore.
+#
+# TURNS OUT config/models/qwen3b.yaml ALREADY IS the fix for this exact
+# problem - its own header comment says it was created specifically
+# because 2B stopped being available, and it already carries a
+# min_pixels correction (200704, not this file's stale 784) that this
+# file never received. Nothing was ever repointed to use it, though -
+# every script/training run in this project still calls --model
+# qwen2b, which kept resolving to the dead repo_id until now. Copied
+# qwen3b's min_pixels fix here too rather than leave a known-bad value
+# in place. Recommend using qwen3b.yaml directly going forward and
+# treating this file as deprecated/retirable - it's now a near-duplicate
+# with only different generation-param tuning (do_sample/temperature/
+# top_p/top_k/repetition_penalty below) as its remaining reason to exist.
+repo_id: Qwen/Qwen2.5-VL-3B-Instruct
 loader_class: QwenLoader
 
 # Generation params - tuned from repeated testing, not framework defaults.
@@ -11,10 +29,11 @@ repetition_penalty: 1.1
 no_repeat_ngram_size: null
 max_new_tokens: 512
 
-# Resolution ceiling - flagged in testing as possibly undersized for
-# archival scans (source images often 3000px+, this caps much lower).
-# Worth raising and re-testing once pipeline is running.
-min_pixels: 784        # 28*28
+# Resolution ceiling - min_pixels raised 2026-07-28 to match qwen3b
+# .yaml's already-fixed floor (the official model card's own tuning
+# example uses 256*28*28-1280*28*28; the original 28*28 floor here was
+# far too low, same bug qwen3b.yaml already corrected).
+min_pixels: 200704     # 256*28*28
 max_pixels: 1003520    # 1280*28*28
 
 # Qwen has no exposed reasoning toggle in this release.

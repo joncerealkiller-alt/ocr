@@ -2,3 +2,6 @@
 *.pyc
 data/outputs/
 data/debug_model_inputs/
+.venv_moondream/
+.venv_deepseek_vl2/
+.venv_hunyuan_ocr/

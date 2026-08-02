@@ -1,5 +1,23 @@
 # Instructions for Claude Code
 
+## Check docs/CODE_MAP.md before re-deriving how something already works
+
+Before exploring the codebase to find an existing helper, schema, or
+pattern (e.g. "how do I crop a field image", "how is a model loaded",
+"how is ground truth scored", "how do the tkinter tools in this repo
+launch a subprocess") - check `docs/CODE_MAP.md` first. It's a
+symbol-level index of reusable primitives, built specifically because
+sessions were burning significant exploration effort (agent dispatches,
+many file reads) rediscovering functions that already existed. It is
+NOT a how-to-run guide (`README.md`/`PIPELINE_WORKFLOW.md` cover that)
+or a directory layout (`README.md`'s "Project layout" covers that).
+
+**Keep it current.** If a session does real exploration (not "I recall
+roughly") to find how something already works, add or correct an entry
+in `docs/CODE_MAP.md` before finishing - a stale entry is worse than no
+entry, since it gets trusted without re-verification. See that file's
+own header for the expected entry format.
+
 ## Check CUDA/GPU usage before editing code or launching an inference run
 
 **Before** editing loader code (`core/loaders/*.py`, `core/row_extraction.py`,

@@ -52,7 +52,7 @@ benchmark/         ← accuracy scoring against ground truth
 training/          ← LoRA dataset export + training
                        (export_lora_dataset.py, train_lora.py)
 scripts/           ← operational CLI tools, not part of the reusable
-                       framework (build_manifest.py, run_row_extraction.py,
+                       framework (build_working_manifest.py, run_row_extraction.py,
                        run_two_stage_extraction.py, model_assessment.py)
 diagnostics/       ← standalone manual diagnostic scripts, not pytest
                        unit tests (test_row_segmentation.py,
@@ -213,11 +213,12 @@ task-shape mismatch, not a wording problem every other `ocr_stage1_*.txt`
 file's imperative phrasing doesn't share with this model).
 
 ### tkinter (no install needed, but required)
-`scripts/build_manifest.py`, `debug_tools/review_uncertain.py`, and
-`scripts/model_assessment.py` all use `tkinter` for their UI (folder
-picker / review queue / test harness). It ships with standard Python
-on Windows and macOS. On Linux, if missing: `sudo apt install
-python3-tk` (Debian/Ubuntu) or equivalent for your distro.
+`scripts/build_working_manifest.py`, `ui/build_manifest_ui.py`,
+`debug_tools/review_uncertain.py`, and `scripts/model_assessment.py` all
+use `tkinter` for their UI (folder picker / manifest pipeline launcher /
+review queue / test harness). It ships with standard Python on Windows
+and macOS. On Linux, if missing: `sudo apt install python3-tk`
+(Debian/Ubuntu) or equivalent for your distro.
 
 ---
 
@@ -275,9 +276,21 @@ inside the main environment described by this list.
 
 Run in this order:
 
-1. **`scripts/build_manifest.py`**
-   Folder picker → walks folder for image files → writes
-   `data/manifest.csv`.
+1. **`scripts/build_working_manifest.py`** (Stage 0 — retired and
+   archived `scripts/build_manifest.py` → `scripts/archive/
+   build_manifest.py`, 2026-07-30: that script only wrote raw file
+   paths straight to CSV with no processing; this is the real engine,
+   `core/manifest_pipeline.py`)
+   ```
+   python scripts/build_working_manifest.py
+   ```
+   Folder picker → copies every image into `data/working/` (originals
+   untouched) → deskews + preprocesses each copy → writes
+   `data/manifest.csv` pointing at the processed copies. For
+   preprocessing an arbitrary/multi-source file selection instead of one
+   folder (e.g. `ui/build_manifest_ui.py`'s queued files), use
+   `scripts/run_preprocessing.py <csv-with-a-file_path-column>` instead
+   — same engine, CSV input.
 
 2. **`core/classifier.py`**
    ```

@@ -17,7 +17,10 @@ implementation here to drift out of sync with the one that matters.
 
 Standalone GUI tools already built this session (scripts/
 model_assessment.py, debug_tools/review_uncertain.py, ui/
-row_segmentation_ui.py, scripts/build_manifest.py) are NOT re-wrapped
+row_segmentation_ui.py, scripts/build_working_manifest.py - retired
+scripts/build_manifest.py's slot here 2026-07-30; that file is now
+archived to scripts/archive/build_manifest.py, see that module's own
+docstring) are NOT re-wrapped
 as option-driven tabs - they're full self-contained apps, so this GUI
 just launches them as separate processes via simple buttons, same
 "call the real entry point" principle applied to a different shape of
@@ -39,6 +42,8 @@ from tkinter import (
     DISABLED, ttk,
 )
 
+from PIL import Image, ImageTk
+
 # Moved into debug_tools/ (2026-07-25) - one directory deeper than repo
 # root. PROJECT_ROOT must still resolve to the actual repo root (every
 # subprocess below is launched with cwd=PROJECT_ROOT, and script paths
@@ -49,7 +54,21 @@ sys.path.insert(0, str(PROJECT_ROOT))
 MODELS_DIR = PROJECT_ROOT / "config" / "models"
 PROMPTS_DIR = PROJECT_ROOT / "config" / "prompts"
 COLUMNS_DIR = PROJECT_ROOT / "config" / "columns"
-SIDECAR_DIR = PROJECT_ROOT / "data" / "outputs" / "row_segmentation"
+OUTPUTS_DIR = PROJECT_ROOT / "data" / "outputs"
+SIDECAR_DIR = OUTPUTS_DIR / "row_segmentation"
+# 2026-07-28, per Jon's report: the sidecar dropdowns below only ever
+# scanned SIDECAR_DIR, so sidecars written by the newer automated/
+# quarantine-review pipeline (data/outputs/auto_row_segmentation/) never
+# showed up here at all - this GUI is debug-only (the real automation
+# calls the CLI scripts directly, per this module's own docstring), so
+# the fix is the simplest thing that actually shows both: scan every dir
+# in SIDECAR_SEARCH_DIRS and prefix each entry with its own folder name
+# (e.g. "auto_row_segmentation/z000017634_dewarped_sidecar.json") so
+# it's unambiguous which folder a same-named file in both dirs came
+# from. A Browse... button next to each combobox covers any OTHER
+# sidecar location ad hoc, rather than needing every possible output
+# folder hard-coded here.
+SIDECAR_SEARCH_DIRS = [SIDECAR_DIR, OUTPUTS_DIR / "auto_row_segmentation"]
 DATA_DIR = PROJECT_ROOT / "data"
 STATE_PATH = PROJECT_ROOT / "data" / "outputs" / "_workflow_gui_state.json"
 
@@ -73,6 +92,88 @@ def _scan_stems(directory: Path, pattern: str) -> list[str]:
     if not directory.exists():
         return []
     return sorted(p.stem for p in directory.glob(pattern))
+
+
+def _scan_sidecar_dirs(dirs: list[Path], pattern: str = "*_sidecar.json") -> list[str]:
+    """
+    Scans every dir in SIDECAR_SEARCH_DIRS, returning each match as
+    "<dirname>/<filename>" (relative to OUTPUTS_DIR, e.g.
+    "auto_row_segmentation/z000017634_dewarped_sidecar.json") so a
+    same-named file in two different folders never collides in the
+    dropdown, and it's always visible which folder a given entry is
+    actually in - see SIDECAR_SEARCH_DIRS' own comment for why this
+    exists (2026-07-28, Jon's report that the old single-folder scan
+    couldn't see the newer auto_row_segmentation/ output at all).
+    """
+    entries = []
+    for d in dirs:
+        if not d.exists():
+            continue
+        for p in sorted(d.glob(pattern)):
+            entries.append(f"{d.name}/{p.name}")
+    return entries
+
+
+def _find_sidecar_image(sidecar_path: Path) -> Path | None:
+    """
+    Resolves a sidecar JSON's own source image, for the preview canvas
+    added to TwoStageTab (2026-07-28, per Jon's direction - "the page
+    needs to query the sidecar for the image path...then display a
+    preview so I can see what type of image the sidecar is for, to
+    select the correct columns file"). Same lookup order as
+    ui/quarantine_review_ui.py's find_source_image(): trust the
+    sidecar's own recorded source_image_path first (it's written at
+    sidecar-creation time and is the authoritative record - see
+    core/row_segmentation.py's build_sidecar()), only falling back to
+    guessing a "<stem>_dewarped.*" file in data/outputs/dewarped/ if
+    that recorded path doesn't exist (e.g. the sidecar was copied
+    somewhere without its source image, or the image moved).
+    """
+    try:
+        sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    recorded = sidecar.get("source_image_path")
+    if recorded and Path(recorded).exists():
+        return Path(recorded)
+
+    stem = sidecar_path.name.removesuffix("_sidecar.json")
+    dewarped_dir = OUTPUTS_DIR / "dewarped"
+    matches = list(dewarped_dir.glob(f"{stem}.*")) if dewarped_dir.exists() else []
+    return matches[0] if matches else None
+
+
+def _scan_checkpoints(model_name: str) -> list[str]:
+    """
+    Lists saved LoRA checkpoints for ONE base model only (data/outputs/
+    <model_name>_lora_checkpoints/epoch_N/, see training/train_lora.py's
+    --out-dir default) - deliberately NOT a scan across every
+    *_lora_checkpoints/ folder. Jon's direction (2026-07-28): restrict
+    the checkpoint picker to whatever model is currently selected for
+    that stage, so a checkpoint trained for a different base model can't
+    get accidentally applied to this one (PeftModel.from_pretrained
+    would either fail outright or silently produce garbage against a
+    mismatched base - see core/loaders/base_loader.py's
+    apply_checkpoint() docstring).
+    """
+    if not model_name:
+        return []
+    checkpoint_dir = OUTPUTS_DIR / f"{model_name}_lora_checkpoints"
+    if not checkpoint_dir.exists():
+        return []
+    return sorted(p.name for p in checkpoint_dir.iterdir() if p.is_dir())
+
+
+def _browse_for_sidecar(string_var: StringVar) -> None:
+    """Fallback for a sidecar living somewhere outside SIDECAR_SEARCH_DIRS entirely - the
+    resulting absolute path is handled as-is by _relative_or_absolute()."""
+    path = filedialog.askopenfilename(
+        title="Select sidecar JSON", initialdir=str(SIDECAR_DIR),
+        filetypes=[("Sidecar JSON", "*_sidecar.json"), ("All files", "*.*")],
+    )
+    if path:
+        string_var.set(path)
 
 
 def _relative_or_absolute(directory: Path, value: str) -> str:
@@ -450,9 +551,11 @@ class RowExtractionTab(CommandTab):
         Label(f, text="Sidecar:").grid(row=0, column=0, sticky="w")
         self.sidecar_var = StringVar(value="")
         self.sidecar_combo = ttk.Combobox(f, textvariable=self.sidecar_var, width=47,
-                                           values=_scan(SIDECAR_DIR, "*_sidecar.json"))
+                                           values=_scan_sidecar_dirs(SIDECAR_SEARCH_DIRS))
         self.sidecar_combo.grid(row=0, column=1, sticky="w")
         Button(f, text="Refresh", command=self._refresh_sidecars).grid(row=0, column=2, padx=(4, 0))
+        Button(f, text="Browse...", command=lambda: _browse_for_sidecar(self.sidecar_var)).grid(
+            row=0, column=3, padx=(4, 0))
 
         Label(f, text="Columns file:").grid(row=1, column=0, sticky="w", pady=(6, 0))
         self.columns_var = StringVar(value="")
@@ -461,8 +564,14 @@ class RowExtractionTab(CommandTab):
 
         Label(f, text="Model:").grid(row=2, column=0, sticky="w", pady=(6, 0))
         self.model_var = StringVar(value="")
-        ttk.Combobox(f, textvariable=self.model_var, width=47,
-                     values=_scan_stems(MODELS_DIR, "*.yaml")).grid(row=2, column=1, sticky="w", pady=(6, 0))
+        self.model_combo = ttk.Combobox(f, textvariable=self.model_var, width=47,
+                     values=_scan_stems(MODELS_DIR, "*.yaml"))
+        self.model_combo.grid(row=2, column=1, sticky="w", pady=(6, 0))
+        Label(f, text="Checkpoint (optional):").grid(row=2, column=2, sticky="w", padx=(12, 0), pady=(6, 0))
+        self.checkpoint_var = StringVar(value="")
+        self.checkpoint_combo = ttk.Combobox(f, textvariable=self.checkpoint_var, width=20,
+                     values=[""])
+        self.checkpoint_combo.grid(row=2, column=3, sticky="w", pady=(6, 0))
 
         Label(f, text="Header fields file (optional):").grid(row=3, column=0, sticky="w", pady=(6, 0))
         self.header_fields_var = StringVar(value="")
@@ -484,19 +593,27 @@ class RowExtractionTab(CommandTab):
                     variable=self.debug_model_inputs_var,
                     command=self.update_preview).grid(row=6, column=1, sticky="w", pady=(6, 0))
 
-        for var in [self.sidecar_var, self.columns_var, self.model_var,
+        for var in [self.sidecar_var, self.columns_var, self.model_var, self.checkpoint_var,
                     self.header_fields_var, self.max_rows_var, self.out_var]:
             var.trace_add("write", self.update_preview)
+        self.model_var.trace_add("write", self._refresh_checkpoints)
         self.update_preview()
 
     def _refresh_sidecars(self):
-        self.sidecar_combo["values"] = _scan(SIDECAR_DIR, "*_sidecar.json")
+        self.sidecar_combo["values"] = _scan_sidecar_dirs(SIDECAR_SEARCH_DIRS)
+
+    def _refresh_checkpoints(self, *_):
+        model = self.model_var.get().strip()
+        values = [""] + _scan_checkpoints(model)
+        self.checkpoint_combo["values"] = values
+        if self.checkpoint_var.get() not in values:
+            self.checkpoint_var.set("")
 
     def _sidecar_path(self) -> str:
         v = self.sidecar_var.get().strip()
         if not v:
             return ""
-        return _relative_or_absolute(SIDECAR_DIR, v)
+        return _relative_or_absolute(OUTPUTS_DIR, v)
 
     def _columns_path(self) -> str:
         v = self.columns_var.get().strip()
@@ -514,6 +631,10 @@ class RowExtractionTab(CommandTab):
                     "Missing input", "Sidecar, columns file, and model are all required.")
             return None
         cmd = [PYTHON, "scripts/run_row_extraction.py", sidecar, columns, "--model", model]
+        checkpoint = self.checkpoint_var.get().strip()
+        if checkpoint:
+            cmd.extend(["--checkpoint",
+                        _relative_or_absolute(OUTPUTS_DIR / f"{model}_lora_checkpoints", checkpoint)])
         max_rows = self.max_rows_var.get().strip()
         if max_rows:
             cmd.extend(["--max-rows", max_rows])
@@ -537,13 +658,18 @@ class RowExtractionTab(CommandTab):
         return Path(out) if out else SIDECAR_DIR
 
     def capture_state(self) -> dict:
-        return {"model": self.model_var.get(), "header_fields": self.header_fields_var.get(),
+        return {"model": self.model_var.get(), "checkpoint": self.checkpoint_var.get(),
+                "header_fields": self.header_fields_var.get(),
                 "max_rows": self.max_rows_var.get(),
                 "debug_model_inputs": self.debug_model_inputs_var.get()}
 
     def restore_state(self, values: dict) -> None:
         if "model" in values:
             self.model_var.set(values["model"])
+        # Checkpoint restored after model - see TwoStageTab.restore_state's
+        # matching comment for why order matters here.
+        if "checkpoint" in values:
+            self.checkpoint_var.set(values["checkpoint"])
         if "header_fields" in values:
             self.header_fields_var.set(values["header_fields"])
         if "max_rows" in values:
@@ -566,9 +692,11 @@ class TwoStageTab(CommandTab):
         Label(f, text="Sidecar:").grid(row=0, column=0, sticky="w")
         self.sidecar_var = StringVar(value="")
         self.sidecar_combo = ttk.Combobox(f, textvariable=self.sidecar_var, width=47,
-                                           values=_scan(SIDECAR_DIR, "*_sidecar.json"))
+                                           values=_scan_sidecar_dirs(SIDECAR_SEARCH_DIRS))
         self.sidecar_combo.grid(row=0, column=1, sticky="w")
         Button(f, text="Refresh all", command=self._refresh_all).grid(row=0, column=2, padx=(4, 0))
+        Button(f, text="Browse...", command=lambda: _browse_for_sidecar(self.sidecar_var)).grid(
+            row=0, column=3, padx=(4, 0))
 
         Label(f, text="Columns file:").grid(row=1, column=0, sticky="w", pady=(6, 0))
         self.columns_var = StringVar(value="")
@@ -581,12 +709,40 @@ class TwoStageTab(CommandTab):
         self.ocr_model_combo = ttk.Combobox(f, textvariable=self.ocr_model_var, width=47,
                      values=_scan_stems(MODELS_DIR, "*.yaml"))
         self.ocr_model_combo.grid(row=2, column=1, sticky="w", pady=(6, 0))
+        Label(f, text="Checkpoint (optional):").grid(row=2, column=2, sticky="w", padx=(12, 0), pady=(6, 0))
+        self.ocr_checkpoint_var = StringVar(value="")
+        self.ocr_checkpoint_combo = ttk.Combobox(f, textvariable=self.ocr_checkpoint_var, width=20,
+                     values=[""])
+        self.ocr_checkpoint_combo.grid(row=2, column=3, sticky="w", pady=(6, 0))
 
         Label(f, text="Stage 2 (structure) model:").grid(row=3, column=0, sticky="w", pady=(6, 0))
         self.structure_model_var = StringVar(value="")
         self.structure_model_combo = ttk.Combobox(f, textvariable=self.structure_model_var, width=47,
                      values=_scan_stems(MODELS_DIR, "*.yaml"))
         self.structure_model_combo.grid(row=3, column=1, sticky="w", pady=(6, 0))
+        Label(f, text="Checkpoint (optional):").grid(row=3, column=2, sticky="w", padx=(12, 0), pady=(6, 0))
+        self.structure_checkpoint_var = StringVar(value="")
+        self.structure_checkpoint_combo = ttk.Combobox(f, textvariable=self.structure_checkpoint_var, width=20,
+                     values=[""])
+        self.structure_checkpoint_combo.grid(row=3, column=3, sticky="w", pady=(6, 0))
+
+        # Sidecar image preview (2026-07-28, per Jon's direction): shows
+        # the sidecar's own source image so the correct columns file can
+        # be picked by actually looking at what type of document this
+        # is, instead of guessing from the sidecar's filename alone. Own
+        # column to the right of the option fields, spanning every row
+        # they occupy, rather than pushing the option grid down.
+        preview_frame = Frame(f, bd=1, relief="solid")
+        preview_frame.grid(row=0, column=4, rowspan=9, sticky="n", padx=(20, 0))
+        Label(preview_frame, text="Sidecar image preview:", font=("Segoe UI", 9, "bold")).pack(
+            anchor="w", padx=6, pady=(6, 2))
+        self.preview_image_label = Label(preview_frame, text="(no sidecar selected)",
+                                          fg="#666", width=32, height=16)
+        self.preview_image_label.pack(padx=6, pady=(0, 4))
+        self.preview_path_label = Label(preview_frame, text="", fg="#444", font=("Segoe UI", 8),
+                                         wraplength=260, justify="left")
+        self.preview_path_label.pack(anchor="w", padx=6, pady=(0, 6))
+        self._preview_photo = None  # kept alive - PhotoImage is garbage collected otherwise
 
         Label(f, text="Stage 1 prompt file (optional):").grid(row=4, column=0, sticky="w", pady=(6, 0))
         self.ocr_prompt_var = StringVar(value="")
@@ -616,10 +772,22 @@ class TwoStageTab(CommandTab):
                     command=self.update_preview).grid(row=8, column=1, sticky="w", pady=(6, 0))
 
         for var in [self.sidecar_var, self.columns_var, self.ocr_model_var,
-                    self.structure_model_var, self.ocr_prompt_var, self.structuring_prompt_var,
-                    self.max_rows_var, self.out_var]:
+                    self.structure_model_var, self.ocr_checkpoint_var,
+                    self.structure_checkpoint_var, self.ocr_prompt_var,
+                    self.structuring_prompt_var, self.max_rows_var, self.out_var]:
             var.trace_add("write", self.update_preview)
+        # Separate traces (2026-07-28): sidecar selection also refreshes
+        # the image preview, and each model's own selection refreshes
+        # THAT model's checkpoint dropdown - restricted to checkpoints
+        # trained from the currently-selected model only (Jon's
+        # direction: avoids accidentally applying a checkpoint trained
+        # for a different base model - see _scan_checkpoints()'s
+        # docstring).
+        self.sidecar_var.trace_add("write", self._update_sidecar_preview)
+        self.ocr_model_var.trace_add("write", self._refresh_ocr_checkpoints)
+        self.structure_model_var.trace_add("write", self._refresh_structure_checkpoints)
         self.update_preview()
+        self._update_sidecar_preview()
 
     def _refresh_all(self):
         """
@@ -630,18 +798,70 @@ class TwoStageTab(CommandTab):
         test was running) previously needed a full app restart to show
         up anywhere except the sidecar dropdown.
         """
-        self.sidecar_combo["values"] = _scan(SIDECAR_DIR, "*_sidecar.json")
+        self.sidecar_combo["values"] = _scan_sidecar_dirs(SIDECAR_SEARCH_DIRS)
         self.columns_combo["values"] = _scan(COLUMNS_DIR, "*.txt")
         self.ocr_model_combo["values"] = _scan_stems(MODELS_DIR, "*.yaml")
         self.structure_model_combo["values"] = _scan_stems(MODELS_DIR, "*.yaml")
         self.ocr_prompt_combo["values"] = [""] + _scan(PROMPTS_DIR, "ocr_stage1_*.txt")
         self.structuring_prompt_combo["values"] = [""] + _scan(PROMPTS_DIR, "structuring_stage2_*.txt")
+        self._refresh_ocr_checkpoints()
+        self._refresh_structure_checkpoints()
+        self._update_sidecar_preview()
+
+    def _refresh_ocr_checkpoints(self, *_):
+        model = self.ocr_model_var.get().strip()
+        values = [""] + _scan_checkpoints(model)
+        self.ocr_checkpoint_combo["values"] = values
+        if self.ocr_checkpoint_var.get() not in values:
+            self.ocr_checkpoint_var.set("")
+
+    def _refresh_structure_checkpoints(self, *_):
+        model = self.structure_model_var.get().strip()
+        values = [""] + _scan_checkpoints(model)
+        self.structure_checkpoint_combo["values"] = values
+        if self.structure_checkpoint_var.get() not in values:
+            self.structure_checkpoint_var.set("")
+
+    def _update_sidecar_preview(self, *_):
+        sidecar = self._sidecar_path()
+        if not sidecar:
+            self.preview_image_label.config(image="", text="(no sidecar selected)")
+            self.preview_path_label.config(text="")
+            self._preview_photo = None
+            return
+
+        sidecar_path = Path(sidecar)
+        if not sidecar_path.is_absolute():
+            sidecar_path = PROJECT_ROOT / sidecar_path
+        if not sidecar_path.exists():
+            self.preview_image_label.config(image="", text="(sidecar file not found)")
+            self.preview_path_label.config(text="")
+            self._preview_photo = None
+            return
+
+        image_path = _find_sidecar_image(sidecar_path)
+        if image_path is None:
+            self.preview_image_label.config(image="", text="(source image not found)")
+            self.preview_path_label.config(text="")
+            self._preview_photo = None
+            return
+
+        try:
+            img = Image.open(image_path)
+            img.thumbnail((260, 340))
+            self._preview_photo = ImageTk.PhotoImage(img)
+            self.preview_image_label.config(image=self._preview_photo, text="")
+            self.preview_path_label.config(text=image_path.name)
+        except Exception as e:
+            self.preview_image_label.config(image="", text=f"(preview failed:\n{e})")
+            self.preview_path_label.config(text="")
+            self._preview_photo = None
 
     def _sidecar_path(self) -> str:
         v = self.sidecar_var.get().strip()
         if not v:
             return ""
-        return _relative_or_absolute(SIDECAR_DIR, v)
+        return _relative_or_absolute(OUTPUTS_DIR, v)
 
     def _columns_path(self) -> str:
         v = self.columns_var.get().strip()
@@ -662,6 +882,15 @@ class TwoStageTab(CommandTab):
             return None
         cmd = [PYTHON, "scripts/run_two_stage_extraction.py", sidecar, columns,
                "--ocr-model", ocr_model, "--structure-model", structure_model]
+        ocr_checkpoint = self.ocr_checkpoint_var.get().strip()
+        if ocr_checkpoint:
+            cmd.extend(["--ocr-checkpoint",
+                        _relative_or_absolute(OUTPUTS_DIR / f"{ocr_model}_lora_checkpoints", ocr_checkpoint)])
+        structure_checkpoint = self.structure_checkpoint_var.get().strip()
+        if structure_checkpoint:
+            cmd.extend(["--structure-checkpoint",
+                        _relative_or_absolute(OUTPUTS_DIR / f"{structure_model}_lora_checkpoints",
+                                               structure_checkpoint)])
         max_rows = self.max_rows_var.get().strip()
         if max_rows:
             cmd.extend(["--max-rows", max_rows])
@@ -692,6 +921,8 @@ class TwoStageTab(CommandTab):
     def capture_state(self) -> dict:
         return {"ocr_model": self.ocr_model_var.get(),
                 "structure_model": self.structure_model_var.get(),
+                "ocr_checkpoint": self.ocr_checkpoint_var.get(),
+                "structure_checkpoint": self.structure_checkpoint_var.get(),
                 "ocr_prompt": self.ocr_prompt_var.get(),
                 "structuring_prompt": self.structuring_prompt_var.get(),
                 "max_rows": self.max_rows_var.get(),
@@ -702,6 +933,14 @@ class TwoStageTab(CommandTab):
             self.ocr_model_var.set(values["ocr_model"])
         if "structure_model" in values:
             self.structure_model_var.set(values["structure_model"])
+        # Checkpoint dropdowns restored AFTER their model (trace_add
+        # above already refreshed each dropdown's values in response to
+        # the model being set, so the saved checkpoint name will be a
+        # valid choice by the time it's set here - order matters).
+        if "ocr_checkpoint" in values:
+            self.ocr_checkpoint_var.set(values["ocr_checkpoint"])
+        if "structure_checkpoint" in values:
+            self.structure_checkpoint_var.set(values["structure_checkpoint"])
         if "ocr_prompt" in values:
             self.ocr_prompt_var.set(values["ocr_prompt"])
         if "structuring_prompt" in values:
@@ -728,14 +967,22 @@ class NativePromptTab(CommandTab):
         Label(f, text="Sidecar:").grid(row=0, column=0, sticky="w")
         self.sidecar_var = StringVar(value="")
         self.sidecar_combo = ttk.Combobox(f, textvariable=self.sidecar_var, width=47,
-                                           values=_scan(SIDECAR_DIR, "*_sidecar.json"))
+                                           values=_scan_sidecar_dirs(SIDECAR_SEARCH_DIRS))
         self.sidecar_combo.grid(row=0, column=1, sticky="w")
         Button(f, text="Refresh", command=self._refresh_sidecars).grid(row=0, column=2, padx=(4, 0))
+        Button(f, text="Browse...", command=lambda: _browse_for_sidecar(self.sidecar_var)).grid(
+            row=0, column=3, padx=(4, 0))
 
         Label(f, text="Model:").grid(row=1, column=0, sticky="w", pady=(6, 0))
         self.model_var = StringVar(value="")
-        ttk.Combobox(f, textvariable=self.model_var, width=47,
-                     values=_scan_stems(MODELS_DIR, "*.yaml")).grid(row=1, column=1, sticky="w", pady=(6, 0))
+        self.model_combo = ttk.Combobox(f, textvariable=self.model_var, width=47,
+                     values=_scan_stems(MODELS_DIR, "*.yaml"))
+        self.model_combo.grid(row=1, column=1, sticky="w", pady=(6, 0))
+        Label(f, text="Checkpoint (optional):").grid(row=1, column=2, sticky="w", padx=(12, 0), pady=(6, 0))
+        self.checkpoint_var = StringVar(value="")
+        self.checkpoint_combo = ttk.Combobox(f, textvariable=self.checkpoint_var, width=20,
+                     values=[""])
+        self.checkpoint_combo.grid(row=1, column=3, sticky="w", pady=(6, 0))
 
         self.target_var = StringVar(value="row")
         Label(f, text="Target:").grid(row=2, column=0, sticky="w", pady=(6, 0))
@@ -748,8 +995,9 @@ class NativePromptTab(CommandTab):
         self.row_var = StringVar(value="1")
         Entry(f, textvariable=self.row_var, width=8).grid(row=3, column=1, sticky="w", pady=(6, 0))
 
-        for var in [self.sidecar_var, self.model_var, self.row_var]:
+        for var in [self.sidecar_var, self.model_var, self.checkpoint_var, self.row_var]:
             var.trace_add("write", self.update_preview)
+        self.model_var.trace_add("write", self._refresh_checkpoints)
         self.update_preview()
 
     def _set_target(self, val):
@@ -757,13 +1005,20 @@ class NativePromptTab(CommandTab):
         self.update_preview()
 
     def _refresh_sidecars(self):
-        self.sidecar_combo["values"] = _scan(SIDECAR_DIR, "*_sidecar.json")
+        self.sidecar_combo["values"] = _scan_sidecar_dirs(SIDECAR_SEARCH_DIRS)
+
+    def _refresh_checkpoints(self, *_):
+        model = self.model_var.get().strip()
+        values = [""] + _scan_checkpoints(model)
+        self.checkpoint_combo["values"] = values
+        if self.checkpoint_var.get() not in values:
+            self.checkpoint_var.set("")
 
     def _sidecar_path(self) -> str:
         v = self.sidecar_var.get().strip()
         if not v:
             return ""
-        return _relative_or_absolute(SIDECAR_DIR, v)
+        return _relative_or_absolute(OUTPUTS_DIR, v)
 
     def build_command(self, silent: bool = False) -> list[str] | None:
         sidecar = self._sidecar_path()
@@ -773,6 +1028,10 @@ class NativePromptTab(CommandTab):
                 messagebox.showwarning("Missing input", "Sidecar and model are both required.")
             return None
         cmd = [PYTHON, "diagnostics/test_native_prompt.py", sidecar, "--model", model]
+        checkpoint = self.checkpoint_var.get().strip()
+        if checkpoint:
+            cmd.extend(["--checkpoint",
+                        _relative_or_absolute(OUTPUTS_DIR / f"{model}_lora_checkpoints", checkpoint)])
         if self.target_var.get() == "header":
             cmd.append("--header")
         else:
@@ -787,12 +1046,14 @@ class NativePromptTab(CommandTab):
         return SIDECAR_DIR
 
     def capture_state(self) -> dict:
-        return {"model": self.model_var.get(), "target": self.target_var.get(),
-                "row": self.row_var.get()}
+        return {"model": self.model_var.get(), "checkpoint": self.checkpoint_var.get(),
+                "target": self.target_var.get(), "row": self.row_var.get()}
 
     def restore_state(self, values: dict) -> None:
         if "model" in values:
             self.model_var.set(values["model"])
+        if "checkpoint" in values:
+            self.checkpoint_var.set(values["checkpoint"])
         if "target" in values:
             self.target_var.set(values["target"])
         if "row" in values:
@@ -1152,9 +1413,13 @@ class ToolsTab:
             ("Review Uncertain", "debug_tools/review_uncertain.py",
              "Manually assign a final bucket to images the classifier "
              "couldn't confidently place."),
-            ("Build Manifest", "scripts/build_manifest.py",
-             "Pick a folder of images, write data/manifest.csv - the "
-             "input the Classification tab needs."),
+            ("Build Manifest", "scripts/build_working_manifest.py",
+             "Pick a folder of images, copy+deskew+preprocess each one, write "
+             "data/manifest.csv pointing at the processed copies - the input the "
+             "Classification tab needs. Migrated 2026-07-30 from the retired, now-"
+             "archived scripts/archive/build_manifest.py (wrote raw paths, no "
+             "preprocessing) - see core/manifest_pipeline.py's module docstring for "
+             "the full Stage 0 story."),
         ]
         for i, (label, script, desc) in enumerate(tools):
             row_frame = Frame(self.frame, relief="groove", borderwidth=1, padx=8, pady=6)

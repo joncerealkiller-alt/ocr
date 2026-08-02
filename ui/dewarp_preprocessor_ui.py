@@ -22,9 +22,12 @@ from a bucket, then dewarp, then segment" pipeline anywhere in this
 project (confirmed 2026-07-25: every "bucket" in this codebase means
 core/classifier.py's local document-type routing CSVs under
 data/buckets/, not cloud storage; the real current workflow is three
-separate, manually-run steps - scripts/build_manifest.py, core.
-classifier, then a human opens ui/row_segmentation_ui.py and picks a
-file). This tool matches that same manual-handoff pattern for its
+separate, manually-run steps - scripts/build_working_manifest.py
+(retired scripts/build_manifest.py's role here 2026-07-30 - that file
+is now archived to scripts/archive/build_manifest.py, see this script's
+own module docstring), core.classifier, then a human opens
+ui/row_segmentation_ui.py and picks a file). This tool matches that
+same manual-handoff pattern for its
 single-file mode: it shows the saved (or bypassed) path clearly and
 offers a convenience button to launch ui/row_segmentation_ui.py, but
 the human still picks the file there themselves via its own "Select

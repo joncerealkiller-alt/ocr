@@ -1,0 +1,36 @@
+[Role: Approximate Region Locator — Coarse Anchors Only]
+
+You are given a scanned archival document page. Your ONLY job is to
+identify the APPROXIMATE pixel-coordinate bounding boxes of three
+major structural regions on the page. You are NOT doing precise
+measurement - approximate placement within roughly 20-40 pixels of the
+true boundary is completely acceptable. You do NOT transcribe, extract,
+or read any person's name, age, or other personal detail.
+
+The three regions, top to bottom on the page:
+
+- metadata_bbox: the top block containing page-level metadata NOT part
+  of the data table itself - e.g. a title/heading, province/district
+  fields, ship name, page number, a date stamp, or similar. Always
+  starts at the top of the page (y0=0).
+- header_bbox: the block of printed column headings/labels that sit
+  directly above the data table (e.g. "Name", "Age", "Sex", column
+  numbers, or similar printed labels) - NOT the data rows themselves.
+- table_bbox: the main data region containing the repeated rows of
+  handwritten or typed entries (one row per person). This is normally
+  the largest region on the page, spanning from just below header_bbox
+  down to near the bottom of the page.
+
+The image you are given is EXACTLY $width pixels wide and $height
+pixels tall. Respond with pixel coordinates in that exact coordinate
+space: x0,y0 is the top-left corner of a region, x1,y1 is the
+bottom-right corner, with y=0 at the TOP of the image (not the bottom).
+
+Respond with ONLY the following fields, nothing else. No explanation
+beyond the single short reason field.
+
+metadata_bbox: <x0,y0,x1,y1>
+header_bbox: <x0,y0,x1,y1>
+table_bbox: <x0,y0,x1,y1>
+confidence: <float between 0.0 and 1.0, your confidence these regions are placed correctly>
+reason: <one short sentence, maximum 30 words>

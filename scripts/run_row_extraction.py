@@ -153,6 +153,12 @@ def main():
                               "(default: data/debug_model_inputs/). Each run gets its "
                               "own timestamped subdirectory - never overwrites a prior "
                               "run.")
+    parser.add_argument("--checkpoint", type=str, default=None,
+                         help="Optional path to a saved LoRA adapter dir (data/outputs/"
+                              "<model>_lora_checkpoints/epoch_N/, see training/"
+                              "train_lora.py) applied on top of --model. Must have been "
+                              "trained from --model specifically. Works in both single-"
+                              "column and legacy multi-column mode.")
     args = parser.parse_args()
 
     sidecar_path = Path(args.sidecar_path)
@@ -183,7 +189,8 @@ def main():
         print(f"Sidecar: {sidecar_path}")
         print("Mode: single-column")
         print(f"Column: {column_name}")
-        print(f"Model: {args.model}")
+        print(f"Model: {args.model}"
+              + (f"  [checkpoint: {args.checkpoint}]" if args.checkpoint else ""))
         print(f"{'='*60}")
 
         results = run_single_column_extraction(
@@ -194,6 +201,7 @@ def main():
             upscale_target_height=args.upscale_target_height or None,
             upscale_max_width=args.upscale_max_width,
             debug_recorder=debug_recorder,
+            checkpoint=args.checkpoint,
         )
 
         csv_path = out_dir / f"{name}_{column_name}_extraction.csv"
@@ -227,13 +235,15 @@ def main():
     print(f"Columns ({len(column_names)}): {', '.join(column_names)}")
     if header_field_names:
         print(f"Header fields ({len(header_field_names)}): {', '.join(header_field_names)}")
-    print(f"Model: {args.model}")
+    print(f"Model: {args.model}"
+          + (f"  [checkpoint: {args.checkpoint}]" if args.checkpoint else ""))
     print(f"{'='*60}")
 
     header_result, results = run_row_extraction(
         str(sidecar_path), args.model, column_names,
         max_rows=args.max_rows, header_field_names=header_field_names,
         debug_recorder=debug_recorder,
+        checkpoint=args.checkpoint,
     )
 
     csv_path = out_dir / f"{name}_extraction.csv"

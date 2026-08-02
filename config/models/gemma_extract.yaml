@@ -53,6 +53,22 @@ prompt_text: ""
 # unnecessarily inflating cost before knowing 560 isn't enough.
 extra:
   image_token_budget: 560
+  # Added 2026-07-30 - this loader used to get a hardcoded CLASSIFIER
+  # persona ("I am a strict, non-interpretive archival routing
+  # classifier") injected into every call regardless of config, a real
+  # bug confirmed live via benchmark/prompt_sweep.py (which calls
+  # _run_generate() directly, bypassing the task gate that would
+  # otherwise have caught this). See gemma.yaml's own system_prompt
+  # comment and docs/CODE_MAP.md's "config owns behavior" section for
+  # the full story. This is this config's OWN system prompt, matching
+  # its actual extraction/OCR role - not inherited from gemma.yaml.
+  system_prompt: |
+    You are an OCR transcription model.
+
+    Transcribe exactly what appears in the image.
+    If unreadable, output only "?".
+    Do not describe the image.
+    Do not explain your reasoning.
 
 vram_headroom_gb: 1.5
 cpu_offload_limit_gb: 48.0

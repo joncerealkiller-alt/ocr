@@ -46,11 +46,47 @@ class GemmaLoader(BaseLoader):
             self.config.repo_id,
             token=False,
         )
+
+        # Config-driven, not hardcoded to any one model: extra.load_in_8bit
+        # (default off) lets a specific config opt into bitsandbytes 8-bit
+        # loading - e.g. config/models/gemma_e4b.yaml, where the raw bf16
+        # weights (16.02GB) exceed this card's total VRAM (15.93GB) on
+        # their own. dtype="auto" is omitted when quantizing: bitsandbytes
+        # manages compute precision for the quantized layers itself, and
+        # passing both together is redundant/conflicting.
+        load_in_8bit = self.config.extra.get("load_in_8bit", False)
+        model_kwargs = dict(device_map="auto", token=False)
+        if load_in_8bit:
+            from transformers import BitsAndBytesConfig
+            # Real bug caught before trusting any E2B-vs-E4B result (2026-08-02):
+            # quantizing the WHOLE model - including vision_tower/embed_vision
+            # (confirmed real module names via modeling_gemma4.py, not guessed) -
+            # produced coherent-but-wrong output ("the image is largely blank",
+            # low confidence) on images the same model reads correctly at bf16.
+            # This is a known failure mode for naive int8 quantization of
+            # multimodal models: the vision/projector path is more precision-
+            # sensitive than the text decoder. Skipping these modules keeps
+            # them in full precision while still 8-bit quantizing the LLM
+            # backbone - the actual VRAM-saving target.
+            # lm_head added after a second real bug: transformers normally
+            # auto-detects and skips tied-weight output heads like lm_head
+            # on its own, but supplying an explicit llm_int8_skip_modules
+            # list REPLACES that default detection rather than extending
+            # it - without lm_head listed explicitly here, generation
+            # crashed with AttributeError: 'Parameter' object has no
+            # attribute 'CB' (lm_head left as a bare, non-bitsandbytes-
+            # wrapped Parameter that the quantized forward path still
+            # tried to call).
+            model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_skip_modules=["vision_tower", "embed_vision", "audio_tower", "embed_audio", "lm_head"],
+            )
+        else:
+            model_kwargs["dtype"] = "auto"
+
         model = AutoModelForCausalLM.from_pretrained(
             self.config.repo_id,
-            dtype="auto",
-            device_map="auto",
-            token=False,
+            **model_kwargs,
         ).eval()
 
         self._execution_meta = {
@@ -90,11 +126,30 @@ class GemmaLoader(BaseLoader):
         if raw_image.mode != "RGB":
             raw_image = raw_image.convert("RGB")
 
+        # System prompt is config-driven, NOT hardcoded here (2026-07-30
+        # fix, per Jon's direction, after a real bug: this used to be a
+        # hardcoded classifier persona applied to EVERY call through this
+        # loader regardless of task - harmless for gemma.yaml's actual
+        # classification role, but silently injected into gemma_extract's
+        # extraction calls too whenever a caller invokes _run_generate()
+        # directly (e.g. benchmark/prompt_sweep.py, which bypasses
+        # _build_prompt()'s task gate by design), making an OCR/structuring
+        # call behave like "I am a strict router" instead. See docs/
+        # CODE_MAP.md's "Architectural principle: config owns behavior,
+        # loaders own mechanics" for the full story. Each model config now
+        # sets its OWN extra.system_prompt (gemma.yaml keeps the classifier
+        # wording, gemma_extract.yaml gets its own extraction-appropriate
+        # one) - DELIBERATELY no hardcoded fallback here: a config that
+        # doesn't set one gets no system message at all, not an
+        # accidentally-inherited personality from whichever config
+        # happened to define one first.
+        #
         # Reasoning toggle: confirmed mechanism is a <|think|> token at
-        # the START of the system prompt, not a generate() kwarg. This
-        # corrects the earlier "param" placeholder in gemma.yaml -
-        # reasoning_toggle_mechanism should be "system_prompt" there.
-        system_content = "You are a strict, non-interpretive archival routing classifier."
+        # the START of the system prompt, not a generate() kwarg (see
+        # gemma.yaml's reasoning_toggle_mechanism comment). Applied here
+        # regardless of whether a system_prompt is configured, so the
+        # toggle still works even for a config with none set.
+        system_content = self.config.extra.get("system_prompt", "")
         if self.config.reasoning_enabled:
             system_content = "<|think|>" + system_content
 
@@ -102,16 +157,16 @@ class GemmaLoader(BaseLoader):
         # precede text content in the message, not follow it (this is
         # the reverse of how the Qwen/InternVL loaders in this project
         # structure their content lists - don't copy that pattern here).
-        messages = [
-            {"role": "system", "content": system_content},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": raw_image},
-                    {"type": "text", "text": prompt},
-                ],
-            },
-        ]
+        messages = []
+        if system_content:
+            messages.append({"role": "system", "content": system_content})
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "image", "image": raw_image},
+                {"type": "text", "text": prompt},
+            ],
+        })
 
         # Image token budget: classification doesn't need fine-grained
         # detail (no OCR happening at this stage), so use a low budget

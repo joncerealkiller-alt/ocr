@@ -1,0 +1,42 @@
+model_name: chameleon
+repo_id: facebook/chameleon-7b   # gated - requires accepting Meta's Chameleon Research License on the HF page
+loader_class: ChameleonLoader
+
+# Reference Classifier Qualification (Benchmark 2 follow-up), same
+# scope as gemma_12b_unified.yaml: comparing architecture (encoder-free
+# early-fusion vs MoE + separate vision encoder), every setting mirrors
+# gemma.yaml's classifier-role values where a Chameleon equivalent
+# exists. No chat template / system-prompt mechanism exists for this
+# model (confirmed: no chat_template in tokenizer_config.json, no
+# chat_template.jinja, transformers' own docstring example uses a flat
+# text string) - system_prompt/reasoning fields from gemma.yaml simply
+# don't apply and are omitted rather than faked.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+max_new_tokens: 256
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: none   # no such mechanism for this model
+reasoning_enabled: false
+
+# Kept enabled per gemma.yaml's default - this model's vocabulary is a
+# UNIFIED text+image discrete token space (early-fusion tokenization),
+# so masking to expected-script characters plausibly matters even more
+# here (guards against a stray image token leaking into text output),
+# not just carried over by default.
+restrict_output_charset: true
+
+prompt_version: v1
+prompt_text: ""
+
+extra: {}
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

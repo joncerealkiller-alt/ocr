@@ -1,0 +1,48 @@
+model_name: gemma_12b_unified
+repo_id: google/gemma-4-12B-it-qat-w4a16-ct   # compressed-tensors w4a16 format - QAT-trained, ships already packed 4-bit weights, no manual quantization step needed
+loader_class: Gemma4UnifiedLoader
+
+# Reference Classifier Qualification (Benchmark 2 follow-up): this
+# config exists to compare architecture (Dense Unified direct
+# projection vs E2B's MoE + separate vision encoder), not to explore
+# a larger model's own tuning space. Every setting below is a direct
+# mirror of config/models/gemma.yaml's classifier-role settings - do
+# not change any of these independently of that file; if a real
+# improvement is found and this gets promoted, resync both files.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+max_new_tokens: 256
+
+min_pixels: null
+max_pixels: null
+
+# Confirmed identical mechanism per the 12B Unified model card's own
+# "Thinking Mode Configuration" section: <|think|> token at the start
+# of the system prompt. Same as E2B.
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+# Same mechanism as gemma.yaml (core/loaders/constrained_decoding.py
+# reads self.tokenizer regardless of which Gemma loader populated it).
+restrict_output_charset: true
+
+prompt_version: v1
+prompt_text: ""
+
+# Model card's "Variable Image Resolution" section lists the same
+# supported budgets (70/140/280/560/1120) for this model as for E2B -
+# kept at the same value as gemma.yaml so this isn't a confound.
+extra:
+  image_token_budget: 140
+  system_prompt: "You are a strict, non-interpretive archival routing classifier."
+
+# Not expected to matter at this model's real footprint (~10.3GB
+# compressed-tensors weights, fits in the 16GB card without offload),
+# but kept identical to gemma.yaml rather than tuned.
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

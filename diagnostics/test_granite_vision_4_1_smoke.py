@@ -1,0 +1,83 @@
+"""
+Smoke test for ibm-granite/granite-vision-4.1-4b (2026-07-28 prep task) -
+loads the model ONCE via the real loader path (core/loaders/
+granite_vision_4_1_loader.py, in-process, no subprocess venv needed) and
+runs it against a handful of real project sample images, so Jon can pick
+up real evaluation from here. Not wired into config/pipeline.yaml, does
+not touch any bucket CSV or extracted.csv - same isolation guarantee as
+model_assessment.py.
+
+Known finding from the initial sanity check (see config/models/
+granite_vision_4_1_4b.yaml's own WARNING comment): on 2 of 3 real
+samples this model fabricated a "confident invented list" - an entire
+fictional 39-person family on a census page, and every country/Canadian
+province on Earth as place_names on another - not an honest hedge, and
+one of those two PASSED schema validation cleanly. Worse than the
+formatting problem seen on the third sample. Treat any "schema PASS"
+from this model with real suspicion until that failure mode is
+understood, not as evidence of a good run.
+
+Usage:
+    python diagnostics/test_granite_vision_4_1_smoke.py
+"""
+
+from __future__ import annotations
+
+import sys
+import time
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from PIL import Image
+from pydantic import ValidationError
+
+from core.loaders.base_loader import load_model_config
+from core.loader_registry import LOADER_REGISTRY
+
+DEWARPED_DIR = PROJECT_ROOT / "data" / "outputs" / "dewarped"
+PROMPT_PATH = PROJECT_ROOT / "config" / "prompts" / "extractor_printed_v2.txt"
+
+TEST_STEMS = [
+    "30807_A000676-00099(1)",   # printed manifest
+    "e078_e001946617",          # 1911 census
+    "e003558130",                # handwritten manifest
+]
+
+
+def main():
+    print("Loading granite_vision_4_1_4b (config/models/granite_vision_4_1_4b.yaml)...")
+    model_cfg = load_model_config("granite_vision_4_1_4b")
+    model_cfg.prompt_text = PROMPT_PATH.read_text(encoding="utf-8")
+
+    loader_cls = LOADER_REGISTRY.get(model_cfg.loader_class)
+    loader = loader_cls(model_cfg)
+    t0 = time.time()
+    loader.initialize_model_and_tokenizer()
+    print(f"Loaded in {time.time() - t0:.1f}s\n")
+
+    for stem in TEST_STEMS:
+        path = DEWARPED_DIR / f"{stem}_dewarped.jpg"
+        if not path.exists():
+            print(f"SKIP {stem}: dewarped file not found at {path}")
+            continue
+
+        with Image.open(path) as image:
+            image = image.convert("RGB")
+            t0 = time.time()
+            raw = loader._run_generate(image, model_cfg.prompt_text)
+            elapsed = time.time() - t0
+
+        print(f"=== {stem} ({elapsed:.1f}s) ===")
+        print(raw)
+        try:
+            result = loader._parse_extraction(str(path), "dense_tabular_rows", raw)
+            print(f"[schema PASS] {result.model_dump_json(indent=2)}")
+        except (ValueError, ValidationError) as e:
+            print(f"[schema FAIL] {e}")
+        print()
+
+
+if __name__ == "__main__":
+    main()

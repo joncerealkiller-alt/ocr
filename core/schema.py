@@ -35,6 +35,18 @@ class DocumentCategory(str, Enum):
     MIXED_TEXT_IMAGE = "mixed_text_image"
     GENEALOGY_CHART = "genealogy_chart"
     UNCERTAIN = "uncertain_review"
+    # Added 2026-08-01 after analyzing data/flagged_needs_new_bucket.csv
+    # (149 files manually flagged by Jon as wrongly classified into
+    # dense_tabular_rows/printed_document/map_land_record): a screenshot
+    # of a genealogy/archive WEBSITE's UI (search results, catalog/
+    # finding-aid metadata pages, database record cards) - NOT a scan or
+    # photograph of a physical document. Deliberately routed to model:
+    # null in config/pipeline.yaml, same "skip extraction" mechanism as
+    # uncertain_review but for a different reason: these images don't
+    # need OCR/vision extraction at all (the text is already crisp,
+    # digitally-rendered webpage text), not that the classifier is
+    # unsure what they are.
+    WEBSITE_SCREENSHOT = "website_screenshot"
 
 
 class ClassificationResult(BaseModel):

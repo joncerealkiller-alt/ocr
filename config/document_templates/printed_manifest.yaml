@@ -1,0 +1,125 @@
+# See canada_census_1921.yaml for the full field-by-field explanation of
+# this schema - kept there rather than repeated per-file.
+#
+# Calibrated 2026-07-27 against data/outputs/row_segmentation/
+# 30807_A000676-00099(1)_dewarped_sidecar.json (1604x1825): metadata_
+# bottom 177/1825=0.097, table_bottom 1824/1825~1.0, table_left
+# 4/1604=0.002, table_right 1600/1604=0.997. That sidecar's own
+# table_bbox top is 0 (the manual pass didn't carve out a distinct
+# header/table split for this doc type), so table.y_frac[0] below was
+# ORIGINALLY just a guessed placeholder (0.14) rather than something
+# actually measured.
+#
+# CORRECTED 2026-07-27 (later same day, per Jon's direction) after that
+# guess proved genuinely wrong, not just imprecise: this manifest's
+# printed header is a full multi-column block - 9 numbered columns,
+# each with its own title AND sub-labels (e.g. column 7 "AGES OF
+# PASSENGERS" further splits into Adults/Children/Infants x Male/
+# Female) - spanning y=150 to y=356 (0.082-0.195), much taller than the
+# 0.14 guess assumed. table_top=0.14 (=255px) landed the search window
+# for locate_table_boundary() entirely inside that header block, so
+# "row 1" ended up being 125px of column-title text rather than the
+# first real passenger row - confirmed by cropping and looking at the
+# actual page, not inferred from geometry alone. The real boundary is a
+# clean 17px BLANK gap at y=357-373 (density=0 for all 17 rows, in
+# stark contrast to the header text above and the first passenger row's
+# text below) - exactly the "clear whitespace, no grid lines" structure
+# Jon described these forms as having. y_frac[0] below (0.20, =365/1825,
+# the middle of that gap) is measured directly against that gap, not
+# guessed.
+#
+# Manifests do NOT share the census forms' fixed 50-line structure or
+# ruled column grid (measured 0 vertical ruling lines vs. 8-25 for the
+# three census templates - see classify_document()'s docstring) - row
+# count varies per page (this sample had 57), so row_strategy is
+# "detect" (the general density/ruling-line detector, same as
+# ui/row_segmentation_ui.py's "detect" mode used for this exact file),
+# not "periodic" (which needs a known, fixed row_count).
+#
+# RENAMED 2026-07-27 (was "passenger_manifest") per Jon's direction,
+# after he showed a genuinely different manifest type - an older
+# HANDWRITTEN ship manifest with a real printed column grid, irregular
+# multi-line family-bracketed entries, and a busier multi-block header
+# (ship name/date stamp, an instructions paragraph, THEN column
+# headers). This template covers only the TYPED kind (like the
+# Empress of France sample this file is calibrated against - clean
+# printed text, no ruled grid, single-line entries). See
+# handwritten_manifest.yaml for the other one - still a placeholder,
+# not yet calibrated against a real sample.
+
+doc_type: printed_manifest
+display_name: "Printed Passenger Manifest"
+
+# See core/document_templates.py's DocumentTemplate.columns_file
+# comment - the curated, ordered field list ui/quarantine_review_ui.py
+# offers for manual column masking (config/columns/*.txt), distinct
+# from expected_columns above.
+columns_file: passenger_manifest.txt
+
+row_strategy: detect
+expected_row_count: null
+
+expected_columns:
+  - Name
+  - Embarkation
+  - Arrival
+  - Occupation
+  - Destination
+
+# See canada_census_1921.yaml's own column_regions_approx comment for
+# the schema. Calibrated from the SAME real reference sidecar (width
+# 1604): Name [240,489], Embarkation [10,128], Arrival [126,263]
+# (that sidecar actually stored two near-duplicate ranges for Arrival,
+# [130,263] and [126,263] - almost certainly manual re-mask noise, not
+# two real regions; using their outer bound), Occupation [894,1055],
+# Destination [493,846].
+#
+# UNLIKE the census templates, this doc type measured 0 vertical ruling
+# lines (see classification comment below) - there is no printed grid
+# for core.auto_sidecar.locate_columns()'s _find_vertical_ruling_line()
+# refinement to actually find, so in practice every column here will
+# fall back to this raw approx position rather than get refined against
+# a real structural line. Still a real, calibrated starting point (far
+# better than the 0.14 table_top guess this file's own history shows
+# an uncalibrated guess can be), just with a documented lower ceiling
+# on per-page accuracy than the census templates have.
+# CHANGED BASIS 2026-07-29 - x_frac is now relative to the TABLE's own
+# left-right span (table_left=4, table_right=1600 on this 1604px-wide
+# reference), not full page width - see canada_census_1911.yaml's own
+# column_regions_approx comment for the full explanation. This
+# template's table sits almost flush with the page edges already
+# (table_left/right fracs 0.002/0.997), so the shift here is tiny -
+# same real pixel ranges as before (Name [240,489], Embarkation
+# [10,128], Arrival [126,263] using the outer bound of two near-
+# duplicate manual ranges as already documented, Occupation
+# [894,1055], Destination [493,846]), re-derived against table width
+# (1596) instead of page width (1604).
+column_regions_approx:
+  Name: {x_frac: [0.1479, 0.3039]}
+  Embarkation: {x_frac: [0.0038, 0.0777]}
+  Arrival: {x_frac: [0.0764, 0.1623]}
+  Occupation: {x_frac: [0.5576, 0.6585]}
+  Destination: {x_frac: [0.3064, 0.5276]}
+
+regions_approx:
+  metadata:
+    y_frac: [0.0, 0.097]
+  header:
+    y_frac: [0.097, 0.20]
+  table:
+    y_frac: [0.20, 0.999]
+    x_frac: [0.002, 0.997]
+
+# aspect_ratio: manifest sample measured 0.879 (portrait) - the
+# strongest, cheapest signal separating manifests from the three
+# (landscape) census templates.
+# vertical_ruling_lines: manifest sample measured 0 - no ruled column
+# grid, plain text rows. column_count_range tightened 2026-07-27 (was
+# [0,4], shared with handwritten_manifest.yaml and produced an exact
+# score tie against it on this sample - handwritten manifests DO have a
+# real printed grid, per Jon's description/image, so 0 is specifically
+# this doc type's signal, not "few or none").
+classification:
+  aspect_ratio_range: [0.60, 1.15]
+  row_count_range: [10, 90]
+  column_count_range: [0, 2]

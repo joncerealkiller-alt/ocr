@@ -6,8 +6,29 @@ do NOT transcribe, extract, or describe document contents in detail.
 Any attempt to read names, dates, or specific text is out of scope for
 this task and will be discarded.
 
+FIRST, before applying any category below: is this image a photograph
+or scan of a PHYSICAL document, or is it a screenshot of a WEBSITE's
+user interface (a genealogy site's search results/person profile, or
+an archive's online catalog/finding-aid page)? A webpage can contain
+text arranged in a table-like or form-like layout (e.g. "Name / Age /
+Ship name" fields, or "Reference number / Date / Level" catalog
+metadata) that superficially resembles dense_tabular_rows or
+printed_document - that resemblance does NOT make it one of those
+categories. Look for hyperlinks (underlined text), browser/site UI
+chrome (tabs, filter controls, search boxes, buttons), or catalog-style
+metadata field names. If you see any of those, the category is
+website_screenshot, regardless of what the page's text is about -
+check this BEFORE evaluating the categories below.
+
 Choose exactly one category:
 
+- website_screenshot: a screenshot of a genealogy or archive website's
+  user interface - search results, catalog/finding-aid metadata pages,
+  database record or "Hints" cards - rather than a scan or photograph
+  of the physical document itself. Often contains a small embedded
+  thumbnail of the real document, but the image as a whole is UI
+  chrome + rendered webpage text, not the document. See the FIRST
+  check above - evaluate this category before the ones below.
 - dense_tabular_rows: documents with MANY REPEATED similar rows sharing
   the same set of columns - specifically census pages and passenger
   manifests (confirmed as the only two document types in this project

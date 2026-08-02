@@ -18,8 +18,8 @@ Behavior on failure (this is deliberate, not a bug to silence):
 
 from __future__ import annotations
 
+import argparse
 import csv
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -87,11 +87,41 @@ def result_to_row(result: ClassificationResult) -> dict:
     return row
 
 
-def run(manifest_path: Path) -> None:
+def _enable_raw_output_debug(loader) -> None:
+    """
+    Wraps loader._run_generate so --debug prints each call's raw model
+    text to stdout before core/loaders/base_loader.py's classify()
+    parses it into a ClassificationResult. Deliberately does NOT touch
+    any file under core/loaders/ - added 2026-07-30 while a real
+    classification batch was actively running, and CLAUDE.md's rule
+    ("ask before editing loader code while a run is in progress") is
+    specifically about that directory; wrapping at this call site
+    instead means the flag never needs to touch it, live run or not.
+
+    Assigns a plain function to the INSTANCE (not the class) - Python's
+    descriptor protocol only auto-binds `self` for methods looked up on
+    the class, so an instance attribute like this is called with
+    exactly the two args it's defined to take (raw_image, prompt), no
+    `self` involved. Standard, safe pattern for patching one instance
+    without touching the class/module it came from.
+    """
+    original_run_generate = loader._run_generate
+
+    def _debug_run_generate(raw_image, prompt):
+        raw_output = original_run_generate(raw_image, prompt)
+        print(f"  [raw model output]\n{raw_output}\n  [end raw output]")
+        return raw_output
+
+    loader._run_generate = _debug_run_generate
+
+
+def run(manifest_path: Path, debug: bool = False) -> None:
     pipeline_cfg = load_pipeline_config()
     min_confidence = pipeline_cfg["classifier"]["min_confidence"]
 
     loader = build_classifier_loader(pipeline_cfg)
+    if debug:
+        _enable_raw_output_debug(loader)
     writers = open_bucket_writers()
 
     with open(manifest_path, "r", encoding="utf-8") as f:
@@ -142,8 +172,17 @@ def run(manifest_path: Path) -> None:
     print(f"\nDone. Bucket CSVs written to {BUCKET_DIR}")
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Stage 2: classify every image in the manifest, route into bucket CSVs.")
+    parser.add_argument("manifest", help="Path to manifest.csv")
+    parser.add_argument(
+        "--debug", action="store_true",
+        help="Print each image's raw model output to stdout before it's parsed.",
+    )
+    args = parser.parse_args()
+    run(Path(args.manifest), debug=args.debug)
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python -m core.classifier <manifest.csv>")
-        sys.exit(1)
-    run(Path(sys.argv[1]))
+    main()

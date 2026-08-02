@@ -1,0 +1,72 @@
+model_name: gemma_e4b
+repo_id: google/gemma-4-E4B-it-qat-mobile-transformers
+loader_class: GemmaLoader
+
+# E2B vs E4B Reference Model Comparison: every setting below is a
+# byte-for-byte mirror of config/models/gemma.yaml (E2B) EXCEPT repo_id
+# - this is the single-variable swap the comparison is scoped to.
+# Verified before creating this file (not assumed): E2B and the base
+# E4B checkpoint share the identical architecture class
+# (Gemma4ForConditionalGeneration, model_type: gemma4), identical
+# processor_config.json, and identical chat_template.jinja (matching
+# sha256).
+#
+# 2026-08-02: switched from the plain google/gemma-4-E4B-it checkpoint
+# (bnb 8-bit) to this QAT mobile-transformers checkpoint, per Jon's
+# direction, after bnb 8-bit was confirmed broken - it hallucinated
+# "the image is largely blank" on two clearly legible typed letters,
+# even after excluding vision_tower/embed_vision/audio_tower/embed_
+# audio/lm_head from quantization. Full bf16 on the plain E4B
+# checkpoint confirmed those same two images classify correctly
+# (printed_document, conf 0.99-1.0), proving the hallucination was a
+# quantization artifact, not a real E4B capability difference - but
+# bnb's naive blanket-8bit cast wasn't the right way to quantize this
+# model. This checkpoint is Google's own QAT-trained, deliberately
+# mixed-precision release (quant_method: "gemma", native transformers
+# GemmaQuantizer - NOT bitsandbytes): vision_tower/audio components are
+# explicitly protected in its own modules_to_not_convert (baked in by
+# Google's own training process, not guessed after the fact by us),
+# language model layers at 4-bit, embeddings/lm_head at 2-bit. Ships
+# already packed (3.56GB on disk, not a 16GB bf16 download cast at load
+# time) - loads through the exact same AutoModelForCausalLM.
+# from_pretrained() call GemmaLoader already uses, no extra.
+# load_in_8bit needed - the checkpoint's own embedded quantization_
+# config is auto-detected by transformers.
+#
+# If a setting here ever drifts from gemma.yaml's, that's a bug -
+# resync both.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.0
+no_repeat_ngram_size: null
+max_new_tokens: 256
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+restrict_output_charset: true
+
+prompt_version: v1
+prompt_text: ""
+
+# Same 70/140/280/560/1120 budget options apply per the model card
+# ("all models"), and image_token_budget=140 is held constant at
+# E2B's value on purpose - this comparison isolates model size, not
+# token budget.
+extra:
+  image_token_budget: 140
+  system_prompt: "You are a strict, non-interpretive archival routing classifier."
+  # No load_in_8bit here - this checkpoint's quantization is already
+  # baked into its own config.json (quant_method: "gemma"), applied
+  # automatically by transformers' native GemmaQuantizer. Setting
+  # load_in_8bit here would try to ALSO apply a redundant/conflicting
+  # bitsandbytes quantization_config on top of it.
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

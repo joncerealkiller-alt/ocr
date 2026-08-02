@@ -75,6 +75,10 @@ def main():
                               "row numbering).")
     parser.add_argument("--header", action="store_true",
                          help="Test the header/metadata region instead of a row.")
+    parser.add_argument("--checkpoint", type=str, default=None,
+                         help="Optional path to a saved LoRA adapter dir (data/outputs/"
+                              "<model>_lora_checkpoints/epoch_N/, see training/"
+                              "train_lora.py) applied on top of --model.")
     args = parser.parse_args()
 
     if args.row is None and not args.header:
@@ -109,7 +113,8 @@ def main():
         label = f"row {args.row}"
 
     print(f"Testing {label}, bbox={bbox}")
-    print(f"Model: {args.model}")
+    print(f"Model: {args.model}"
+          + (f"  [checkpoint: {args.checkpoint}]" if args.checkpoint else ""))
     print(f"{'='*60}")
 
     config = load_model_config(args.model)
@@ -121,6 +126,8 @@ def main():
     loader = loader_cls(config)
     try:
         loader.initialize_model_and_tokenizer()
+        if args.checkpoint:
+            loader.apply_checkpoint(args.checkpoint)
 
         # THE key difference from run_row_extraction: uses the loader's
         # OWN _build_prompt(), not our generic build_row_prompt(). For

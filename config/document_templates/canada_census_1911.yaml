@@ -1,0 +1,134 @@
+# See canada_census_1921.yaml for the full field-by-field explanation of
+# this schema - kept there rather than repeated per-file.
+#
+# Calibrated 2026-07-27 against data/outputs/row_segmentation/
+# e078_e001946617_dewarped_sidecar.json (3563x2190): metadata_bottom
+# 272/2190=0.124, table_top 625/2190=0.285, table_bottom 2068/2190=0.944,
+# table_left 52/3563=0.015, table_right 3494/3563=0.981.
+
+doc_type: canada_census_1911
+display_name: "Canada Census 1911"
+
+# See canada_census_1921.yaml's columns_file comment for the full
+# explanation.
+columns_file: census_core_fields.txt
+
+# See canada_census_1921.yaml's row_strategy comment for why this is
+# "fixed_periodic" (row 1 located, everything else tiled arithmetically)
+# and not per-row refinement.
+row_strategy: fixed_periodic
+expected_row_count: 50
+
+expected_columns:
+  - Name
+  - Age
+  - Sex
+  - Relationship to Head
+  - Birthplace
+  - Occupation
+  - Family Number
+  - Marital Status
+  - Month of Birth
+  - Year
+
+# See canada_census_1921.yaml's own column_regions_approx comment for
+# the full explanation. Calibrated as the AVERAGE of TWO real reference
+# sidecars that closely agree (e078_e001946617, width 3563, and
+# http___...1911_jpg_e001946617, width 3573 - likely near-duplicate
+# scans of the same real page): Name ~[218-227,513-520], Age
+# ~[1074-1082,1117-1126], Sex ~[677-684,722-729], Relationship to Head
+# ~[722-730,851-860], Birthplace ~[1120-1127,1249-1257].
+#
+# A THIRD real reference (z000017634_dewarped_sidecar.json, width
+# 3105) disagrees more than scan-to-scan noise would explain,
+# particularly on Sex (frac [0.141,0.158] there vs ~[0.191,0.203] in
+# the other two) and Relationship to Head (frac [0.177,0.216] vs
+# ~[0.204,0.240]) - a real, unexplained discrepancy, not averaged in
+# here since 2-of-3 agreeing is stronger evidence than a 3-way blend
+# that would blur a genuinely different layout into a wrong middle
+# ground. core/auto_sidecar.py's column search radius is set generously
+# (not just proportional to each column's own narrow width) specifically
+# so a page shaped like z000017634 still has a chance of finding its
+# real ruling lines rather than being forced to the other two samples'
+# positions.
+# CHANGED BASIS 2026-07-29 (per Jon: "could be the offset from left
+# edge from dewarp"): every x_frac below is now relative to the
+# TABLE's own left-right span (table_bbox), NOT the full page width -
+# see core/auto_sidecar.py's locate_columns() for the matching code
+# fix. This was a real bug, not just imprecision: a 3rd real reference
+# (e001926997, table starting at 5.4% of page width vs ~1.5% for the
+# original two calibration samples, due to differing dewarp/scan
+# margins) looked like it disagreed with the existing Name calibration
+# by a huge ~4 percentage points when measured against page width -
+# that discrepancy nearly vanished (down to <0.2pp) once measured
+# relative to the table instead. Name/Age/Sex/Relationship to Head are
+# now averaged across all THREE real references (the original two plus
+# e001926997); Birthplace stays averaged over the original two only
+# (e001926997's manual sidecar used "#Address" at that position
+# instead, not directly comparable - see #Address note below).
+# Verified directly against data/outputs/row_segmentation/
+# e078_e001946617_dewarped_sidecar.json,
+# http___..._e001946617.jpg_dewarped_sidecar.json, and
+# e001926997_sidecar.json's own table_bbox + mask_keep_ranges (not
+# re-derived from old comments, to avoid compounding rounding).
+column_regions_approx:
+  Name: {x_frac: [0.0497, 0.1351]}
+  Age: {x_frac: [0.2977, 0.3104]}
+  Sex: {x_frac: [0.1828, 0.1958]}
+  Relationship to Head: {x_frac: [0.1960, 0.2335]}
+  Birthplace: {x_frac: [0.3103, 0.3479]}
+  # Family Number/Marital Status/Month of Birth/Year: added 2026-07-29,
+  # calibrated from ONE real reference so far (e001926997, table-
+  # relative fractions per the basis fix above) - treat as provisional
+  # until a second real reference confirms or disagrees, same
+  # 2-of-3-agreeing discipline the others above follow. NOTE: this same
+  # reference's own column_order uses "#Address" (not "Occupation") for
+  # the physical column between Name and Sex - Occupation still has no
+  # real calibration data, left for manual masking as before.
+  Family Number: {x_frac: [0.0345, 0.0504]}
+  Marital Status: {x_frac: [0.2353, 0.2486]}
+  Month of Birth: {x_frac: [0.2486, 0.2858]}
+  Year: {x_frac: [0.2858, 0.2990]}
+
+# See canada_census_1921.yaml's number_row_approx comment for the full
+# explanation. Measured on e078_e001946617: number row y=612-629
+# (top_offset=637-612=25px, bottom_offset=637-629=8px from
+# table_top=637), then the thick rule at y=630-638 leading into
+# table_top. Fractions on a 2190px-tall page: 0.0114/0.0037. This is
+# also this template's own motivating case: z000017634 (a third real
+# 1911 sample, already flagged in this file's column_regions_approx
+# comment as disagreeing on Sex/Relationship to Head by 50-175px from
+# the other two references) is exactly the kind of per-page shift this
+# number-row anchor is meant to catch and correct.
+number_row_approx:
+  top_offset_frac: 0.0114
+  bottom_offset_frac: 0.0037
+
+# Real row height (28.0px on a 2190px-tall page, from e078) - see
+# canada_census_1921.yaml's expected_row_height_frac comment. This is
+# the exact check that catches z000017634 (this template's own known
+# outlier): its wrong table_top=725 was chosen because it sits almost
+# exactly 1 row-height (27px, ratio 0.96) below the PREVIOUS candidate
+# rule found in the search window - a strong sign the algorithm picked
+# a row-separator line, not the true header/table divider.
+expected_row_height_frac: 0.01279
+
+regions_approx:
+  metadata:
+    y_frac: [0.0, 0.124]
+  header:
+    y_frac: [0.124, 0.285]
+  table:
+    y_frac: [0.285, 0.944]
+    x_frac: [0.015, 0.981]
+
+# aspect_ratio: 1911 sample measured 1.622-1.637
+# vertical_ruling_lines: 1911 sample measured ~21 (vs 1921's ~11 and
+# 1931's ~41, all measured through the real pipeline path at
+# run_ratio_threshold=0.35 - see canada_census_1921.yaml's
+# classification comment and classify_document()'s own docstring for
+# why this specific threshold/measurement path matters).
+classification:
+  aspect_ratio_range: [1.40, 1.75]
+  row_count_range: [44, 56]
+  column_count_range: [16, 28]

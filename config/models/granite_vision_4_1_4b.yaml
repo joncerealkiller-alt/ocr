@@ -1,0 +1,54 @@
+model_name: granite_vision_4_1_4b
+repo_id: ibm-granite/granite-vision-4.1-4b
+loader_class: GraniteVision41Loader
+
+# PREP/SANITY-TEST CANDIDATE ONLY (2026-07-28) - not wired into
+# config/pipeline.yaml. See core/loaders/granite_vision_4_1_loader.py's
+# docstring for the full compatibility story, including that this exact
+# model was already looked at once (2026-07-11) and skipped for needing
+# trust_remote_code - re-checked now because native transformers support
+# landed since then, confirmed against this project's current
+# transformers 5.12.1.
+#
+# CAVEAT (2026-07-28, Jon): the smoke test below used a whole-page prompt
+# against a whole dense document image - NOT how this project's real
+# pipeline handles census/manifest documents (see core/row_extraction.py,
+# tight per-field crops). Whole-page extraction is a known overload effect
+# for any model, not necessarily specific to this one - not yet tested via
+# the real per-field path. Also: the JSON-wrapping noted below is NOT a
+# real pipeline problem per Jon (granite-vision-2b does the same, already
+# handled by the real per-field parser) - only this file's throwaway
+# whole-page test harness doesn't tolerate that shape.
+#
+# 3-sample smoke test (real output, accurately transcribed - read with the
+# caveat above in mind): loading/compatibility is clean. On 2 of 3 real
+# samples it fabricated an entire fictional family/place list (39 invented
+# "Janssen" names on one census page; every country and Canadian province
+# on Earth as "confirmed" place_names on another) - textbook "confident
+# invented list" hallucination at whole-page scale. One of those two
+# happened to pass schema validation cleanly. Worth re-testing through the
+# real per-field pipeline before drawing any conclusion either way - see
+# the loader docstring for full detail.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+max_new_tokens: 512
+
+attn_implementation: null
+stop_string: null
+keywords_max_new_tokens: 80
+
+reasoning_toggle_mechanism: unsupported
+reasoning_enabled: false
+
+restrict_output_charset: false
+
+prompt_version: v1
+prompt_text: ""
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0
