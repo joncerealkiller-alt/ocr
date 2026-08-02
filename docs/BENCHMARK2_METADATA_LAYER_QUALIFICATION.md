@@ -255,10 +255,13 @@ lock-on risk applies only to the latter).
 | Gemma prompt context (if ever used) | Calibrated categories only (e.g. `structural.orientation_confidence: "high"`), never raw scores | Text-hint — subject to §20's lock-on-risk evaluation before use |
 
 **Where this plugs into the existing pipeline**: as a new stage
-between Stage 0 (preprocessing) and Stage 1 (classification) — runs
-once per image, writes the metadata artifact, and every listed
-consumer reads from it rather than re-deriving. Existing deterministic
-Stage A (`image_analysis.py`) is untouched and still feeds the
+between Stage 0 (preprocessing; now Stage 3 "Image Processing" per
+docs/PIPELINE_STAGE_TERMINOLOGY.md, 2026-08-02) and Stage 1
+(classification; now Stage 5 "Document Routing") — runs once per
+image, writes the metadata artifact, and every listed consumer reads
+from it rather than re-deriving. Existing deterministic Stage A
+(`image_analysis.py`, now Stage 1 "Raw Sensor Capture") is untouched
+and still feeds the
 `structural`/`quality` top-level fields directly; this benchmark adds
 the `encoders` block alongside it, not instead of it.
 

@@ -94,12 +94,25 @@ old "Stage 2"), `core/row_extraction.py` (Stage 6), `core/
 semantic_stages.py` (between Stage 5 and 6) - one-line pointers added,
 old names kept, all import-verified.
 
-**NOT yet done - flagged so a future session doesn't assume complete**:
-- `docs/BENCHMARK2_METADATA_LAYER_QUALIFICATION.md`, `docs/
-  VISION_IR_RESEARCH.md`, `benchmark/models.py`, `benchmark/
-  prompt_sweep.py`, `benchmark/prompt_sweep_gui.py` - other stage
-  references not yet updated (lower priority - these are
-  research/benchmark docs and tools, not the live orchestration path).
+**Done (2026-08-02, fifth/final pass)**: `docs/
+BENCHMARK2_METADATA_LAYER_QUALIFICATION.md` - its 2 real pipeline-stage
+references (Stage 0/preprocessing, Stage 1/classification, Stage A)
+now cross-reference the new numbers inline. `docs/VISION_IR_RESEARCH.md`
+- one disambiguation note added near the top; its many internal "Stage
+A/B/C" mentions deliberately left AS-IS, since they name research
+EXPERIMENT PHASES for that document's own proposal, a different concept
+from the pipeline's operational stages, not a stale reference to
+rename. `benchmark/models.py`, `benchmark/prompt_sweep.py`, `benchmark/
+prompt_sweep_gui.py`, `scripts/run_two_stage_extraction.py` - checked,
+all deliberately SKIPPED: their "Stage 1/2" means "OCR pass / structuring
+pass" within one extraction call, an unrelated internal concept, not
+this pipeline's terminology.
+
+**Rollout is now complete** for every file that actually uses this
+pipeline's Stage terminology. Remaining old-name mentions in the
+codebase (if any turn up later) are either already-covered bridge
+references (old name kept alongside new, by design) or belong to one
+of the unrelated internal "stage" concepts documented above.
 
 No renamed file has broken any import - every touched module still
 works under its existing name. Renaming actual filenames (vs. just

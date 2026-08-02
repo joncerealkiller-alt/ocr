@@ -4,6 +4,17 @@
 proposes changing production code. Written against the pipeline as it
 exists on the `automated-sidecar-generation` branch, 2026-07-31.
 
+**Terminology note (2026-08-02)**: this document's "Stage A / Stage B /
+Stage C" are RESEARCH EXPERIMENT PHASES for the Vision IR proposal
+specifically (CV analyser -> encoder+projector prototype -> full
+integration test) - a different concept from the pipeline's canonical
+Stage 0-6 orchestration naming in `docs/PIPELINE_STAGE_TERMINOLOGY.md`.
+Do not conflate them: this doc's "Stage A" roughly parallels the
+pipeline's operational Stage 1 (Raw Sensor Capture) in subject matter,
+but names an experiment phase, not a pipeline stage - left as-is
+throughout the rest of this document rather than renamed, since
+renaming would misrepresent what these labels actually mean.
+
 **Scope note**: this assesses whether a Vision IR is worth building as
 an *experimental branch*, not how to build it. Where the answer is
 "yes, but," the "but" is the point — this corpus (archival scans,
