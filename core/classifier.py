@@ -1,6 +1,8 @@
 """
-Stage 2 of the pipeline: classify every image in the manifest and
-route it to the appropriate bucket CSV.
+Stage 5 (Document Routing) per docs/PIPELINE_STAGE_TERMINOLOGY.md's
+canonical Stage 0-6 naming (2026-08-02) - old name "Stage 2" below,
+not yet updated everywhere. Classifies every image in the manifest and
+routes it to the appropriate bucket CSV.
 
 Usage:
     python -m core.classifier data/manifest.csv

@@ -1,4 +1,7 @@
 """
+Sits between Stage 5 (Document Routing) and Stage 6 (Specialized
+Extraction) per docs/PIPELINE_STAGE_TERMINOLOGY.md - determines HOW to
+extract (e.g. census year/template), not the bucket itself.
 Modular runner for POST-BUCKET semantic classification stages - Gemma
 calls that share ONE resident model load, chained one after another.
 Jon's Phase 3 design ("adding future prompts requires minimal code

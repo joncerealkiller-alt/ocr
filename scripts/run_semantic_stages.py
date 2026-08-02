@@ -1,4 +1,6 @@
 """
+[Runs after new Stage 5 (Document Routing) - see docs/
+PIPELINE_STAGE_TERMINOLOGY.md; "Stage 2" below is the old name]
 Runs the post-bucket-classification semantic stage pipeline (Jon's
 Phase 1/3 design, 2026-07-27): loads Gemma ONCE, then runs each stage
 in STAGES below against it in order, before unloading.

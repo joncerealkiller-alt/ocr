@@ -1,11 +1,16 @@
 """
-Stage A of the preprocessing decision: PURE MEASUREMENT of a page image.
-Measures, records, and returns numbers. Never modifies an image, never
-chooses a preprocessing profile, never decides anything.
+Stage 1 (Raw Sensor Capture, physical half) per docs/PIPELINE_STAGE_
+TERMINOLOGY.md's canonical Stage 0-6 naming (2026-08-02) - previously
+called "Stage A" below and elsewhere; that name still appears in
+older docs/comments not yet updated (see that doc's rollout status).
+PURE MEASUREMENT of a page image. Measures, records, and returns
+numbers. Never modifies an image, never chooses a preprocessing
+profile, never decides anything.
 
 Built 2026-07-29 per Jon's spec: split the old "rule table picks a
-preprocessing function" idea into Stage A (this module - analysis) and
-Stage B (policy - a separate module that maps these numbers onto a named
+preprocessing function" idea into Stage A/now-Stage-1 (this module -
+analysis) and Stage B/now-Stage-2 (Decision Engine - a separate module
+that maps these numbers onto a named
 profile in core/image_preprocessing.py's PREPROCESSING_PROFILES). His
 reasoning, which is the whole design constraint here: "the analyser
 becomes reusable - if in six months you replace your preprocessing

@@ -1,4 +1,5 @@
 """
+[Spans new Stage 0/1/3, see docs/PIPELINE_STAGE_TERMINOLOGY.md - not yet split]
 Stage 0 CLI, CSV-input adapter over core/manifest_pipeline.py's real
 engine (build_working_manifest_from_paths()) - reads paths from a
 "file_path" CSV column (core/bucket_worklist.py's load_bucket_filepaths(),

@@ -1,4 +1,12 @@
 """
+Stage 1 (Raw Sensor Capture, semantic half) per docs/PIPELINE_STAGE_
+TERMINOLOGY.md's canonical Stage 0-6 naming (2026-08-02). See that doc
+and docs/REFERENCE_PIPELINE_V1.md for why this module's name stays
+"baseline_embeddings" (capability-named, not stage-named, per Jon's
+explicit instruction) even though its ROLE is Stage 1 - and for the
+real mislabeling bug this module's data uncovered (existing-corpus
+captures tagged "pre_preprocessing" that were actually post-Stage-3).
+
 Captures a pre-preprocessing baseline vision-tower embedding for each
 image, per docs/BENCHMARK2_METADATA_LAYER_QUALIFICATION.md's Third/
 Fourth extension design (Jon, 2026-07-29/30): one canonical embedding

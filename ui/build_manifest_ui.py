@@ -9,8 +9,9 @@ LEGACY MODULE RETIRED FROM THIS UI, 2026-07-30 - scripts/build_manifest.py
 (Jon: "build_manifest was the initial starting module. its legacy now
 and wont be used going forward") is NOT imported here. What used to be
 this UI's "Build Manifest" step (write a raw file list straight to CSV,
-no processing) is now real Stage 0 work: copying queued files into
-data/working/, deskewing, and preprocessing them, via
+no processing) is now real work spanning new Stage 0/1/3 (see docs/
+PIPELINE_STAGE_TERMINOLOGY.md - not yet split apart): copying queued
+files into data/working/, deskewing, and preprocessing them, via
 core/manifest_pipeline.py's build_working_manifest_from_paths() - the
 ACTUAL pipeline engine, run through a small new CSV-input adapter CLI,
 scripts/run_preprocessing.py. There is only ONE manifest artefact this

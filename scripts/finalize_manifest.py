@@ -1,4 +1,8 @@
 """
+[Old "Stage 2" name predates the 2026-08-02 Stage 0-6 rename - see
+docs/PIPELINE_STAGE_TERMINOLOGY.md. This is post-Stage-5 bookkeeping
+(merges classification output), not yet assigned a clean new number -
+flagged there as unresolved, not forgotten.]
 Stage 2 CLI: merges core/classifier.py's bucket CSVs (and, for
 dense_tabular_rows, ui/dewarp_preprocessor_ui.py's own dewarped-bucket
 CSV) into one final manifest recording each file's real, ready-to-use

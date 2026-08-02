@@ -36,14 +36,27 @@ that story):
      the dewarp UI's own output CSV into one final manifest recording
      each file's real, ready-to-use image path.
 
-INGESTION SHAPE (2026-08-02, generalized from PDF-specific handling):
-    Source Discovery -> Source Expansion -> Working Manifest -> ...
-This module (Working Manifest onward) only ever deals in plain image
-paths - it has NO knowledge of PDFs, TIFFs, ZIPs, or any other
-expandable source format. That normalization is core/source_expansion.
-py's job entirely (expand_source_paths()/EXPANDABLE_EXTENSIONS) -
-see that module's docstring for why the split exists and how to add a
-future expandable format without touching this file at all.
+STAGE TERMINOLOGY (2026-08-02): this module currently spans THREE
+stages per docs/PIPELINE_STAGE_TERMINOLOGY.md's canonical Stage 0-6
+naming, conflated into one function - build_working_manifest_from_paths()
+does Stage 0 (Source Acquisition: expand_source_paths/copy_to_working_dir),
+then Stage 1 (Raw Sensor Capture: baseline_embeddings, no image
+modification), then Stage 3 (Image Processing: preprocess_for_manifest,
+deskew+autocontrast), all inside one call. This conflation is exactly
+what caused the pre/post-preprocessing mislabeling documented in
+docs/REFERENCE_PIPELINE_V1.md - a fresh Stage 1 capture run separately
+against an already-Stage-3'd corpus silently measured processed images
+while tagging them "pre_preprocessing". NOT YET SPLIT into genuinely
+separate, independently-callable Stage 0/1/3 functions - flagged in
+docs/PIPELINE_STAGE_TERMINOLOGY.md's rollout status as the next real
+fix, not done in this pass (renaming/documenting first, restructuring
+control flow is riskier and deserves its own dedicated pass).
+
+That normalization (PDFs, TIFFs, ZIPs, or any other expandable source
+format) is core/source_expansion.py's job entirely
+(expand_source_paths()/EXPANDABLE_EXTENSIONS) - see that module's
+docstring for why the split exists and how to add a future expandable
+format without touching this file at all.
 
 WARP-DETECTION INSERTION POINT: dense_tabular_rows currently goes to
 manual dewarp for EVERY file, unconditionally - see

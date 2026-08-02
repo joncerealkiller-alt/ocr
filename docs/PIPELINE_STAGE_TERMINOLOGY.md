@@ -69,23 +69,32 @@ genuinely before ANY preprocessing has ever touched this image."
   reference the new stage numbers (see those files' own 2026-08-02
   entries).
 
+**Done (2026-08-02, second pass)**: `core/manifest_pipeline.py`,
+`core/image_analysis.py`, `core/baseline_embeddings.py` docstrings
+updated to reference new stage numbers (old "Stage A"/"Stage 0"/"Stage
+B" names kept alongside as a bridge, not deleted). Actually splitting
+`build_working_manifest_from_paths()` into real, separately-callable
+Stage 0/1/3 functions is STILL NOT DONE - deliberately deferred as its
+own focused task (control-flow restructuring is riskier than doc/
+comment updates; don't rush it).
+
+**Done (2026-08-02, third pass)**: `scripts/build_working_manifest.py`,
+`scripts/run_preprocessing.py`, `scripts/finalize_manifest.py`,
+`scripts/run_semantic_stages.py`, `ui/build_manifest_ui.py` - one-line
+pointers added to each docstring (old names kept, not deleted).
+`scripts/run_two_stage_extraction.py` checked and deliberately
+SKIPPED - its "stage 1/stage 2" is an unrelated internal concept
+(extraction sub-passes within one file, not the pipeline's Stage 0-6),
+a naming collision, not something to rename. Filenames NOT renamed
+(backward compat preserved - nothing broken, all touched files
+syntax-checked).
+
+**Done (2026-08-02, fourth pass)**: `core/classifier.py` (Stage 5,
+old "Stage 2"), `core/row_extraction.py` (Stage 6), `core/
+semantic_stages.py` (between Stage 5 and 6) - one-line pointers added,
+old names kept, all import-verified.
+
 **NOT yet done - flagged so a future session doesn't assume complete**:
-- `core/manifest_pipeline.py`, `core/image_analysis.py`, `core/
-  baseline_embeddings.py` docstrings/comments still use old "Stage 0"/
-  "Stage A" language in places - needs a pass to update in-code
-  references to the new numbering, ideally alongside actually splitting
-  `build_working_manifest_from_paths()` into real Stage 0 / Stage 1 /
-  Stage 3 sub-functions (ⁿot done yet - would need care to avoid
-  breaking the working pipeline; recommend doing this as its own
-  focused task, not rushed).
-- `scripts/build_working_manifest.py`, `scripts/run_preprocessing.py`,
-  `scripts/finalize_manifest.py`, `scripts/run_semantic_stages.py`,
-  `scripts/run_two_stage_extraction.py`, `ui/build_manifest_ui.py` -
-  CLI/UI entry points, still using old terminology in help text/
-  docstrings. Filenames NOT renamed yet (backward compat preserved by
-  default - nothing broken).
-- `core/classifier.py`, `core/row_extraction.py`, `core/semantic_stages.py`
-  - Stage 5/6 modules, not yet updated to reference new numbering.
 - `docs/BENCHMARK2_METADATA_LAYER_QUALIFICATION.md`, `docs/
   VISION_IR_RESEARCH.md`, `benchmark/models.py`, `benchmark/
   prompt_sweep.py`, `benchmark/prompt_sweep_gui.py` - other stage

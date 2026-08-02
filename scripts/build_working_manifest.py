@@ -1,4 +1,5 @@
 """
+[Spans new Stage 0/1/3, see docs/PIPELINE_STAGE_TERMINOLOGY.md - not yet split]
 Stage 0 CLI: copy a folder of raw scans into a working directory, deskew +
 preprocess every copy, and write data/manifest.csv pointing at those
 working copies - see core/manifest_pipeline.py's module docstring for the

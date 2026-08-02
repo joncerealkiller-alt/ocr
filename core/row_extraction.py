@@ -1,4 +1,5 @@
 """
+Stage 6 (Specialized Extraction) per docs/PIPELINE_STAGE_TERMINOLOGY.md.
 Row-level extraction stage - consumes a segmentation sidecar JSON (see
 core/row_segmentation.py) and runs structured extraction on each row,
 cropped from the ORIGINAL source image in memory per row, not from
