@@ -35,6 +35,8 @@ from core.manifest_pipeline import (
     build_working_manifest, DEFAULT_WORKING_DIR, DEFAULT_MANIFEST_PATH,
     DEFAULT_PREPROCESSING_PROFILE,
 )
+from core.workspace_context import WorkspaceContext
+from core.run_context import RUN_TYPES, RunContext
 
 
 def pick_folder() -> Path | None:
@@ -57,6 +59,15 @@ def main():
     parser.add_argument("--preprocessing-profile", type=str, default=DEFAULT_PREPROCESSING_PROFILE,
                          help=f"core/image_preprocessing.py PREPROCESSING_PROFILES key "
                               f"(default: {DEFAULT_PREPROCESSING_PROFILE!r})")
+    parser.add_argument("--new-run", action="store_true",
+                         help="Create a fresh hashed run under genealogy_workspace/runs/ "
+                              "(see docs/RUN_ARCHITECTURE.md) instead of writing into the "
+                              "legacy default working_dir/manifest_path above - the "
+                              "preferred mode going forward. --working-dir/--manifest-path "
+                              "are ignored when this is set.")
+    parser.add_argument("--run-name", default=None, help="Optional human-readable run name (--new-run only).")
+    parser.add_argument("--run-type", default="production", choices=sorted(RUN_TYPES),
+                         help="Run type (--new-run only, default: production).")
     args = parser.parse_args()
 
     if args.source_folder:
@@ -71,16 +82,31 @@ def main():
         print(f"Folder does not exist: {folder}")
         sys.exit(1)
 
+    ctx = None
+    if args.new_run:
+        workspace = WorkspaceContext.resolve()
+        ctx = RunContext.create(
+            workspace, run_type=args.run_type, source_input=str(folder), run_name=args.run_name,
+        )
+        print(f"Run: {ctx.run_id}" + (f" ({args.run_name})" if args.run_name else ""))
+        print(f"Run root: {ctx.run_root}")
+
     try:
         build_working_manifest(
             source_folder=folder,
             working_dir=Path(args.working_dir),
             manifest_path=Path(args.manifest_path),
             preprocessing_profile=args.preprocessing_profile,
+            ctx=ctx,
         )
     except FileNotFoundError as e:
+        if ctx is not None:
+            ctx.mark_failed(str(e))
         print(f"ERROR: {e}")
         sys.exit(1)
+    else:
+        if ctx is not None:
+            ctx.mark_completed()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,24 @@
+# Resolves the two filesystem roots used by core/workspace_context.py:
+#
+#   pipeline_root  - this repo (code, config, docs, UI, tests). Defaults
+#                     to the directory this repo lives in; you should
+#                     essentially never need to override this.
+#   workspace_root - all generated/persistent data (runs, datasets,
+#                     models, checkpoints, logs). Defaults to a sibling
+#                     directory named "genealogy_workspace" next to
+#                     this repo.
+#
+# Resolution order (see core/workspace_context.py WorkspaceContext.resolve()):
+#   1. GENEALOGY_PIPELINE_ROOT / GENEALOGY_WORKSPACE_ROOT environment variables
+#   2. The pipeline_root / workspace_root values below, if not null
+#   3. Sibling-directory default (workspace_root = pipeline_root.parent
+#      / "genealogy_workspace")
+#
+# Deliberately left null here rather than checked in as an absolute
+# path - a machine-specific path baked into version-controlled config
+# would break portability for every other checkout/machine. If you need
+# a fixed path on your own machine, set the env vars above, or create
+# config/workspace.local.yaml (gitignored) with the same two keys.
+
+pipeline_root: null
+workspace_root: null

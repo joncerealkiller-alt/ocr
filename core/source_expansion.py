@@ -120,7 +120,7 @@ register_expander(PdfExpander())
 EXPANDABLE_EXTENSIONS: set[str] = set(SOURCE_EXPANDERS.keys())
 
 
-def expand_source_paths(source_paths: list[Path]) -> list[ExpandedSource]:
+def expand_source_paths(source_paths: list[Path], pdf_output_dir: Path | None = None) -> list[ExpandedSource]:
     """
     THE generic entry point, and the only function core/manifest_
     pipeline.py calls into this module. Every input path becomes one or
@@ -129,10 +129,20 @@ def expand_source_paths(source_paths: list[Path]) -> list[ExpandedSource]:
     via that expander's own expand() instead. Order is preserved for
     non-expanding entries; an expanding entry's pages appear in page
     order at that entry's position.
+
+    pdf_output_dir (hashed-run migration): when given, PDF pages are
+    rendered here instead of the registry's default DEFAULT_PDF_OUTPUT_
+    DIR - used by core/manifest_pipeline.py's stage0_acquire_and_copy_
+    sources() to route rendered pages into a run's own ctx.raw_from_pdf
+    directory rather than a shared, run-agnostic location. Only affects
+    PDF expansion for this call; the registered SOURCE_EXPANDERS
+    singleton itself is untouched.
     """
     expanded: list[ExpandedSource] = []
     for source_path in source_paths:
         expander = SOURCE_EXPANDERS.get(source_path.suffix.lower())
+        if expander is not None and pdf_output_dir is not None and isinstance(expander, PdfExpander):
+            expander = PdfExpander(output_dir=pdf_output_dir, dpi=expander.dpi)
         if expander is not None:
             expanded.extend(expander.expand(source_path))
         else:

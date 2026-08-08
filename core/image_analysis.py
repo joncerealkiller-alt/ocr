@@ -127,6 +127,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, asdict, field, fields
 from pathlib import Path
 
@@ -135,9 +137,25 @@ import numpy as np
 from PIL import Image
 
 from core.row_segmentation import estimate_deskew_angle
+from core.pipeline_db import PipelineDatabase, DEFAULT_DB_PATH
+# stdlib-only import (no torch/timm), safe at module top - see core/
+# pipeline_db.py's own docstring. DB wiring added 2026-08-03 (Jon: "the
+# other sensors may help us with classifying... i would suggest all
+# sensor values are kept so the decision engine can use them") - this
+# is the physical-sensor half of Stage 1, wired in alongside the
+# semantic half (core/baseline_embeddings.py, already wired via
+# core/manifest_pipeline.py's stage1_capture_baseline_embeddings()).
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_REPORT_PATH = PROJECT_ROOT / "data" / "outputs" / "image_analysis" / "analysis_report.csv"
+# Stage 4 (Validation Capture, 2026-08-04): the post-Stage-3 counterpart
+# to DEFAULT_REPORT_PATH, used with write_sidecars=False (per-image
+# sidecars stay stem-based, colocated with the image - reusing them for
+# Stage 4 would silently overwrite Stage 1's own sidecars) - this report
+# CSV is Stage 4 physical's complete, separate evidence file instead.
+DEFAULT_POSTPROCESSING_REPORT_PATH = (
+    PROJECT_ROOT / "data" / "outputs" / "image_analysis" / "analysis_report_postprocessing.csv"
+)
 
 # Longest side every measurement is taken at. Real scans here run
 # 2000-6600px on the long side; measuring at full resolution makes
@@ -198,13 +216,40 @@ _TABLE_EDGE_EXCLUSION_FRAC = 0.02
 # this corpus: the microfilm scans measured dominant ruling-line angles up
 # to 12.57 deg, and a page whose true skew exceeds the range silently
 # returns the range itself (see deskew_angle_clamped).
-_DESKEW_ANGLE_RANGE = 15.0
+#
+# PUBLIC (not underscore-prefixed) as of the 2026-08-03 consolidation
+# pass: core/manifest_pipeline.py's Stage 3 and core/auto_sidecar.py's
+# auto-sidecar module both independently called estimate_deskew_angle()
+# with no override at all (i.e. its OWN narrower 5.0 default) - a real,
+# silent divergence from this measurement's parameters, confirmed
+# against the corpus (32/1974 images, 1.6%, have |deskew_angle_deg| > 5,
+# meaning a 5.0-range re-estimate there would land on a different,
+# clamped angle than this one measured). Both call sites now reference
+# this constant directly instead of duplicating the magic number 15.0 or
+# silently falling back to a different one.
+DESKEW_ANGLE_RANGE = 15.0
 
 # Ruling lines per axis at which table_confidence saturates at 1.0. A real
 # census schedule shows tens (measured 11-41 across the three years in
 # document_classification.py's calibration), so this is the point where
 # more lines stop adding evidence rather than a target.
 _TABLE_CONFIDENCE_SATURATION = 8
+
+# analyze_manifest()'s concurrency, measured not guessed (2026-08-04):
+# benchmark/stage1_concurrency_experiment.py tested 7 real configurations
+# against this module's own analyze_image() on a fixed 24-image sample -
+# threaded x8 with 4 cv2 threads/worker was the best (4.5x wall-clock
+# speedup over sequential), and plain Python threading (not
+# multiprocessing) already captured the full gain, since OpenCV's C++
+# calls release the GIL. cv2's own intra-op thread count barely mattered
+# in that benchmark (1 vs 32 threads/call changed sequential throughput
+# ~1%) - unlike core/vision_embeddings.py's PyTorch-based encoders, this
+# module's classic CV operations (contour finding, connected components,
+# Hough lines) aren't well-parallelized by OpenCV's own threading
+# backend, so there's little intra-op parallelism being traded away by
+# favoring more concurrent images instead.
+_ANALYSIS_CONCURRENCY_WORKERS = 8
+_CV2_THREADS_PER_WORKER = 4
 
 
 @dataclass
@@ -270,7 +315,7 @@ class ImageAnalysis:
     aspect_ratio: float
     analysis_scale: float          # source px * this = analysis px
     deskew_angle_deg: float        # core/row_segmentation.py's estimator
-    # True when the estimate hit +/-_DESKEW_ANGLE_RANGE, i.e. the real angle
+    # True when the estimate hit +/-DESKEW_ANGLE_RANGE, i.e. the real angle
     # is AT LEAST this and the number is a floor, not a measurement. Found
     # 2026-07-29: a microfilm page reported exactly -5.00, which is
     # estimate_deskew_angle's own default angle_range, not a coincidence.
@@ -705,7 +750,7 @@ def analyze_image(image: Image.Image | str | Path) -> ImageAnalysis:
     frame_ink = (arr <= frame_thresh).astype(np.uint8)
     v_count, h_count, v_angle, h_angle, v_mask, h_mask = _ruling_lines(frame_ink)
 
-    deskew_angle = float(estimate_deskew_angle(pil, angle_range=_DESKEW_ANGLE_RANGE))
+    deskew_angle = float(estimate_deskew_angle(pil, angle_range=DESKEW_ANGLE_RANGE))
     quad, page_conf, page_method, page_bbox = _page_boundary(arr)
     table_bbox, table_conf = _table_boundary(v_mask, h_mask, v_count, h_count)
 
@@ -723,7 +768,7 @@ def analyze_image(image: Image.Image | str | Path) -> ImageAnalysis:
         aspect_ratio=round(source_w / source_h, 4) if source_h else 0.0,
         analysis_scale=round(scale, 4),
         deskew_angle_deg=round(deskew_angle, 3),
-        deskew_angle_clamped=abs(deskew_angle) >= _DESKEW_ANGLE_RANGE - 1e-6,
+        deskew_angle_clamped=abs(deskew_angle) >= DESKEW_ANGLE_RANGE - 1e-6,
         blur_laplacian_var=round(float(cv2.Laplacian(arr, cv2.CV_64F).var()), 2),
         noise_residual_std=round(
             float(np.abs(arr.astype(np.int16) - cv2.medianBlur(arr, 3).astype(np.int16)).std()), 3
@@ -831,8 +876,27 @@ def analyze_manifest(
     manifest_path: str | Path,
     report_path: str | Path = DEFAULT_REPORT_PATH,
     write_sidecars: bool = True,
+    db_path: Path = DEFAULT_DB_PATH,
+    stage: str = "stage1_image_analysis",
+    ctx=None,
 ) -> Path:
     """
+    ctx (hashed-run migration, typed loosely to avoid a core.run_context
+    <-> core.image_analysis import cycle - see docs/RUN_ARCHITECTURE.md):
+    when given a RunContext, overrides db_path with
+    ctx.workspace.pipeline_db_path AND report_path with ctx.reports /
+    <report_path's own filename> - the rolled-up CSV is run-owned output,
+    not a shared cross-run file, so it must not land in a fixed
+    repo-relative location regardless of which run produced it (a real
+    bug this session: an early ctx-based test run before this override
+    existed silently overwrote the live corpus's data/outputs/
+    image_analysis/analysis_report.csv). Every DB identity lookup/write
+    below (get_image_by_path, record_stage_output's sidecar_path) is
+    normalized through ctx.to_relative()/scoped by ctx.run_id instead of
+    matching manifest_path's absolute file_path strings directly. Image
+    files themselves are still opened via the absolute file_path from
+    the manifest - only DB-persisted identifiers and report_path change.
+
     Measures every image in a manifest CSV's "file_path" column: one
     sidecar per image (unless write_sidecars=False) plus a rolled-up CSV
     at report_path, one row per page with region blocks flattened into
@@ -843,45 +907,137 @@ def analyze_manifest(
     not abort the run - one corrupt file partway through a corpus should
     not cost every measurement taken so far (same tolerance as
     manifest_pipeline.build_working_manifest()'s per-file try/except).
+
+    db_path (2026-08-03): records a stage_outputs event (stage=stage,
+    default "stage1_image_analysis") per successfully-measured image
+    (sidecar_path pointing at the *_analysis.json this function already
+    writes) - the physical-sensor counterpart to core/manifest_pipeline.py's
+    stage1_capture_baseline_embeddings() (semantic half). A failed
+    measurement records its own "failed" stage_outputs row instead
+    (note=the error), matching this project's established pattern
+    (core/pipeline_db.py's sync_bucket_classifications()).
+
+    stage (2026-08-04): lets a caller reuse this exact function/engine
+    for a genuinely different measurement EVENT without colliding with
+    Stage 1's own idempotency/history - e.g. core/manifest_pipeline.py's
+    stage4_capture_postprocessing_physical() passes stage=
+    "stage4_validation_capture" so re-running this against already-
+    Stage-1-analyzed images doesn't get skipped by the IDEMPOTENT check
+    below (which is scoped to the SAME stage name), and so the DB
+    records which measurement event this was, not just that "some
+    image_analysis event" happened. Default preserves every existing
+    caller's behavior exactly.
+
+    IDEMPOTENT: images that already have ANY stage_outputs record for
+    THIS stage (done or failed, from a prior run) are excluded from
+    file_paths before measurement even starts - re-running this after
+    adding new images to the corpus only measures what's genuinely new,
+    same "storage is cheap, re-running is what's expensive" reasoning
+    behind recording this at all. NOTE: report_path's rolled-up CSV
+    therefore only covers what THIS run measured, not the whole corpus,
+    once some images have already been analyzed in a prior run - the
+    per-image sidecars remain the complete record; the CSV is a
+    per-run convenience, not a cumulative one.
+
+    A path not known to the DB is measured anyway (this function's core
+    "modify nothing, just measure" behavior is unaffected either way) -
+    its DB event is simply skipped with a printed note, same reasoning
+    as every other stage's DB wiring this session.
+
+    CONCURRENT as of 2026-08-04 (see _ANALYSIS_CONCURRENCY_WORKERS'
+    own comment for the measured benchmark behind this): analyze_image()
+    calls run across a ThreadPoolExecutor - pure compute, no shared
+    state, safe to parallelize. Every side effect (CSV row, sidecar
+    file, DB write, print) stays sequential in the MAIN thread, in
+    submission order (Executor.map()'s documented ordering guarantee,
+    not assumed) - nothing here needed a lock, because nothing shared
+    is ever touched from more than one thread.
     """
     from core.bucket_worklist import load_bucket_filepaths
 
-    file_paths = load_bucket_filepaths(manifest_path)
+    def _already_analyzed(fp: str) -> bool:
+        # get_stage_outputs()-by-image_id, not find_stage_output()-by-
+        # lookup_key - this stage never moves working_path (unlike
+        # dewarp), so there's no "path changed since the event was
+        # recorded" case to guard against; a plain path lookup is
+        # correct and simpler. A path not yet known to the DB is never
+        # treated as "already analyzed" - always attempt it.
+        lookup = ctx.to_relative(fp) if ctx is not None else fp
+        image = db.get_image_by_path(lookup, run_id=ctx.run_id if ctx is not None else None)
+        if image is None:
+            return False
+        return len(db.get_stage_outputs(image["id"], stage=stage)) > 0
+
+    if ctx is not None:
+        db_path = ctx.workspace.pipeline_db_path
+        report_path = ctx.reports / Path(report_path).name
+    db = PipelineDatabase(db_path)
+    all_paths = load_bucket_filepaths(manifest_path)
+    file_paths = [fp for fp in all_paths if not _already_analyzed(fp)]
+    already_done = len(all_paths) - len(file_paths)
+    if already_done:
+        print(f"Skipping {already_done} image(s) already analyzed (per the DB).")
+
     report_path = Path(report_path)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     written = failed = 0
+    t0 = time.time()
+
+    cv2.setNumThreads(_CV2_THREADS_PER_WORKER)
 
     with open(report_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=_csv_columns())
         writer.writeheader()
 
-        for i, file_path in enumerate(file_paths, 1):
-            print(f"[{i}/{len(file_paths)}] {Path(file_path).name}", end=" ")
-            try:
-                analysis = analyze_image(file_path)
-            except Exception as e:
-                failed += 1
-                print(f"FAILED ({type(e).__name__}: {e})")
-                writer.writerow({"file_path": file_path, "error": f"{type(e).__name__}: {e}"})
-                continue
+        with ThreadPoolExecutor(max_workers=_ANALYSIS_CONCURRENCY_WORKERS) as executor:
+            results = executor.map(analyze_image, file_paths)
 
-            writer.writerow(_csv_row(analysis))
-            written += 1
-            if write_sidecars:
-                save_analysis(analysis)
+            for i, file_path in enumerate(file_paths, 1):
+                print(f"[{i}/{len(file_paths)}] {Path(file_path).name}", end=" ")
+                lookup = ctx.to_relative(file_path) if ctx is not None else file_path
+                image = db.get_image_by_path(lookup, run_id=ctx.run_id if ctx is not None else None)
 
-            roi = analysis.regions.get("table") or analysis.regions.get("page")
-            print(
-                f"page={analysis.page_method or 'no'}({analysis.page_confidence}) "
-                f"table={'yes' if analysis.table_boundary else 'no'}"
-                f"({analysis.table_confidence}) "
-                f"skew={analysis.deskew_angle_deg:+.2f} "
-                f"blur={analysis.blur_laplacian_var} "
-                f"roi_contrast={roi.contrast_p5_p95_spread if roi else '-'} "
-                f"roi_text_h={roi.text_height_px if roi else '-'}"
-            )
+                try:
+                    analysis = next(results)
+                except Exception as e:
+                    failed += 1
+                    print(f"FAILED ({type(e).__name__}: {e})")
+                    writer.writerow({"file_path": file_path, "error": f"{type(e).__name__}: {e}"})
+                    if image is not None:
+                        db.record_stage_output(
+                            image["id"], stage=stage,
+                            status="failed", note=str(e)[:300],
+                        )
+                    continue
 
-    print(f"\nAnalysis report written to {report_path} ({written} measured, {failed} failed).")
+                writer.writerow(_csv_row(analysis))
+                written += 1
+                sidecar_path = save_analysis(analysis) if write_sidecars else None
+                if image is not None:
+                    db_sidecar_path = None
+                    if sidecar_path:
+                        db_sidecar_path = ctx.to_relative(sidecar_path) if ctx is not None else str(sidecar_path)
+                    db.record_stage_output(
+                        image["id"], stage=stage,
+                        sidecar_path=db_sidecar_path,
+                        status="done",
+                    )
+
+                roi = analysis.regions.get("table") or analysis.regions.get("page")
+                print(
+                    f"page={analysis.page_method or 'no'}({analysis.page_confidence}) "
+                    f"table={'yes' if analysis.table_boundary else 'no'}"
+                    f"({analysis.table_confidence}) "
+                    f"skew={analysis.deskew_angle_deg:+.2f} "
+                    f"blur={analysis.blur_laplacian_var} "
+                    f"roi_contrast={roi.contrast_p5_p95_spread if roi else '-'} "
+                    f"roi_text_h={roi.text_height_px if roi else '-'}"
+                )
+
+    elapsed = time.time() - t0
+    rate = f"{len(file_paths)/elapsed:.2f} img/s" if elapsed and file_paths else "n/a"
+    print(f"\nAnalysis report written to {report_path} ({written} measured, {failed} failed) "
+          f"in {elapsed:.1f}s ({rate}, {_ANALYSIS_CONCURRENCY_WORKERS} workers).")
     return report_path
 
 
@@ -900,11 +1056,15 @@ def main() -> None:
         "--no-sidecars", action="store_true",
         help="Write only the rolled-up CSV, no per-image *_analysis.json sidecars.",
     )
+    parser.add_argument(
+        "--db-path", default=str(DEFAULT_DB_PATH),
+        help=f"core/pipeline_db.py database path (default: {DEFAULT_DB_PATH})",
+    )
     args = parser.parse_args()
 
     target = Path(args.target)
     if target.suffix.lower() == ".csv":
-        analyze_manifest(target, args.report, write_sidecars=not args.no_sidecars)
+        analyze_manifest(target, args.report, write_sidecars=not args.no_sidecars, db_path=Path(args.db_path))
         return
 
     analysis = analyze_image(target)

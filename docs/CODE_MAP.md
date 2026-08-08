@@ -168,6 +168,215 @@ memory. Genuinely different schema from `core/schema.py`'s
   re-applying deskew so stored (already-deskewed-space) coordinates line
   up. `compute_exclude_ranges()` turns keep-ranges into paint-white
   exclude-ranges.
+- **Printed-number geometric anchors** (2026-08-05/06, `core/row_
+  segmentation.py`) — using a form's own printed numbers (row numbers
+  down the margin; column numbers across the header) as a stronger
+  boundary signal than faint/thin ruling lines. `detect_row_number_
+  centers(image, number_column_left, number_column_right, y0, y1)` +
+  `row_boundaries_from_number_centers(centers, table_top, table_bottom,
+  alignment="center"|"bottom")` — wired into `segment_rows_periodic()`
+  (left+right dual-column pooling with real agree/disagree telemetry,
+  plus row-level trust + neighbor-inheritance + run-interpolation for
+  anomaly recovery - see that function's own docstring for the full
+  mechanism and why naive per-boundary "fix the bad one" repair was
+  wrong). `detect_column_number_centers(image, x0, x1, y0, y1)` +
+  `nearest_number_candidate(candidates, expected_position, max_distance)`
+  — the column-axis counterpart, PURE SENSOR (measures, doesn't decide,
+  doesn't know which column anything belongs to) - see
+  `docs/COLUMN_NUMBER_ANCHOR_RESEARCH.md` for why this needed a
+  template-guided FILTERING step (not better raw detection) to be
+  reliable, and why an earlier column-number attempt
+  (`core/auto_sidecar.py`'s `_detect_header_number_blobs()`, retired
+  2026-07-27) failed without it. `find_number_row_band(image, x0, x1,
+  search_y0, search_y1)` — automates the y-band calibration itself
+  (sweeps candidate bands, scores each via `_score_number_row_band()`,
+  keeps the best) rather than requiring a human to hand-pick it per
+  template; validated against 1911/1931 (landed within 1-12px of a
+  hand-calibrated band) and 1926 (substantially recovered a case where
+  an uncalibrated manual guess had performed badly) — see the research
+  doc's "Round 2" section. Column version is research/validated
+  only — NOT wired into `locate_columns()`'s production cascade.
+  Both axes are dependency-free (PIL+numpy only, no scipy/OpenCV),
+  matching this module's own discipline — connected-component-style
+  grouping is done via longest-run-length exclusion of ruling
+  structure, not `scipy.ndimage.label`.
+  **Boundary projection** (`diagnostics/test_column_boundary_projection.py`,
+  research-only, reuses `detect_column_number_centers()` and
+  `core/auto_sidecar.py`'s existing `_find_vertical_ruling_line()` as-is):
+  chains header-number centres into an actual boundary PREDICTION via
+  `B[i] = 2*C[i] - B[i-1]` (reflection through the centre — deliberately
+  not an equal-width midpoint assumption). Validated against 1931: usable
+  as a search-corridor prior (±20-50px corridor captures 78-100% of real
+  boundaries) but NOT accurate enough alone to replace a measured
+  boundary (max error 26-61px even with detector correction) — see the
+  research doc's "Round 3" section for the full metrics, the "gate
+  against known-bad ground truth too, not just missing sensor data"
+  lesson (a remask-artifact reference column poisoned the whole
+  recursive chain until filtered), and the finding that detector
+  correction can itself lock onto the wrong ruling line on narrow,
+  tightly-packed columns (worse than pure projection there).
+  **Cross-year generalization is weaker than the single-1931-sample
+  Round 3 result suggested** — `diagnostics/test_column_boundary_
+  projection_multiyear.py` (Round 4) found 1901's match rate is only
+  39% (vs 1931's 98%) and Variant B never corrects anything at all on
+  that year; combined cross-year corridor capture is 58-85% at
+  ±20-50px, notably below Round 3's 78-100%. **Not yet ready for
+  production integration** — see the research doc's "Round 4" section.
+  **Round 5's enhancement test found near-zero improvement on 1901 and
+  concluded the form likely lacks real vertical ruling lines — Round 6
+  proved that conclusion WRONG.** A gradient-based detector
+  (`find_vertical_line_via_gradient()` in the same diagnostics file —
+  `cv2.Scharr(dx=1)` averaged down each column, "found" = strongest
+  column beats local median by 1.5x) found real edge signal at 18/33
+  (55%) of 1901's boundaries the threshold-based detector saw zero of,
+  AND hit 100% on both 1926 and 1931 (vs. 20%/43-69% for raw/enhanced).
+  Root cause was polarity/threshold sensitivity in `_find_vertical_
+  ruling_line()`'s dark-ridge approach, not missing lines — a hairline
+  rule can have a strong, consistent EDGE without enough absolute dark-
+  pixel coverage to pass an Otsu+run-length threshold. This is a
+  stronger building block than anything tried in Rounds 3-5.
+  **Round 7** wired it into the full multi-year projection harness as
+  Variant B's corrector: combined mean error dropped from 21.7px to
+  7.2px, median 14.0px→3.0px, ±20px corridor capture 58%→91% — 1926 and
+  1931 both landed near-perfect (100% line-found rate, 2-4px mean
+  error). **1901 got WORSE, not better** (14.2px→23.1px) despite a much
+  higher found-rate (9/10 vs ~0/10) — its real bottleneck is the
+  upstream column-number match rate (13/33, still not root-caused), not
+  line-detector sensitivity; a more sensitive detector searching an
+  already-poorly-centered corridor just locks onto the wrong real line
+  more often instead of finding nothing. Fixing 1901's match rate is
+  now the highest-priority open item.
+  **Round 8** tried a projection+gradient fusion detector (multi-scale
+  Scharr + a coverage/continuity gate meant to reject wrong-line
+  lock-ons) — negative result: no change on 1926/1931 (already 100%),
+  but 1901 found-rate dropped 55%→21%. Root cause: 1901's genuine
+  printed rules are themselves broken/discontinuous (known print-
+  quality issue on this form), so a "real lines are continuous"
+  coverage gate can't distinguish real matches from background there —
+  both land in the same low-coverage range. Reinforces that 1901 needs
+  header-driven anchoring (better upstream column-number match rate),
+  not further line-detector tuning — see the research doc's "Round 8".
+  **Round 9 root-caused it**: 1901's header row is measurably NOT level
+  — `find_number_row_band()` run independently on left/middle/right
+  thirds of the table finds a DIFFERENT optimal y-band each time
+  ((607,619) / (592,604) / (529,541), an ~80px drift, ~1.5° effective
+  tilt), visually confirmed by cropping and inspecting each zone. A
+  single global band is a compromise that's wrong almost everywhere.
+  Filter thresholds (`min_blob_width_px`, `line_run_threshold_frac`)
+  were swept and ruled out (85→93 blobs, negligible). **Not an OCR
+  problem** — `find_number_row_band()` needs per-zone/local calibration
+  instead of one global search across the full table width; proposed,
+  not yet implemented — see the research doc's "Round 9".
+  **Round 10** implemented it: `find_number_row_band_piecewise()` +
+  `detect_column_number_centers_piecewise()` (same file) split the
+  table into N zones, calibrate each independently, merge blobs. Real
+  win (every n_zones 3-16 beat the 39% global baseline; best was 73%
+  at n_zones=10) but the curve is noisy/non-monotonic, and a smoother
+  per-column local-window alternative was tried and was ALSO noisy
+  (36-61%, never beat the best fixed-zone result) — ruling out "hard
+  zone boundaries" as the specific cause. Likely real cause:
+  `_score_number_row_band()`'s plausibility scoring assumes whole-table
+  blob counts (~25-50) and gets unreliable at narrow-window scale.
+  **Do not hardcode n_zones=10** — it's the best score on one page, not
+  a validated constant; see the research doc's "Round 10" for the full
+  caveat and next steps (test more 1901 samples, or fix the scorer's
+  narrow-window instability directly).
+  **Round 11** tested generalization across the only two 1901-family
+  pages with any real ground truth (a 33-column full sample and a
+  5-column sparse spot-check — no second full-layout sample exists in
+  this corpus): median gain from piecewise calibration was positive on
+  BOTH (+15.2pt / +20.0pt), though the best n_zones differed per page
+  (10 vs. 3), confirming it shouldn't be hardcoded. Verdict: **local
+  calibration generalizes — next step is fixing `_score_number_row_
+  band()`'s narrow-window scoring directly**, not abandoning the
+  piecewise approach.
+  **Round 12 tried that fix and reverted it.** Scaling `count_score`'s
+  cap by search width (instead of the fixed `min(n,70)/70.0`) sounds
+  right but two calibration attempts both failed empirically: the first
+  used the wrong quantity (real-column density instead of raw-blob
+  density) and regressed the piecewise task outright; the corrected
+  version improved the piecewise task some but never beat the original
+  fixed-70 baseline's best case, AND silently broke the already-
+  validated global bands for 1911 (91px off) and 1926 (210px off,
+  landed on handwriting noise) — confirmed via direct re-run of Round
+  2's validated samples. `_score_number_row_band()` is back to the
+  original fixed 70, with both failed attempts documented in its own
+  docstring so they aren't quietly retried. Reframes Round 11's
+  either/or: this favors "the fixed-grid/window calibration shape is
+  wrong" over "just fix the scorer" — see the research doc's "Round 12"
+  for untried alternatives (`plausible_width_frac`'s quantization at
+  low n, or a smooth-trend-fit-and-interpolate approach).
+  **Round 13 tried the trend-fit alternative** (`detect_column_number_
+  centers_trend()`, same file — fits a line through a few WIDE, reliable
+  band measurements, interpolates finer x-slice bands by pure
+  arithmetic, never re-invokes the scorer). Best-case looked comparable
+  to piecewise (70%/100% vs. 73%/100%) but median gain across its full
+  parameter sweep was ~0pt (vs. piecewise's +15-20pt) — most (n_anchors,
+  n_slices) combos perform at or below the global baseline. New failure
+  mode diagnosed: narrow slices can cut a real digit blob in half at a
+  slice boundary (different from Round 12's scorer instability — no
+  scorer involved here at all). **Verdict: piecewise calibration
+  (Round 10/11) remains the best option found so far** — not because
+  it's robust, but because both alternatives since have measured worse.
+  See the research doc's "Round 13" for the full sweep and the untried
+  "model the physical skew geometrically" direction.
+  **Round 14 found the actual root cause: a physical binding crease**,
+  confirmed by direct visual inspection across 6 real, unrelated pages
+  (different enumerators/townships/sub-districts, same crease position
+  every time — the bound volume's own gutter, not a one-off). New
+  module `core/page_dewarp.py`: `detect_page_crease_x()` (full-page-
+  height Scharr gradient + coverage gate) + `dewarp_page_at_crease()`
+  (per-column vertical `cv2.remap` shift using `core/row_segmentation.py`'s
+  already-validated wide-anchor trend primitives). **A real bug was
+  caught here by Jon looking at the rendered output image, not by the
+  metric** — an early version extrapolated the correction target past
+  the last real measurement, producing a too-good 67% match-rate number
+  that was actually masking a corrupted image (the raw scan's black
+  photo-frame border dragged into the visible page near the edges).
+  Fixed by using one connected wide-anchor trend with a never-
+  extrapolated (always-measured) target. Also found `cv2.INTER_LINEAR`
+  blurs digit edges enough to hurt detection — switched to
+  `INTER_NEAREST`. Final, honestly-verified result: 39%→52% from the
+  dewarp alone, 39%→70% combined with simple piecewise n_zones=3 (close
+  to Round 10's best-ever 73%, but via a far more stable, low-parameter
+  path since most of the real distortion is corrected upstream). Not
+  wired into production. See the research doc's "Round 14" for the full
+  before/after numbers and the extrapolation-bug story.
+  **Round 15 tried refining the trend beyond 3 anchors — no config beat
+  the baseline.** `_find_overlapping_band_anchors()` (same file) gets
+  more sample points via overlapping wide windows instead of disjoint
+  zones (avoids Round 10/12's narrow-zone instability), but every
+  config underperformed the original 3-anchor result (39-58% vs. 70%
+  combined with piecewise), and smooth polynomial fits through those
+  points did better than raw piecewise-linear but still didn't beat it
+  (best 67%). Conclusion: the limit is `find_number_row_band()`'s own
+  per-measurement noise floor, not insufficient resolution — adding
+  more sample points adds proportionally more noise with it. 3-anchor
+  piecewise-linear (Round 14) remains the best validated result.
+  **Round 16** validated against the other 5 confirmed-crease pages —
+  blind `detect_page_crease_x()` generalized badly (found the crease on
+  only 1/5, even though it's visually confirmed present on all 5 —
+  the gradient signal is just weaker on some pages than the confidence
+  gate demands). Added `find_crease_x_near_prior()` (same file) using a
+  structural prior Jon supplied — the crease sits exactly on the
+  printed column 15/16 boundary (Nationality/Religion) — but even that
+  didn't reliably land on the true position across pages; most likely
+  cause is that only `z000077117` has real ground-truth table bounds,
+  the other 5 used rough visual guesses, and the fraction-of-table-
+  width calculation is only as good as those guesses. Getting real
+  measured table bounds for the other 5 pages is the clear next step —
+  see the research doc's "Round 16".
+  **Round 17 confirmed real page-to-page placement shift on the
+  scanner** (~20-40px spread across 5/6 pages tested) — matches Jon's
+  hypothesis directly. Also confirmed, a third time this session, that
+  "find the strongest/first vertical line in a blind window" is not a
+  reliable technique on this page family (misidentified the row-number-
+  margin/Dwelling-House divider as the outer table border twice, and
+  the photographic negative-frame edge once, before landing close to
+  correct). One page (`z000077134`) still misfired even after fixing
+  the search-start point — same page that also had the weakest crease
+  signal in Round 16, plausibly a genuinely lower-contrast scan. See
+  the research doc's "Round 17" for the full per-page numbers.
 - `_release_model(loader)` — see lifecycle note above.
 - High-level entry points, all load-once/release internally:
   `run_row_extraction()`, `run_single_column_extraction()` (writes
@@ -326,6 +535,51 @@ loader-free anyway.
   not via an actual classify() call, since the GPU was busy with a real
   run when this was built.
 
+## Gemma4 manual vision-embedding reuse (investigated 2026-08-05, NOT in production)
+
+Full writeup: `docs/GEMMA_HIERARCHICAL_ROUTING_INVESTIGATION.md`. Status:
+**parked — architecture sound, not currently worth building.** Recorded
+here so the two real Gemma4-internals gotchas below don't get
+rediscovered from scratch if this (or anything else touching manual
+`inputs_embeds`/cache reuse against this model) comes up again.
+
+Investigated whether one Gemma vision encoding could be reused across
+multiple separate narrow prompts (for a proposed hierarchical Decision-
+Engine-routed classifier, instead of today's one-big-prompt design in
+`core/classifier.py`). Standalone diagnostics only, under
+`diagnostics/test_gemma_kv_cache_*.py` — none of this is wired into
+`core/loaders/gemma_loader.py` or any production path.
+
+**Two confirmed Gemma4 (`transformers` 5.12.1, `Gemma4ForConditionalGeneration`)
+internals gotchas, verified by reading the installed source directly:**
+
+- `Gemma4Model.get_image_features(pixel_values, image_position_ids)`
+  returns a `BaseModelOutputWithPooling` — `.last_hidden_state` is the
+  UNPROJECTED 768-dim vision-tower output; `.pooler_output` is the real
+  LM-space-projected embedding (1536-dim, via `embed_vision`) that
+  actually belongs spliced into the text embedding sequence. Using
+  `.last_hidden_state` fails with a shape mismatch, not silently wrong
+  output — but it's easy to grab the wrong field first.
+- Gemma4 has a second embedding pathway ("Per-Layer Embeddings",
+  `Gemma4TextModel.get_per_layer_inputs()`). Calling `model(inputs_embeds=
+  ..., input_ids=None)` without ALSO passing real `input_ids` (or a
+  precomputed `per_layer_inputs`) forces the model to reverse-search the
+  full embedding table to recover token identities — tried to allocate
+  **127GB** and OOM'd immediately in testing. Fix: always pass real
+  `input_ids` alongside `inputs_embeds` at every step (the merged
+  prompt's real ids for the first step, the greedily-sampled token id for
+  every step after).
+- Separately: `model.generate()` cannot be seeded with a previous call's
+  `past_key_values` to skip re-running the vision tower — confirmed both
+  from source (`GenerationMixin._sample()` hard-codes
+  `is_first_iteration=True` for every top-level call's prefill step,
+  unrelated to whether a cache was pre-supplied) and empirically (hard
+  crash). The only way to get single-encode/multi-prompt reuse working
+  is to bypass `generate()` entirely via a manual forward-pass decode
+  loop (validated working — see the doc above for what "working" does
+  and doesn't include, since it's currently SLOWER than doing nothing at
+  realistic output lengths).
+
 ## Pipeline stage terminology (2026-08-02)
 
 See `docs/PIPELINE_STAGE_TERMINOLOGY.md` for the canonical Stage 0-6
@@ -386,12 +640,16 @@ what it actually needs.
   the entire ~1500-image corpus at both baseline+postprocessing stages
   combined, all 8 encoders, so a single consolidated file is both
   simpler and nowhere near a size needing per-image files).
-- Called from `core/manifest_pipeline.py`'s `build_working_manifest_
-  from_paths()` via `capture_baseline: bool = True` (default on) -
-  runs immediately after `copy_to_working_dir()`, before
-  `preprocess_for_manifest()`. Lazy-imported inside that function (not
-  at module top) so importing `core.manifest_pipeline` doesn't force
-  every caller to pay torch/timm's import cost even when
+- Called from `core/manifest_pipeline.py`'s
+  `stage1_capture_baseline_embeddings(manifest_path)` - its own,
+  independently-callable function as of the 2026-08-02 Stage 0/1/3
+  split (see `docs/PIPELINE_STAGE_TERMINOLOGY.md`). `build_working_
+  manifest_from_paths()` still runs it by default (`capture_baseline:
+  bool = True`) between Stage 0 and Stage 3, but you can now also call
+  `stage1_capture_baseline_embeddings()` directly against any existing
+  manifest without re-running Stage 0. Lazy-imported inside that
+  function (not at module top) so importing `core.manifest_pipeline`
+  doesn't force every caller to pay torch/timm's import cost even when
   `capture_baseline=False`.
 - **Real gotcha hit while testing this**: `write_baseline_embeddings`'s
   `output_path` parameter defaults to the module-level
@@ -407,6 +665,111 @@ what it actually needs.
   Fourth extension doc section), `timestamp`, `library_versions`
   (timm/torch), `embeddings.<encoder_name>.{checkpoint, vector}`.
 - Full production corpus (1677 images) captured 2026-08-02.
+
+## Layout-detection sensor (`core/layout_detector.py` + additions to `core/baseline_embeddings.py`, added 2026-08-04)
+
+A second, DIFFERENT-SHAPED sensor tower alongside the 8-encoder
+embedding battery above - identified in `docs/GEMMA_INSTRUMENTATION_
+AND_SENSOR_SURVEY.md` Part 2/3 as the most differentiated candidate
+surveyed there, because it returns structured, labeled region
+DETECTIONS (bounding boxes), not an embedding vector. Built per Jon's
+direction: "any information we can gather that could assist the CV
+stages like auto_rows and auto_columns [`core/auto_sidecar.py`'s
+`locate_table_boundary()`/`locate_columns()`] should be recorded the
+same as the other sensor tower data" - this entry only ADDS the
+capture/record step; nothing in `core/auto_sidecar.py` or
+`core/image_analysis.py` was changed to consume it yet, same "Stage 1
+measures, doesn't decide" discipline every other Stage 1 sensor
+already follows.
+
+- **Model**: DocLayout-YOLO (`opendatalab/DocLayout-YOLO` on GitHub, a
+  YOLOv10-based document layout detector), DocStructBench-finetuned
+  checkpoint (`juliozhao/DocLayout-YOLO-DocStructBench` on HF).
+  `pip install doclayout-yolo` (0.0.4, installed 2026-08-04) - real
+  install verified against this project's actual Python 3.14
+  interpreter, no conflicts (`pip check` clean; it pulls in
+  `opencv-python-headless` alongside the already-installed
+  `opencv-python` 5.0.0.93 - confirmed both coexist without breaking
+  `cv2` via a direct functional smoke test, not just "pip didn't
+  error").
+- **LICENSING - real, checked, not assumed**: the `doclayout_yolo`
+  PACKAGE is **AGPL-3.0** (confirmed directly against the GitHub repo's
+  own `LICENSE` file) - this CORRECTS `docs/GEMMA_INSTRUMENTATION_AND_
+  SENSOR_SURVEY.md` Part 2's assumption ("Apache 2.0 (MinerU/OpenDataLab
+  license pattern)"), which was wrong for this specific package. The
+  DocStructBench CHECKPOINT WEIGHTS are separately Apache-2.0. See
+  `core/layout_detector.py`'s module docstring for the full note. This
+  is why `capture_layout` defaults to `False` in
+  `build_working_manifest_from_paths()` (below) rather than `True` like
+  every other `capture_*` flag.
+- **`core/layout_detector.py`** - pure, stateless model/detection
+  functions, same pattern as `core/vision_embeddings.py`:
+  `build_layout_model()` (downloads/loads the checkpoint via
+  `huggingface_hub.hf_hub_download()` + `YOLOv10(local_path)` -
+  **deliberately NOT `YOLOv10.from_pretrained(repo_id)`**, confirmed
+  broken against the real installed package: it instantiates against a
+  hardcoded `'yolov10n.pt'` default instead of the repo's real
+  checkpoint file, raising `FileNotFoundError`), `detect_layout(model,
+  pil_image) -> list[dict]` (returns `{class_id, class_name, confidence,
+  bbox_xyxy}` per detection, in the ORIGINAL image's pixel coordinates -
+  confirmed by direct test, no rescaling needed by callers; `bbox_xyxy`
+  is directly usable against the same pixel space
+  `core/image_analysis.py`/`core/auto_sidecar.py` already operate in).
+  10 classes (`title`, `plain text`, `abandon`, `figure`,
+  `figure_caption`, `table`, `table_caption`, `table_footnote`,
+  `isolate_formula`, `formula_caption`) - always read from the loaded
+  model's own `model.names` at call time, never hardcoded, so a future
+  different checkpoint's class set can't silently drift out of sync.
+- **`core/baseline_embeddings.py` additions**: `capture_layout_
+  detections()` / `write_layout_detections()`, same
+  capture-then-persist shape as `capture_baseline_embeddings()`/
+  `write_baseline_embeddings()` but under a `"layout_detections"` key
+  instead of `"embeddings"` (a genuinely different payload shape -
+  variable-length labeled boxes, not a fixed-length vector).
+  **Writes into the SAME file** (`DEFAULT_BASELINE_PATH`, i.e.
+  `data/baseline_embeddings.json`) as the embeddings battery - "record
+  it the same as the other sensor tower data" was taken literally, one
+  consolidated per-image sensor record, not a second file to keep in
+  sync.
+- **`merge_sensor_records()` (renamed/generalized from the former
+  private `_merge_and_save()`)** - the real mechanism that makes two
+  different sensor types coexist safely in one file: changed from a
+  full per-image record REPLACE to a per-image shallow dict UPDATE, so
+  writing a `"layout_detections"` record for an image that already has
+  an `"embeddings"` record adds the new key without wiping the old one
+  (and vice versa) - verified directly with a real cross-merge test
+  (a fake pre-existing embeddings record + a real layout-detection
+  write against the same image path, confirming both keys survive).
+  Every existing caller of the old `_merge_and_save()` behavior is
+  unaffected: `capture_baseline_embeddings()` always writes every one
+  of its own keys on every call, so full-replace and shallow-update are
+  behaviorally identical for that path alone - the difference only
+  matters once a SECOND sensor type writes to the same file.
+- **`core/manifest_pipeline.py`**: `stage1_capture_layout_detections()`,
+  same independently-callable Stage 1 shape as
+  `stage1_capture_baseline_embeddings()` (own DB recording under
+  `stage="stage1_layout_detections"`, a distinct `stage_outputs` row
+  from `"stage1_baseline_embeddings"` for the same image).
+  `build_working_manifest_from_paths()` gained `capture_layout: bool =
+  False` (default OFF, unlike every sibling `capture_*` flag which
+  defaults ON - see the licensing/not-yet-validated reasoning above) -
+  set `True` to run it as part of a manifest build.
+- **Not yet done, explicitly out of scope for this addition**: nothing
+  in `core/auto_sidecar.py` (`locate_table_boundary()`,
+  `locate_columns()`, `detect_data_rows()`) or `core/image_analysis.py`
+  reads `"layout_detections"` yet - this entry is the sensor capture
+  only. Whether/how those CV stages should actually use the detected
+  `table`/`title`/`plain text` boxes is a separate, later decision.
+  Also worth a documented caveat rather than a silent gap: a single
+  smoke-test detection on a real dense_tabular_rows census page
+  (`e001926997.png`) returned one `figure` box spanning nearly the
+  whole page at 0.91 confidence - DocStructBench's training
+  distribution (general/academic documents) may not transfer cleanly to
+  this project's handwritten/tabular genealogical corpus without its
+  own calibration pass, the same kind of finding
+  `image_analysis.py`'s `table_confidence` calibration effort already
+  went through for the classical-CV ROI detectors - not yet measured
+  here at any scale beyond one image.
 
 ## Source expansion layer (`core/source_expansion.py`, added 2026-08-02)
 
@@ -468,6 +831,50 @@ expander-specific config - see this module's own docstring and
   touching production `data/manifest.csv`/`data/working`) after EACH
   design pass, not just the final one - not just assumed to work from
   reading the code.
+
+## Pipeline orchestration database (`core/pipeline_db.py`, added 2026-08-02)
+
+**Infrastructure built and verified against the real corpus; NOT yet
+wired into any stage** — every stage still reads/writes exactly the CSV/
+JSON it always has. See `docs/PIPELINE_DATABASE.md` for the full schema,
+rationale, stage-interaction map, and migration risks - this entry is
+just a pointer.
+
+- **`PipelineDatabase`** (`core/pipeline_db.py`) - wraps one SQLite file
+  (`data/pipeline.db` by default), two tables only: `images` (current
+  state - source/working path, two separate hash columns, current_stage/
+  status, routing outcome) and `stage_outputs` (append-only log that
+  doubles as the sidecar-location index - `image_id, stage, sidecar_path,
+  lookup_key, sha256, status, note, created_at`). Deliberately NOT the
+  more normalized 6-table shape (`routing`/`pipeline_state`/
+  `sidecar_locations`/`stage_history` as separate tables) an earlier
+  design pass sketched - Jon's explicit steer was two tables, current
+  state vs. append-only evidence-pointer log.
+  `get_or_create_image()`, `get_image_by_path()`, `get_image()`,
+  `update_image_state()` (whitelisted columns), `record_stage_output()`,
+  `list_images()`, `get_stage_outputs()`. stdlib-only import (no torch/
+  timm), WAL mode, one connection per call (never held open across
+  calls - multiple independent processes already touch this project's
+  `data/` directory).
+- **Two hash columns, not one** - `identity_hash` (computed once, at
+  Stage 0, before any preprocessing, never recomputed) vs. `current_hash`
+  (recomputed whenever a stage modifies `working_path`). Direct response
+  to the real pre/post-preprocessing mislabeling bug documented in
+  `docs/REFERENCE_PIPELINE_V1.md` - a single hash field can't distinguish
+  "changed on purpose" from "drifted unexpectedly."
+- **`scripts/migrate_manifest_to_db.py`** - one-time, read-only, additive
+  import of the existing file-based state (`manifest.csv`, provenance
+  sidecar, per-image `*_analysis.json` sidecars, `baseline_embeddings.json`,
+  every bucket CSV, any `*_dewarped.csv`) into `pipeline.db`. `--verify`
+  diffs DB counts against source CSVs. Verified 2026-08-02: 1677/1677
+  images, every bucket count matched, zero source files modified
+  (`git status` clean under `data/` afterward).
+  **Real bug found running this against production data**:
+  `data/baseline_embeddings.json` stores paths relative to
+  `PROJECT_ROOT`, while `manifest.csv`/bucket CSVs store absolute paths -
+  confirmed by direct inspection (first run matched 0/1677 baseline
+  records for exactly this reason). Fixed with a `_to_abs()` normalizer
+  resolved against `PROJECT_ROOT`, not the caller's cwd.
 
 ## Build Manifest UI (`ui/build_manifest_ui.py`, built 2026-07-30)
 
@@ -767,6 +1174,33 @@ as in 4.x — reshape rather than unpacking a fixed shape.
   comparable** to `document_classification.py`'s
   `_count_vertical_ruling_lines()` unbroken-run counts — never feed them
   to a template's `column_count_range`.
+- **`core/manifest_pipeline.py`'s `_resolve_deskew_angle()`/
+  `preprocess_for_manifest()`** (Stage 3) — a DIFFERENT deskew failure
+  mode than the silent-zero one above: `deskew_angle_deg` pinned at
+  exactly `±DESKEW_ANGLE_RANGE` (15.0) with `deskew_angle_clamped=True`
+  means the projection-profile search ran off the edge of its range with
+  no real interior peak (mostly Screenshot-bucket images — map/chart/web
+  captures with no periodic text-row structure to search against), NOT
+  a genuine 15° skew. Confirmed 2026-08-05 against 34/1750 working
+  images by direct visual round-trip check against each one's raw
+  pre-rotation source. **Do NOT reach for `dominant_horizontal/
+  vertical_angle_deg` as the fix here the way the note above suggests
+  for microfilm** — tried it, three escalating guards (sign correction,
+  minimum ruling-line count, `table_confidence==1.0`) and it still failed
+  on real examples, most instructively two Google-Maps-style screenshots
+  where a real, confidently-detected straight ROAD was measured
+  accurately but is irrelevant to the screenshot's own frame orientation.
+  Current fix: `_resolve_deskew_angle()` just returns 0.0 when clamped —
+  the only policy that held up against direct visual checks. Telemetry
+  for follow-up analysis without touching pixels again: every Stage 3
+  run writes `<name>_preprocess.json` (`preprocess_sidecar_path()`) with
+  `deskew_status` (`"normal"` / `"clamped_zeroed"` /
+  `"no_sidecar_fresh_estimate"`) + `raw_deskew_estimate_deg`, and
+  `stage3_preprocess_manifest()` mirrors that status into the
+  `stage_outputs` DB table (`core/pipeline_db.py`) — `COUNT ... WHERE
+  stage='stage3_preprocess' AND status='clamped_zeroed'` joined to
+  `images.bucket` answers "how often" and "which document types" by SQL
+  alone.
 
 ### Microfilm corpus finding — crop before you trust tone (measured 2026-07-29)
 
@@ -1005,6 +1439,165 @@ percentage of table width.
   ~30% short) — a systematic bias suggesting it snaps to a sub-row feature
   (ruled sub-line or text baseline), not random noise. Not investigated.
 
+## Column Calibration UI (`ui/column_calibration_ui.py`, `core/column_calibration.py`, built 2026-08-07)
+
+Built to generate human-verified ground truth for `locate_columns()`'s
+column-edge output and the (research-only, not production-wired)
+header-number-anchor detectors above — both are explicitly sensors/priors,
+not authority, and the only way to measure their real error pattern
+(systematic offset, appropriate search-window width, year/form-specific
+geometry) is human-confirmed geometry to compare against.
+
+**Explicitly does NOT overlap with the other two sidecar UIs**:
+`ui/row_segmentation_ui.py` (full manual sidecar build — table bounds,
+rows, regions, column names, all required before it saves anything) and
+`ui/quarantine_review_ui.py` (whole-page re-review after automated
+validation failure) are both untouched. This tool loads an existing
+auto sidecar + the doc_type's template and only ever edits COLUMN
+geometry — table bounds, rows, header/metadata boxes, and column names
+are all read-only inputs here, never re-entered.
+
+**Boundary model differs from the sidecar's own schema, deliberately**
+(Jon's explicit decision): the sidecar stores each column independently
+(`columns[name]["mask_keep_ranges"]: [[x0,x1]]`, two neighbors CAN
+slightly disagree on their shared edge — real `locate_columns()`
+behavior). This UI instead treats columns as sharing ordered DIVIDING
+LINES — N-1 interior dividers for N columns; the two outer edges come
+straight from `table_bbox` and aren't editable here (table bounds are
+out of scope). `core/column_calibration.py` is the translation layer:
+`build_correction_record()` reconciles the sidecar's independent ranges
+into shared dividers on load (averaging when both neighbors agree,
+preserving the raw disagreement as `auto_disagreement_px` when they
+don't), `merge_column_corrections()` converts back on save.
+
+**Extraction-oriented vs. geometry-oriented, a real distinction Jon
+flagged mid-build**: `locate_columns()` silently skips any column absent
+from `template.column_regions_approx` (e.g. every census template's
+"Occupation" — see that function's own docstring), so a sidecar's
+`mask_keep_ranges` can legitimately be empty for a column that still
+physically exists on the page. `build_correction_record()` still creates
+a real divider entry for every adjacent `column_order` pair regardless —
+a divider bordering a never-masked column just starts with `auto_x=None`
+("nothing detected/masked yet, needs a human to place it"), not silently
+dropped. Verified via synthetic test (4 columns, one deliberately
+unmasked and sandwiched between two masked ones): the divider on either
+side of the unmasked column still resolves `auto_x` from whichever
+neighbor DOES have data; only a divider with BOTH neighbors unmasked
+comes back `None`.
+
+**Never overwrites the source sidecar.** Saves a separate correction
+record at `data/outputs/column_calibration/{stem}_correction.json` (own
+directory, not mixed into `data/outputs/row_segmentation/`, so a naive
+`glob("*_sidecar.json")` — the pattern `find_quarantined_sidecars()` in
+`ui/quarantine_review_ui.py` already uses — never picks one up). Schema
+(`schema_version: 1`): per-divider `auto_x`/`human_x`/`projected_x`/
+`delta_px`/`provenance` (`auto_accepted_unreviewed` | `human_confirmed`
+| `human_placed`) plus a `header_number_anchor` block (`band_y`,
+`detected_centers`). `merge_column_corrections(sidecar, record)` returns
+a NEW dict — never calls `save_sidecar()` itself; the UI's "Export merged
+sidecar..." button writes it to a user-chosen path via a save dialog.
+Only columns with at least one reviewed bounding divider are touched;
+everything else (table_bbox, rows, other columns' status/results,
+progress, active_column, ...) stays byte-identical.
+
+**"Project from confirmed anchors"** (`project_remaining_dividers()`)
+reuses only the pure-arithmetic half of `locate_columns()`'s resolution
+cascade — `_fit_registration_affine` imported directly from
+`core/auto_sidecar.py` (precedented cross-module private import, same
+as `core/page_dewarp.py`/`core/warp_detection.py` already do against
+`row_segmentation.py`) fitted from every divider the reviewer has
+already confirmed this session, then applied to every unreviewed
+divider's template-expected position. Writes only to a `projected_x`
+field — never auto-promotes to `human_x`/`human_confirmed`; accepting one
+still requires an explicit action, same as any other proposed value.
+Refuses cleanly (`"Not enough confirmed anchors yet..."`) rather than
+guessing when `_fit_registration_affine` returns `None` — verified via
+synthetic test (2 well-spread confirmed anchors → succeeds; 1 → refuses).
+
+**Header-number anchor line is manual-only in this version, by design**:
+`try_load_anchor_cache()` does a plain `Path.exists()` + `json.load()`
+against `data/outputs/column_number_anchors/{stem}_anchors.json` — no
+such cache is produced anywhere in this pipeline today (confirmed:
+`locate_columns()`'s own `diagnostics` dict is computed in-memory inside
+`generate_auto_sidecar()` and discarded, never persisted). This UI and
+`core/column_calibration.py` never call `detect_column_number_centers()`
+or any variant themselves. If a cache ever exists, its centers render as
+reference tick marks along the anchor line; producing that cache (e.g.
+via `find_number_row_band_piecewise()`) is an out-of-scope future
+follow-up, not part of this build.
+
+**Verified against real data (2026-08-07, after the GPU training run this
+was built alongside finished)**: a real `z000077117_sidecar.json` (33
+manually-masked columns, no `parameters.doc_type` — exercises the
+`column_order` fallback path, not just the template path) + its real
+source image. Load, divider seeding, click-select, drag, release,
+undo/redo, zoom-level coordinate consistency (Fit → 2x → back), confirm-
+as-is, header-anchor placement, save/reload round-trip, a FRESH app
+instance correctly resuming a saved correction record, and
+`merge_column_corrections()` against the real sidecar (diffed — only
+touched columns changed, original file's bytes on disk unchanged
+throughout).
+
+**Two real bugs found and fixed by this real-data pass** (neither was
+caught by the earlier synthetic-dict tests):
+1. **Canvas coordinate offset**: `Canvas`'s default `highlightthickness=2`
+   shifts `canvasx()`/`canvasy()` by a constant -2 canvas-space units once
+   a `scrollregion` is active (confirmed by isolating it: `canvasx(0)`
+   returns `-2.0` with Tk defaults, `0.0` with `highlightthickness=0,
+   bd=0`). At Fit-zoom on a 3352px-wide page that's a ~5px image-space
+   drag error. Fixed by setting `highlightthickness=0, bd=0` on this
+   UI's `Canvas` construction. `ui/row_segmentation_ui.py`'s own `Canvas`
+   has the same unset defaults and likely has the identical offset -
+   **not fixed there** (out of scope for this build), flagged separately.
+2. **Edge-column merge bug**: `merge_column_corrections()` used
+   `table_bbox`'s raw outer edge whenever a first/last column's only
+   bounding divider (its interior one - outer edges have no divider by
+   design) was touched, silently discarding that column's own untouched
+   outer mask edge. Confirmed wrong against real data: `"Dwelling House"`
+   is masked `[246, 321]` while `table_bbox` starts at `192` (~54px real
+   margin, likely a row-number column never allocated to any named
+   field). Fixed to fall back to the column's own existing
+   `mask_keep_ranges` edge first, `table_bbox` only as a last resort for
+   a column with no prior mask at all.
+
+**Still not exercised** (needs an actual mouse, not simulated events):
+real click/drag "feel" (hit-radius tuning, whether 6px is comfortable in
+practice), the side-panel listbox workflow end-to-end, "Project from
+confirmed anchors" against a real template's `column_regions_approx`,
+and "Export merged sidecar"'s save dialog.
+
+**Row-number margin anchors (added 2026-08-07, same day, per Jon)**: a
+THIRD calibration target, distinct from both column dividers and the
+header-number anchor — the ~54px gap discussed above (`table_bbox` left
+edge vs. the first column's actual mask start) is the printed VERTICAL
+row-number margin `DocumentTemplate.row_number_column_x_frac`/
+`row_number_column2_x_frac` already model as a search window for
+`detect_row_number_centers()`; dialing in its exact center improves that
+detector's hit rate. `correction_record["row_number_anchor"]` =
+`{left_x, right_x}` (both `None` until set), seeded by
+`build_correction_record()`, migrated onto older records missing the key
+by `load_correction_record()` (`SCHEMA_VERSION` bumped 1 → 2), and
+carried forward verbatim (independent of `column_order`) across a
+column-list-triggered rebuild in `load_or_build_correction_record()` —
+same treatment as `header_number_anchor`.
+
+UI: one button, "Define left/right row number centers", per Jon's exact
+spec — click LEFT margin center, click RIGHT margin center, mode
+auto-deactivates after the second click (no need to press the button
+again). Re-arming the mode after both are already set clears both
+immediately, so the very next click starts a fresh placement — that's
+the whole "redo if one is wrong" mechanism; no separate per-line clear
+was asked for or built, and this action is deliberately NOT wired into
+the general divider undo/redo stack (the re-arm-and-reset flow already
+covers it). Mutually exclusive with the header-number anchor's own
+click-mode — arming either cancels the other. Verified against the same
+real `z000077117` page/sidecar: seed-empty, click-left (mode stays
+armed), click-right (mode auto-exits), re-arm-clears-both, cancel-mid-
+mode-preserves-the-in-progress-value, mutual exclusion with the header-
+anchor mode, render with both lines present, save/reload round-trip, and
+the schema_version=1 → 2 migration path (synthetic old record, real
+function).
+
 ## Dewarp ground truth — the labelled corner set (measured 2026-07-29)
 
 `data/outputs/dewarped/` holds **16** `*_dewarped.json` sidecars with
@@ -1026,6 +1619,76 @@ corner error 1.95% of width, worst 4.69%**, with errors clustering
 bimodally (~1.2% and ~4.5% groups — a systematic wrong-boundary pick,
 not noise). Read that against the 1% warp being corrected before
 concluding anything about Tier 1's usefulness.
+
+## Routing Decision Engine (`core/routing_decision_engine.py`, built 2026-08-07)
+
+**NAMING COLLISION - read this first if searching for "decision engine"**:
+`core/decision_engine.py` ALREADY EXISTS and is a DIFFERENT module -
+Stage 2 per docs/PIPELINE_STAGE_TERMINOLOGY.md, preprocessing-profile
+pass-through + tower-consensus COMPUTATION/recording, explicitly "does
+not act on it, only records it." `core/routing_decision_engine.py` is
+this NEW module - later-stage, evidence-FUSION arbitration that
+CONSUMES already-recorded evidence and produces a real routing decision
+(route/quarantine/audit). The two never call each other; do not confuse
+them when grepping for "decision".
+
+- **Design basis**: `docs/MULTI_SOURCE_VOTING_CLASSIFIER_PROPOSAL.md`'s
+  full research arc (zero-shot tower plateau, fine-tuning breakthrough,
+  multi-architecture complementarity analysis, Gemma same-split
+  comparison, error-dissent rule). This module is the first production
+  IMPLEMENTATION step - see that doc's own "Decision Engine
+  implementation" section for the [A]/[B]/[C]-tagged status writeup.
+- **Core shape**: `EvidenceRecord` (one sensor's observation - producer-
+  agnostic, pure data, zero inference imports in this file) ->
+  `decide(evidence, config, policy=None) -> DecisionResult` (selected
+  class, `TrustState` [AUTO_ACCEPT/ACCEPT_WITH_CAUTION/QUARANTINE/
+  NO_DECISION], full human-readable audit trail, disagreements list).
+- **4 policies, config-switchable with ZERO code changes** (`config/
+  decision_engine.yaml`'s `default_policy` field): `gemma_primary`
+  (today's default - Gemma is currently the single best-measured sensor
+  per the proposal doc's same-split comparison, but this is a CONFIG
+  VALUE, explicitly not structural), `vision_primary`, `weighted_fusion`
+  (family-weighted plurality - correlated sensor families get ONE vote,
+  not one-per-sensor, per the multi-architecture benchmark's finding
+  that convnext/dinov2/beit/swin/siglip/vit21k are 91-94% pairwise-
+  correlated while mobilenetv2 is genuinely independent), and
+  `class_specific_authority` (per-category primary/supporting override
+  table - EMPTY by design today, no category has validated per-class
+  evidence yet to justify one).
+- **Every threshold is UNCALIBRATED** (marked as such in both the code
+  and `config/decision_engine.yaml`'s comments) - directional starting
+  points from the proposal doc's logit-confidence experiments (Gemma
+  raw decision-token logit margin: auto-accept ~20, quarantine <7), not
+  production-validated cutoffs.
+- **`tests/test_decision_engine.py`** (no pytest in this environment -
+  plain assert-based, run via `python tests/test_decision_engine.py`) -
+  covers all 8 scenarios Jon specified, including the load-bearing
+  proof that switching `gemma_primary`->`vision_primary` changes the
+  actual routing decision on IDENTICAL evidence via one config field,
+  zero code changes (test 8).
+- **`diagnostics/replay_decision_engine.py`** - the first real milestone
+  ("recorded evidence JSON -> Decision Engine -> route/quarantine/audit
+  record," not live sensor wiring yet). Feeds the ALREADY-RECORDED
+  Gemma flat-8 run + 7-tower logit extraction (same 332-image held-out
+  split) through the engine. **Real, honest gap surfaced by this
+  replay, not hidden**: Gemma's production `classify()` path doesn't
+  expose a raw logit margin (only the self-reported confidence field,
+  repeatedly measured unreliable) - so in THIS replay, Gemma's evidence
+  is recorded UNSCORED rather than substituting a known-bad number,
+  which means `gemma_primary` policy can never reach AUTO_ACCEPT here
+  (always ACCEPT_WITH_CAUTION or QUARANTINE) - a concrete illustration
+  of why a real Gemma logit-margin adapter is the top next integration
+  step, not a bug in the engine itself. `vision_primary`/
+  `weighted_fusion` DO reach real AUTO_ACCEPT states in this same
+  replay (towers have real normalized scores), at 96.7-97.6% accuracy
+  within that bucket.
+- **NOT built yet** (explicitly out of scope for this pass, see the
+  module's own "INTEGRATION STATUS" docstring note): live sensor
+  adapters (a real Gemma call / tower forward pass / CV measurement ->
+  EvidenceRecord), wiring `decide()`'s output into `core/pipeline_db.py`
+  or the bucket-CSV write path, a QUARANTINE trust state's actual
+  pipeline effect, row-regularity/column-grid/layout-detector evidence
+  adapters.
 
 ## Known conventions worth not re-learning
 
@@ -1068,3 +1731,53 @@ concluding anything about Tier 1's usefulness.
   `nvidia-smi`'s reading (system-wide, not per-process, on WDDM) will
   look consistent with this the whole time a Phase-A-then-B sweep runs
   - don't mistake it for a different model still being resident.
+
+## Hashed run architecture (`core/workspace_context.py`, `core/run_context.py`, built 2026-08-08)
+
+Full design doc: `docs/RUN_ARCHITECTURE.md` (ownership model, run_id
+hash scheme, DB identity contract, known gaps, phase-2 target mapping -
+this entry is just the symbol-level pointer).
+
+- **`WorkspaceContext.resolve()`** (`core/workspace_context.py`) - the
+  two filesystem roots (`pipeline_root` = this repo, `workspace_root` =
+  sibling `genealogy_workspace/` by default). Env vars
+  (`GENEALOGY_PIPELINE_ROOT`/`GENEALOGY_WORKSPACE_ROOT`) > `config/
+  workspace.yaml`/`workspace.local.yaml` > sibling-dir fallback. No
+  module should construct `Path("data/...")` directly anymore - get
+  this or a `RunContext` and read paths off it.
+- **`RunContext.create(workspace, run_type=, source_input=, run_name=)`**
+  (`core/run_context.py`) - the run-directory owner.
+  `run_id = YYYYMMDDTHHMMSSffffff_<8-char-config-hash>`. Exposes
+  `.working_images`/`.working_analysis`/`.manifest_csv`/`.buckets`
+  (locked under `outputs/`, NOT a run-root sibling)/`.embeddings`/etc.
+  `RunContext.resume(workspace, run_id)` reopens an in-progress run;
+  raises on a completed one (runs are immutable once
+  `ctx.mark_completed()`). `ctx.to_relative(path)`/`ctx.to_absolute(rel)`
+  are THE canonical DB-boundary normalization functions - every write
+  into `core/pipeline_db.py` goes through `to_relative()` first.
+- **`core/pipeline_db.py`'s `run_id` column + `resolve_path(run_id,
+  relative_path)`** - every `images`/`stage_outputs` row for a run-owned
+  artifact is now `run_id`-tagged and stores a RUN-RELATIVE path (an
+  external `source_path` stays absolute, never relativized).
+  `resolve_path()` derives `runs_root` from its own `db_path.parent`,
+  not a re-resolved `WorkspaceContext` - keeps working even if the
+  ambient env/config workspace differs from the one the DB was actually
+  opened against. `get_image_by_path(path, run_id=...)` /
+  `get_or_create_image(..., run_id=...)` both accept the scope; passing
+  `None` matches pre-migration/legacy-caller behavior.
+- **`core/manifest_pipeline.py`'s stage0-4 functions all take an
+  optional `ctx: RunContext`** - when given, every path/DB-identity
+  decision routes through it (see each function's own docstring for
+  specifics). `python -m core.manifest_pipeline <source>` is the new CLI
+  entry point (prompts for an optional run name interactively; `--run-
+  name`/`--run-type` bypass the prompt for scripted callers).
+  `scripts/build_working_manifest.py --new-run` has the same flags.
+- **`scripts/migrate_pipeline_db_to_run_schema.py`** - the one-time
+  migration moving the pre-run-system `data/` layout into a synthetic
+  `legacy_pre_run_system` run and rewriting `pipeline.db` to the same
+  `run_id`+relative-path invariant. Validate against copies
+  (`--data-root`/`--source-data-root` split) before ever pointing it at
+  real `data/`.
+- **DO NOT call `write_baseline_embeddings()`/`write_layout_detections()`
+  without either a `ctx` or an explicit `output_path`** - without one of
+  those two, it targets the real, shared `data/baseline_embeddings.json`.

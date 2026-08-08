@@ -123,7 +123,21 @@ from PIL import Image, ImageTk
 
 from core.classifier import load_pipeline_config, BUCKET_DIR
 
-MISCLASSIFICATION_LOG = BUCKET_DIR.parent / "misclassifications.csv"
+# Persistent, cross-run triage/ground-truth logs - deliberately anchored
+# to the fixed data/ directory, NOT derived from BUCKET_DIR.parent.
+# BUCKET_DIR now resolves into whichever run produced the current bucket
+# CSVs (see core/classifier.py's dynamic legacy-run fallback), but these
+# four logs are NOT run-owned - misclassifications.csv is explicitly "a
+# flat ground-truth sample, not a queue" (see core/review_modes.py's own
+# docstring), and the other three are "running lists" meant to persist
+# across many runs for a later taxonomy-design pass. Deriving them from
+# BUCKET_DIR.parent would have silently pointed them at
+# <run>/outputs/ instead of data/ once BUCKET_DIR started resolving into
+# a run directory - see docs/RUN_ARCHITECTURE.md's ownership model.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_DATA_DIR = _PROJECT_ROOT / "data"
+
+MISCLASSIFICATION_LOG = _DATA_DIR / "misclassifications.csv"
 MISCLASSIFICATION_FIELDS = [
     "bucket", "file_path", "category", "confidence", "reason",
     "model", "prompt_version",
@@ -141,8 +155,8 @@ MISCLASSIFICATION_FIELDS = [
 #   - PRUNE_LOG: images to be dropped from the corpus entirely (e.g.
 #     unusable scans) - a separate list, since "skewed wrongly" and
 #     "not worth keeping at all" are different actions on the same data.
-BAD_DESKEW_LOG = BUCKET_DIR.parent / "flagged_bad_deskew.csv"
-PRUNE_LOG = BUCKET_DIR.parent / "flagged_for_pruning.csv"
+BAD_DESKEW_LOG = _DATA_DIR / "flagged_bad_deskew.csv"
+PRUNE_LOG = _DATA_DIR / "flagged_for_pruning.csv"
 # Added 2026-07-31 alongside the two above, per Jon: "not that we may
 # need it, but incase we do. better to have and not need it than get
 # 1000 images in and find we do need it and have to redo from the start
@@ -150,7 +164,7 @@ PRUNE_LOG = BUCKET_DIR.parent / "flagged_for_pruning.csv"
 # existing bucket well (the non-portrait-photo gap, modern-UI-screenshot
 # gap, etc. already surfaced during review), collected for the same
 # later taxonomy-design pass as misclassifications.csv, not acted on now.
-NEEDS_BUCKET_LOG = BUCKET_DIR.parent / "flagged_needs_new_bucket.csv"
+NEEDS_BUCKET_LOG = _DATA_DIR / "flagged_needs_new_bucket.csv"
 # Shared field list - these two logs only ever need "which bucket/row was
 # this seen from", not the full classification metadata the
 # misclassification log tracks, so they're intentionally smaller.

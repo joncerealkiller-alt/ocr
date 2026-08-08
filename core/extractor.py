@@ -34,10 +34,14 @@ from pydantic import ValidationError
 from core.loaders.base_loader import load_model_config
 from core.loader_registry import LOADER_REGISTRY
 from core.schema import DocumentCategory, ExtractionResult, ConfidenceLevel
+from core.workspace_context import WorkspaceContext
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-BUCKET_DIR = PROJECT_ROOT / "data" / "buckets"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "outputs"
+
+# Legacy fallback - see core/manifest_pipeline.py's identical comment.
+_legacy_bucket_dir = WorkspaceContext.resolve().runs_root / "legacy_pre_run_system" / "outputs" / "buckets"
+BUCKET_DIR = _legacy_bucket_dir if _legacy_bucket_dir.exists() else PROJECT_ROOT / "data" / "buckets"
 
 # Loaders are model-specific but expensive to load (GPU memory), so we
 # cache one instance PER MODEL across buckets - not per (model, prompt)
@@ -204,7 +208,7 @@ def run_anomaly_checks(results: list[ExtractionResult], checks_cfg: list[dict]) 
     return flags
 
 
-def check_uncertain_gate() -> bool:
+def check_uncertain_gate(bucket_dir: Path = BUCKET_DIR) -> bool:
     """
     Returns True if it's safe to proceed with extraction. Per project
     design: extraction should not run against buckets while
@@ -213,7 +217,7 @@ def check_uncertain_gate() -> bool:
     human yet - proceeding anyway risks the same kind of silent
     contamination the review step exists to prevent.
     """
-    uncertain_csv = BUCKET_DIR / "uncertain_review.csv"
+    uncertain_csv = bucket_dir / "uncertain_review.csv"
     if not uncertain_csv.exists():
         return True
     with open(uncertain_csv, "r", encoding="utf-8") as f:
@@ -268,16 +272,25 @@ def _check_header_matches(path: Path, expected_fields: list[str]) -> None:
         )
 
 
-def run() -> None:
-    if not check_uncertain_gate():
+def run(ctx=None) -> None:
+    """
+    ctx (hashed-run migration, typed loosely to avoid an import cycle -
+    see docs/RUN_ARCHITECTURE.md): when given a RunContext, overrides
+    bucket_dir with ctx.buckets and output_dir with ctx.extraction
+    instead of the fixed repo-relative BUCKET_DIR/OUTPUT_DIR.
+    """
+    bucket_dir = ctx.buckets if ctx is not None else BUCKET_DIR
+    output_dir = ctx.extraction if ctx is not None else OUTPUT_DIR
+
+    if not check_uncertain_gate(bucket_dir):
         sys.exit(1)
 
     pipeline_cfg = load_pipeline_config()
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    output_path = OUTPUT_DIR / "extracted.csv"
-    failed_path = OUTPUT_DIR / "failed_extraction.csv"
-    flags_path = OUTPUT_DIR / "anomaly_flags.csv"
+    output_path = output_dir / "extracted.csv"
+    failed_path = output_dir / "failed_extraction.csv"
+    flags_path = output_dir / "anomaly_flags.csv"
 
     _check_header_matches(output_path, OUTPUT_FIELDS)
     _check_header_matches(failed_path, FAILED_FIELDS)
