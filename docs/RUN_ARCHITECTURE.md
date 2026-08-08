@@ -207,6 +207,12 @@ was actually opened against (tests, or a moved workspace).
   DB's own persisted identity is normalized. This is a deliberate,
   explicit decision, not an oversight: it avoids the DB persistence
   format depending on how the CSV happens to represent a path.
+  Confirmed with Jon (2026-08-08): keep this hardcoded/absolute rather
+  than relativizing it - a UI may load a manifest CSV directly, outside
+  of any `RunContext` at all (no run_id in hand to resolve a relative
+  path against), so the file needs to stay independently openable.
+  Revisit only if/when every manifest-CSV consumer is guaranteed to
+  have a `RunContext` available.
 
 ### Migration script
 
