@@ -257,12 +257,20 @@ CLI usage (`--data-root` vs `--source-data-root` for validation runs).
   property of that function, not new risk introduced here.
 - **`core/calibration_workspace.py`**: explicitly deferred to phase 2 -
   a persistent evaluation workspace, not per-run state.
-- **`sync_bucket_classifications()`'s internal lookup**: reads bucket
-  CSVs' absolute `file_path` column and calls `get_image_by_path()`
-  unscoped by `run_id` - for a run-based DB this won't match a
-  run-scoped row. Acceptable for this pass (Jon: "CSV paths can be
-  fixed later, this is a restructuring phase") - tracked as follow-up,
-  not silently ignored.
+- ~~`sync_bucket_classifications()`'s internal lookup~~ **FIXED**
+  (2026-08-08, revisited after the cutover before moving on to
+  classification): now normalizes the bucket CSV's absolute `file_path`
+  through `ctx.to_relative()` and scopes every lookup/write by
+  `ctx.run_id`, matching every other stage's contract. Also fixed the
+  same gap in `core/classifier.py`'s `_record_classification_db()`,
+  which had been storing `lookup_key` absolute even in a `ctx`-based run
+  - both `finalize_manifest()`'s and `classifier.py`'s calls into
+  `sync_bucket_classifications()` now pass `ctx=ctx`. `find_stage_output()`
+  stays unscoped by `run_id` by design (see its own docstring) - a
+  same-named run-relative path across two different runs could in
+  principle find a stale row from the wrong run, but the only
+  consequence is skipping a redundant identical "failed" status
+  re-write, never corrupting state.
 - **3 GUI tools not yet ctx-aware**: `ui/build_manifest_ui.py`,
   `ui/classifier_validation_ui.py`, `ui/dewarp_preprocessor_ui.py`.
   Confirmed safe as-is (they keep working against the legacy run via

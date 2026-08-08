@@ -194,6 +194,7 @@ def _record_classification_db(
     bucket: str, confidence: float | None, model: str,
     status: str, stage_output_status: str, note: str | None,
     bucket_dir: Path = BUCKET_DIR,
+    ctx=None,
 ) -> None:
     """
     Wraps PipelineDatabase.record_classification() with the same
@@ -206,14 +207,24 @@ def _record_classification_db(
     called at the end of run()) picks up exactly this kind of gap.
     image_id=None (get_or_create_image() itself failed) skips the DB
     write entirely, same reasoning.
+
+    ctx: when given, both sidecar_path (the bucket CSV, a run-owned
+    artifact) and lookup_key (file_path, the working image - also
+    run-owned) are normalized through ctx.to_relative() before being
+    persisted, matching every other stage's DB-identity contract - see
+    docs/RUN_ARCHITECTURE.md. Previously lookup_key stayed absolute even
+    in a ctx-based run, an inconsistency caught while revisiting this
+    stage after the migration.
     """
     if image_id is None:
         return
     bucket_csv_path = bucket_dir / f"{bucket}.csv"
+    db_sidecar_path = ctx.to_relative(bucket_csv_path) if ctx is not None else str(bucket_csv_path)
+    db_lookup_key = ctx.to_relative(file_path) if ctx is not None else file_path
     try:
         db.record_classification(
             image_id, bucket=bucket, confidence=confidence, model=model,
-            status=status, sidecar_path=str(bucket_csv_path), lookup_key=file_path,
+            status=status, sidecar_path=db_sidecar_path, lookup_key=db_lookup_key,
             stage_output_status=stage_output_status, note=note,
         )
     except Exception as e:
@@ -287,7 +298,7 @@ def run(manifest_path: Path, debug: bool = False, db_path: Path = DEFAULT_DB_PAT
                 db, image_id, file_path, bucket=DocumentCategory.UNCERTAIN.value,
                 confidence=None, model=loader.config.model_name,
                 status="uncertain_review", stage_output_status="failed", note=error_note,
-                bucket_dir=bucket_dir,
+                bucket_dir=bucket_dir, ctx=ctx,
             )
             continue
 
@@ -310,7 +321,7 @@ def run(manifest_path: Path, debug: bool = False, db_path: Path = DEFAULT_DB_PAT
             confidence=result.confidence, model=loader.config.model_name,
             status="uncertain_review" if target_category == DocumentCategory.UNCERTAIN else "classified",
             stage_output_status="done", note=None,
-            bucket_dir=bucket_dir,
+            bucket_dir=bucket_dir, ctx=ctx,
         )
 
     for _, f in writers.values():
@@ -323,7 +334,7 @@ def run(manifest_path: Path, debug: bool = False, db_path: Path = DEFAULT_DB_PAT
     # above, and any OTHER writer of these bucket CSVs. Idempotent and
     # fast (a few seconds over the whole corpus, measured), so keeping
     # this costs nothing even when it finds zero changes.
-    updated = sync_bucket_classifications(db, bucket_dir)
+    updated = sync_bucket_classifications(db, bucket_dir, ctx=ctx)
     print(f"Reconciliation sync: {updated} additional change(s) into {db.db_path}")
 
 

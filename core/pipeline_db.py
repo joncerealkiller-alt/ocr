@@ -585,10 +585,17 @@ def sync_bucket_classifications(
 ) -> int:
     """
     ctx (hashed-run migration): when given a RunContext, overrides
-    bucket_dir with ctx.buckets - see docs/RUN_ARCHITECTURE.md. Typed
-    loosely (not `RunContext`) to avoid a core.run_context <-> core.
-    pipeline_db import cycle; core.manifest_pipeline (which imports
-    both) is the only caller expected to pass this.
+    bucket_dir with ctx.buckets, AND every DB identity lookup/write
+    below (get_image_by_path, get_or_create_image, find_stage_output/
+    record_stage_output's lookup_key) is normalized through
+    ctx.to_relative()/scoped by ctx.run_id instead of matching the
+    bucket CSV's absolute file_path column directly - the same
+    normalization every other stage already does, fixed here while
+    revisiting this function after the migration (previously this was a
+    documented, deliberately deferred gap - see docs/RUN_ARCHITECTURE.md).
+    Typed loosely (not `RunContext`) to avoid a core.run_context <->
+    core.pipeline_db import cycle; core.manifest_pipeline/core.classifier
+    (which import both) are the expected callers to pass this.
 
     Reads every data/buckets/<category>.csv and brings the DB's
     images.bucket/classifier_confidence/classifier_model up to date.
@@ -631,13 +638,26 @@ def sync_bucket_classifications(
             if not file_path:
                 continue
 
-            image = db.get_image_by_path(file_path)
+            # DB identity is normalized through ctx (RunContext.to_relative())
+            # when given - the bucket CSV's own file_path column stays
+            # absolute (manifest/bucket CSVs are meant to be directly
+            # openable without a RunContext in hand), but the DB's
+            # working_path/lookup_key are run-relative, so a lookup by
+            # the raw absolute file_path would never match a ctx-based
+            # row. See docs/RUN_ARCHITECTURE.md.
+            lookup_key = ctx.to_relative(file_path) if ctx is not None else file_path
+            run_id = ctx.run_id if ctx is not None else None
+
+            image = db.get_image_by_path(lookup_key, run_id=run_id)
             if image is None:
                 if not Path(file_path).exists():
                     print(f"WARNING: {file_path!r} in {bucket_csv.name} not registered "
                           f"in the DB and no longer exists on disk - skipped.")
                     continue
-                image_id = db.get_or_create_image(source_path=file_path, working_path=file_path)
+                image_id = db.get_or_create_image(
+                    source_path=file_path, working_path=lookup_key, run_id=run_id,
+                    identity_hash=hash_file(file_path) if ctx is not None else None,
+                )
                 image = db.get_image(image_id)
 
             error = row.get("error", "")
@@ -651,11 +671,24 @@ def sync_bucket_classifications(
                 # this check every re-sync would re-append an identical
                 # "failed" stage_outputs row forever.
                 note = error[:300]
-                existing = db.find_stage_output("stage5_classify", file_path)
+                # find_stage_output() is unscoped by run_id (searches
+                # ACROSS ALL IMAGES by lookup_key alone - see its own
+                # docstring), but that's still correct here: lookup_key
+                # is now the run-relative path when ctx is set, and two
+                # DIFFERENT runs can share the exact same run-relative
+                # string (e.g. "working/images/foo.jpg" in both) - so
+                # this could in principle find a stale row from a
+                # DIFFERENT run with the same relative path. Acceptable
+                # for this pass since a false match only skips a
+                # redundant re-write of an identical "failed" status/note
+                # pair, never corrupts state - see docs/RUN_ARCHITECTURE.md's
+                # "Known gaps" if this needs tightening later.
+                existing = db.find_stage_output("stage5_classify", lookup_key)
                 if existing is None or existing["status"] != "failed" or existing["note"] != note:
                     db.record_stage_output(
                         image["id"], stage="stage5_classify",
-                        sidecar_path=str(bucket_csv), lookup_key=file_path,
+                        sidecar_path=ctx.to_relative(bucket_csv) if ctx is not None else str(bucket_csv),
+                        lookup_key=lookup_key,
                         status="failed", note=note,
                     )
                     updated += 1
@@ -678,7 +711,8 @@ def sync_bucket_classifications(
             )
             db.record_stage_output(
                 image["id"], stage="stage5_classify",
-                sidecar_path=str(bucket_csv), lookup_key=file_path, status="done",
+                sidecar_path=ctx.to_relative(bucket_csv) if ctx is not None else str(bucket_csv),
+                lookup_key=lookup_key, status="done",
             )
             updated += 1
     return updated

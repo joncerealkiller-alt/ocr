@@ -36,9 +36,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from PIL import Image
 
+import csv
+
 from core.workspace_context import WorkspaceContext
 from core.run_context import RunContext
-from core.pipeline_db import PipelineDatabase
+from core.pipeline_db import PipelineDatabase, sync_bucket_classifications
 import core.manifest_pipeline as mp
 from core.manifest_pipeline import build_working_manifest_from_paths, build_working_manifest
 
@@ -219,11 +221,61 @@ def test_embeddings_are_run_owned():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_sync_bucket_classifications_matches_ctx_scoped_rows():
+    print("\n[5] sync_bucket_classifications() correctly matches a ctx-scoped row "
+          "from an absolute bucket-CSV file_path (fixed after being a documented gap)")
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        ws = dataclasses.replace(WorkspaceContext.resolve(), workspace_root=tmp / "workspace")
+        ctx = RunContext.create(ws, run_type="diagnostic", source_input="sync_test")
+
+        img_path = ctx.working_images / "sync_test.jpg"
+        Image.new("RGB", (10, 10)).save(img_path)
+
+        db = PipelineDatabase(ctx.workspace.pipeline_db_path)
+        image_id = db.get_or_create_image(
+            source_path=str(img_path), working_path=ctx.to_relative(img_path),
+            run_id=ctx.run_id, identity_hash="abc123",
+        )
+
+        # A bucket CSV as core/classifier.py would write it: file_path
+        # stays ABSOLUTE (manifest/bucket CSVs are meant to be directly
+        # openable without a RunContext), unlike the DB's own working_path.
+        bucket_csv = ctx.buckets / "printed_document.csv"
+        bucket_csv.parent.mkdir(parents=True, exist_ok=True)
+        with open(bucket_csv, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=["file_path", "category", "confidence", "model"])
+            w.writeheader()
+            w.writerow({
+                "file_path": str(img_path), "category": "printed_document",
+                "confidence": "0.95", "model": "gemma",
+            })
+
+        updated = sync_bucket_classifications(db, ctx.buckets, ctx=ctx)
+        check(updated == 1, f"sync found and applied 1 change (got {updated})")
+
+        row = db.get_image(image_id)
+        check(row["bucket"] == "printed_document", "bucket updated")
+        check(row["classifier_confidence"] == 0.95, "confidence updated")
+        check(row["classifier_model"] == "gemma", "model updated")
+
+        outs = db.get_stage_outputs(image_id, stage="stage5_classify")
+        check(len(outs) == 1, "one stage5_classify row recorded")
+        check(not Path(outs[0]["lookup_key"]).is_absolute(), "lookup_key stored run-relative")
+        check(not Path(outs[0]["sidecar_path"]).is_absolute(), "sidecar_path stored run-relative")
+
+        updated2 = sync_bucket_classifications(db, ctx.buckets, ctx=ctx)
+        check(updated2 == 0, f"re-sync is idempotent, 0 changes (got {updated2})")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     test_stage0to3_run_from_paths()
     test_second_run_does_not_touch_first()
     test_folder_adapter_forwards_ctx()
     test_embeddings_are_run_owned()
+    test_sync_bucket_classifications_matches_ctx_scoped_rows()
 
     print(f"\n{'='*60}")
     print(f"RESULTS: {_PASS} passed, {_FAIL} failed")

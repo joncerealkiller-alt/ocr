@@ -1187,8 +1187,8 @@ def finalize_manifest(
         output_path = PROJECT_ROOT / "data" / "manifest_final.csv"
 
     db = PipelineDatabase(db_path)
-    n_classified = sync_bucket_classifications(db, bucket_dir)
-    n_dewarped = sync_dewarp_results(db, bucket_dir)
+    n_classified = sync_bucket_classifications(db, bucket_dir, ctx=ctx)
+    n_dewarped = sync_dewarp_results(db, bucket_dir, ctx=ctx)
     if n_classified or n_dewarped:
         print(f"Synced {n_classified} new/changed classification(s), "
               f"{n_dewarped} new dewarp result(s) into {db.db_path}")
