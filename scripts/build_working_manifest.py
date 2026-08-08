@@ -105,8 +105,13 @@ def main():
         print(f"ERROR: {e}")
         sys.exit(1)
     else:
+        # Deliberately NOT ctx.mark_completed() here - see core/
+        # manifest_pipeline.py's _cli_main() for why (classification/
+        # extraction continue this SAME run afterward; RunContext.resume()
+        # refuses to reopen a completed run).
         if ctx is not None:
-            ctx.mark_completed()
+            print(f"\nRun {ctx.run_id} left in progress (Stage 0-3 done) - continue it with:")
+            print(f"  python -m core.classifier {ctx.manifest_csv}")
 
 
 if __name__ == "__main__":

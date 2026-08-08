@@ -1321,7 +1321,19 @@ def _cli_main(argv: Optional[list[str]] = None) -> int:
     except Exception as e:
         ctx.mark_failed(str(e))
         raise
-    ctx.mark_completed()
+
+    # Deliberately NOT ctx.mark_completed() here - Stage 0-3 finishing
+    # is not the same as the run being done. Per this project's existing
+    # workflow, classification (python -m core.classifier <manifest>)
+    # and extraction run against this SAME run afterward, and
+    # RunContext.resume() refuses to reopen a completed run - marking
+    # complete here would make every later stage unable to continue this
+    # run at all. The run stays "in_progress" (resumable) until whatever
+    # caller considers the whole pipeline done calls mark_completed()
+    # itself - found as a real bug via the first actual post-migration
+    # smoke test (see docs/RUN_ARCHITECTURE.md).
+    print(f"\nRun {ctx.run_id} left in progress (Stage 0-3 done) - continue it with:")
+    print(f"  python -m core.classifier {ctx.manifest_csv}")
     return 0
 
 

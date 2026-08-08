@@ -338,6 +338,28 @@ def run(manifest_path: Path, debug: bool = False, db_path: Path = DEFAULT_DB_PAT
     print(f"Reconciliation sync: {updated} additional change(s) into {db.db_path}")
 
 
+def _ctx_from_manifest_path(manifest_path: Path):
+    """Best-effort: if manifest_path looks like <runs_root>/<run_id>/
+    manifest/manifest.csv (the shape RunContext.create() produces),
+    resume that run and return its RunContext so this CLI invocation
+    continues the SAME run Stage 0-3 already started, instead of
+    operating ctx-less against just a manifest path. Returns None (not
+    an error) for any manifest not shaped this way - e.g. a
+    pre-migration/legacy manifest.csv - preserving old CLI behavior."""
+    from core.workspace_context import WorkspaceContext
+    from core.run_context import RunContext
+
+    try:
+        # .../runs/<run_id>/manifest/manifest.csv -> parents[1] is <run_id>
+        run_id = manifest_path.resolve().parents[1].name
+        workspace = WorkspaceContext.resolve()
+        if manifest_path.resolve() != workspace.runs_root / run_id / "manifest" / "manifest.csv":
+            return None
+        return RunContext.resume(workspace, run_id)
+    except (IndexError, FileNotFoundError, ValueError):
+        return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Stage 5: classify every image in the manifest, route into bucket CSVs.")
@@ -353,7 +375,11 @@ def main() -> None:
         help=f"core/pipeline_db.py database path (default: {DEFAULT_DB_PATH})",
     )
     args = parser.parse_args()
-    run(Path(args.manifest), debug=args.debug, db_path=Path(args.db_path))
+    manifest_path = Path(args.manifest)
+    ctx = _ctx_from_manifest_path(manifest_path)
+    if ctx is not None:
+        print(f"Continuing run {ctx.run_id}")
+    run(manifest_path, debug=args.debug, db_path=Path(args.db_path), ctx=ctx)
 
 
 if __name__ == "__main__":
