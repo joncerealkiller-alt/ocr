@@ -1,7 +1,8 @@
 # Run Architecture: Repo/Workspace Split + Hashed Runs
 
-Status: **Phase 1 of 2 implemented AND the real cutover has run**
-(2026-08-08). `data/working/`, `data/raw_from_pdf/`, `data/buckets/`,
+Status: **Both Phase 1 and Phase 2 have run for real** (2026-08-08).
+
+**Phase 1**: `data/working/`, `data/raw_from_pdf/`, `data/buckets/`,
 `data/manifest.csv`, `data/manifest_provenance.json`, and
 `data/pipeline.db` have been migrated into
 `genealogy_workspace/runs/legacy_pre_run_system/` and
@@ -11,11 +12,16 @@ before removal: full checksum comparison against a pre-cutover baseline
 sidecar-bearing stage_outputs rows resolve), a real UI
 (`ui/classifier_validation_ui.py`) launched successfully against the
 migrated data, and a fresh new run created and confirmed fully isolated
-from the legacy run. Phase 2 (reorganizing existing `data/outputs/`
-research/dataset/checkpoint content into
-`genealogy_workspace/{research,datasets,models}/`, UI reorg, root
-cleanup) is planned but **not executed** - see "Phase 2 target mapping"
-below. See also `docs/HASHED_RUN_RESTRUCTURE_HANDOFF.md` for the
+from the legacy run. A real end-to-end smoke test (7 real screenshots
+through Stage 0-3 + Gemma classification) also caught and fixed a
+run-lifecycle bug (premature `mark_completed()` blocking classification
+from continuing a run) - see git history for `core/manifest_pipeline.py`
+and `core/classifier.py`.
+
+**Phase 2**: `data/outputs/` (44GB, 67 mapped items) has been
+decomposed into `genealogy_workspace/{research,datasets,models}/` - see
+"Phase 2 target mapping" below for the actual outcome (not a plan
+anymore). See also `docs/HASHED_RUN_RESTRUCTURE_HANDOFF.md` for the
 original blast-radius/DO-NOT-TOUCH findings this work was scoped
 against.
 
@@ -282,18 +288,92 @@ CLI usage (`--data-root` vs `--source-data-root` for validation runs).
   dataset/diagnostic tools operating on the flat legacy corpus (phase-2/
   dataset territory), confirmed safe unmodified via the same fallback.
 
-## Phase 2 target mapping (planned, not executed)
+## Phase 2 target mapping (executed, 2026-08-08)
 
-| Category | Current location | Target |
-|---|---|---|
-| Research experiments (`benchmark2*`, `gemma_reasoning_consistency_audit/`, etc.) | `data/outputs/*` | `genealogy_workspace/research/experiments/` |
-| Protected caches (`DO_NOT_TOUCH.md`) | `data/outputs/gemma_hidden_state_probe/`, `data/outputs/error_analysis/` | **Stay exactly where they are, indefinitely** |
-| LoRA/model checkpoints | `data/outputs/*_lora_checkpoints/` | `genealogy_workspace/models/checkpoints/` |
-| Dataset pulls / curated corpora | `lac_pull_*/`, `reference_pull/`, `lora_dataset/` | `genealogy_workspace/datasets/{reference,training,bootstrap}/` |
-| Ground truth | `new_taxonomy_ground_truth.csv`, `data/misclassifications.csv`, `ground_truth_log.jsonl` | `genealogy_workspace/datasets/ground_truth/` |
-| Persistent logs/reports | `data/logs/`, `reviewed_uncertain.csv` | `genealogy_workspace/logs/` |
-| Root generated artifacts | `benchmark_results/`, `experiment3_*_outputs/`, `yolo26n.pt` | `genealogy_workspace/research/...`, `genealogy_workspace/models/` |
-| UI mockups | `UI Mockups/` | `docs/ui_mockups/` (stays in repo - design artifact) |
+`research/` ended up with four subcategories, not one flat
+`experiments/` - `benchmark2*`/`vit_family_benchmark` are genuinely
+benchmarks (comparing methods against each other), distinct from
+one-off experiments, frozen comparison snapshots, and persistent
+calibration workspaces:
+
+```
+genealogy_workspace/
+    research/
+        benchmarks/      # benchmark2*, vit_family_benchmark
+        experiments/      # one-off investigations, logs
+        baselines/         # reference_pipeline_v1-v4, _prerefactor (frozen snapshots)
+        calibration/        # column_calibration, column_calibration_workspace
+    models/
+        checkpoints/        # all *_lora_checkpoints/, vit21k_doc_classifier_checkpoints
+    datasets/
+        reference/           # lac_pull_*, lac_census_pull, lac_new_years_samples
+        bootstrap/            # layout_bootstrap_train (14G)
+        training/              # lora_dataset (hook-protected, see below)
+        ground_truth/           # ground_truth_log.jsonl, vit_finetune_dataset*.csv
+    migration_manifest.json  # per-item record of what happened and why
+    _workflow_gui_state.json  # tool state, not data
+```
+
+**Mechanism: `scripts/migrate_data_outputs_to_workspace.py`, driven by
+a literal, pre-flight-validated mapping (67 entries, zero
+pattern-matching).** 75 files across `training/`/`diagnostics/`/docs
+hardcode a `data/outputs/<name>` path directly, with no shared constant
+to patch centrally (unlike Phase 1's `BUCKET_DIR`-style fallback) -
+rewriting all 75 was judged high-risk for low benefit, so instead: the
+real data was copied and checksum-verified into
+`genealogy_workspace/...`, the original at `data/outputs/<name>` was
+removed, and an **NTFS reparse point** was left in its place -
+`mklink /J` (junction) for a directory, `mklink /H` (hardlink) for a
+loose file (junctions are directory-only and error on a file target).
+Every hardcoded reference in those 75 files keeps working completely
+unmodified; `open()`/`Path.exists()`/`Path.is_dir()` all follow the
+link transparently. Verified post-migration: sample files read through
+the OLD path are byte-identical to the new location, and a real
+hardlink's `st_ino`/`st_dev` were confirmed identical to its target
+(not a second copy).
+
+**3 items got copy-only treatment, no link, original left in place**:
+`row_segmentation/`, `lora_dataset/`, `scoring_reports/` are hard-blocked
+from any scripted `rm -rf` by `.claude/protected_paths.txt`
+(`.claude/hooks/block_protected_delete.py`, a `PreToolUse` hook - added
+after a real incident where a careless cleanup command destroyed 25
+manually-dewarped images). For these three, both the original
+`data/outputs/<name>` and the verified copy under
+`genealogy_workspace/...` coexist; removing the original and creating
+the junction is a manual, explicit step for Jon to do himself whenever
+ready - never a scripted one.
+
+**`genealogy_workspace/migration_manifest.json`** records every
+processed item: `old`/`new` path, `kind` (`dir`/`file`), `type`
+(`junction`/`hardlink`/`copy_only`), size, file count, and (for
+`copy_only` entries) `reason` - so "why is this a junction" or "why
+wasn't this one deleted" never needs re-deriving from scratch.
+
+**Benchmark convention going forward**: `research/benchmarks/<name>/`
+is meant to become a container, with each future EXECUTION of that
+benchmark getting its own timestamped child directory
+(`research/benchmarks/vit_family_benchmark/20260808T204158/`) rather
+than overwriting the previous run's output - benchmarks should stay
+reproducible historical comparisons. The migrated benchmark dirs are
+grandfathered in flat (each is already a single, distinct,
+already-completed study, not a repeat run of the same one). This is a
+target-structure decision only - no benchmark script was edited to
+actually write timestamped subdirs; that's separate future work.
+
+**Left untouched, explicitly out of scope this pass** (still in
+`data/outputs/`):
+- `gemma_hidden_state_probe/`, `error_analysis/` - `DO_NOT_TOUCH.md`,
+  never touched without a dedicated separate ask.
+- `reference_pull/`, `new_taxonomy_ground_truth.csv`/`_README.txt` -
+  another session was actively writing to these during Phase 2 (last
+  write ~5 min before recon); moving mid-write risks a torn copy. Move
+  in a later phase 2.5 pass once that work concludes.
+- `.lorabackup/` (53M, hidden/dot-prefixed) - a manual backup snapshot
+  of old checkpoints/dataset/ground-truth, discovered during planning
+  (missed by the initial recon since it's dot-prefixed). Not part of
+  the approved mapping; left in place, undecided.
+- The root `DO NOT AUTO DELETE ANYTHING HERE.txt` marker (0 bytes) -
+  still protects what remains in `data/outputs/`.
 
 ## Unresolved ownership questions
 
@@ -301,10 +381,8 @@ CLI usage (`--data-root` vs `--source-data-root` for validation runs).
   generator; could become a run-local queue or persistent ground truth
   depending on how the second Gemma pass it's designed for actually
   gets built. Left untouched, undecided.
-- `column_calibration/`, `row_segmentation/` workspaces - persistent
-  evaluation/training workspaces per the original plan, but individual
-  items may turn out to be run-tied on closer inspection; needs a
-  per-item ownership check before phase 2 moves them.
-- `reference_pipeline_v1..v4`, `data/reference_prerefactor/` - look like
-  frozen comparison snapshots, not experiments; phase 2 should confirm
-  before choosing `research/reports/` vs. a dedicated `baselines/`.
+- `.lorabackup/` - is this backup snapshot still worth keeping at all,
+  and if so, does it deserve its own `genealogy_workspace/backups/`
+  category? Deferred, see above.
+- `reference_pull/`/`new_taxonomy_ground_truth.csv` - pending phase 2.5
+  once the other session's active work concludes.

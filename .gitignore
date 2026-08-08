@@ -6,3 +6,4 @@ data/debug_model_inputs/
 .venv_deepseek_vl2/
 .venv_hunyuan_ocr/
 config/workspace.local.yaml
+scripts/_phase2_checksum_baseline.json
