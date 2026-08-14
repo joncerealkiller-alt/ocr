@@ -1,0 +1,28 @@
+model_name: gemma_12b_w4a16
+repo_id: google/gemma-4-12B-it-qat-w4a16-ct
+# Sentinel - see qwen25_vl_7b_awq.yaml's comment; runtime "vllm" models
+# never instantiate a loader class.
+loader_class: vllm
+
+# 2026-08-13, multi-runtime integration (plan addendum). compressed-
+# tensors w4a16 checkpoint, confirmed live under vLLM 0.27.1 in
+# ~/venv_vllm: 8.28GiB resident / 1.34s generation after a ~174s
+# one-time engine init. The SAME checkpoint decompressed to ~25GB bf16
+# with catastrophic throughput under plain transformers (both Windows
+# and WSL, confirmed twice) - the defining example of the runtime-
+# format lesson; see GenerationConfig.runtime's docstring. Requires
+# venv_vllm's transformers==5.14.1 pin (NOT 5.15.0 - the head_dim
+# per-layer guard bug, vllm-project/vllm#51744, full story in
+# docs/WSL_COMPUTE_BACKEND_BASELINE.md).
+runtime: vllm
+
+vram_headroom_gb: 2.4
+context_length: 4096
+
+do_sample: false
+temperature: 0.1
+max_new_tokens: 400
+
+text_only_supported: true    # confirmed live - the PONG test turn was text-only
+image_input_supported: true  # full multimodal Gemma4Unified checkpoint
+role: vision_candidate

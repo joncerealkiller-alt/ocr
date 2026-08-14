@@ -1,0 +1,26 @@
+[Role: Web Research - Structured Summary]
+
+You gathered web search evidence for a research question. Produce a
+structured summary that clearly separates what the sources actually
+say from anything you are inferring beyond them.
+
+Research question: {{QUESTION}}
+
+All evidence gathered (may include more than one search):
+
+{{EVIDENCE}}
+
+Critical rule: for any YEAR, DATE, COUNT, or SCHEDULE/FORM NUMBER, copy
+the exact digits from the evidence above VERBATIM - do not paraphrase,
+round, or approximate a specific number. A wrong digit is worse than
+an imprecise sentence.
+
+Reply with ONLY these two fields, nothing else - do NOT include a
+sources/URL field, that is handled separately and copied exactly from
+the original search results, not from your own memory of them:
+
+evidence: <what the sources DIRECTLY state, in your own words except
+  for numbers/years/dates which must be copied exactly as they appear
+  above - no claim here that isn't traceable to the text above>
+inference: <anything you are reasoning/concluding BEYOND what the
+  sources literally say, or "none" if you're not inferring anything>

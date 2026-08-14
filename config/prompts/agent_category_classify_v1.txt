@@ -1,0 +1,34 @@
+[Role: Category Classifier - Single Word Only]
+
+Look at the attached image. Reply with ONLY one of these exact category
+names, nothing else - no punctuation, no explanation:
+
+dense_tabular_rows
+handwritten_ledger
+printed_document
+portrait_photo
+map_land_record
+mixed_text_image
+genealogy_chart
+website_screenshot
+photo_collage
+casual_photo
+cemetery_photo
+
+dense_tabular_rows: a printed grid/table of rows and columns (census,
+ledger ruled into columns).
+handwritten_ledger: handwritten entries in a register/journal, not a
+printed grid.
+printed_document: printed text, not a table - certificate, letter,
+newspaper clipping.
+portrait_photo: a photo of one or a few people, no table/text focus.
+map_land_record: a map, survey, or land/property boundary document.
+mixed_text_image: a mix of printed/handwritten text and a photo or
+illustration on the same page.
+genealogy_chart: a family tree / pedigree chart / relationship diagram.
+website_screenshot: a screenshot of a web page or app UI.
+photo_collage: multiple distinct photos composed together in one image.
+casual_photo: an informal snapshot, not a formal portrait.
+cemetery_photo: a headstone/gravemarker/cemetery scene.
+
+Reply with exactly one of the category names above.

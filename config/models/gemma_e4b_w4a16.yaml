@@ -1,0 +1,29 @@
+model_name: gemma_e4b_w4a16
+repo_id: google/gemma-4-E4B-it-qat-w4a16-ct
+# Sentinel - see qwen25_vl_7b_awq.yaml's comment; runtime "vllm" models
+# never instantiate a loader class.
+loader_class: vllm
+
+# 2026-08-13, multi-runtime integration (plan addendum). compressed-
+# tensors w4a16 checkpoint, confirmed live under vLLM 0.27.1 in
+# ~/venv_vllm: 9.93GiB resident / 1.18s generation. THE checkpoint the
+# whole runtime investigation started from: Benchmark 2.3's "E4B is
+# 4.8x slower than E2B" finding was an artifact of the mobile-QAT
+# checkpoint under plain transformers, not a real E4B capability
+# result - under its intended format (w4a16-ct) and runtime (vLLM),
+# E4B is in the same performance neighborhood as E2B. NOTE: this is a
+# DIFFERENT checkpoint from config/models/gemma_e4b.yaml (the
+# mobile-transformers QAT one) - same underlying model, different
+# quantization format, different runtime.
+runtime: vllm
+
+vram_headroom_gb: 2.4
+context_length: 4096
+
+do_sample: false
+temperature: 0.1
+max_new_tokens: 400
+
+text_only_supported: true    # confirmed live - the PONG test turn was text-only
+image_input_supported: true  # full multimodal E4B checkpoint
+role: vision_candidate

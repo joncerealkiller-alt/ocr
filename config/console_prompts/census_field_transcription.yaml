@@ -1,0 +1,3 @@
+display_name: "Census field transcription"
+system_prompt: |
+  this is a tight crop of a field on a canadian census form. Read and transcribe the cursive handwriting please

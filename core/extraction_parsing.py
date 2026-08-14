@@ -146,25 +146,92 @@ def _inline_field_split(raw_output: str) -> dict[str, str]:
     return result
 
 
-def parse_pipe_entries(value: str) -> list[tuple[str, ConfidenceLevel]]:
+_PIPE_ENTRY = re.compile(
+    r"([^|]+?)\|\s*(confirmed|partial|unclear|not_present)\b", re.IGNORECASE,
+)
+
+
+def parse_pipe_entries(
+    value: str, max_count: int | None = None,
+) -> list[tuple[str, ConfidenceLevel]]:
     """
     Parses 'value|confidence; value|confidence; ...' into tuples.
+
+    max_count, if given, hard-truncates to that many entries (keeping
+    the FIRST max_count in generation order), matching whichever
+    ExtractionResult field this call feeds (personal_names=200,
+    place_names=60, visible_dates=20 - see core/schema.py). Added
+    2026-08-13 alongside parse_keyword_list()'s own max_count fix
+    ([[feedback_subject_keywords_needs_structural_cap]] in memory) after
+    the SAME failure class showed up on a different field: qwen3vl4b
+    generated 86 place_names entries against the schema's max_length=60,
+    hard-failing the whole extraction, on the same map image/prompt
+    that separately made qwen3b overflow subject_keywords instead of
+    place_names. Same lesson, same fix shape: prompt wording alone was
+    already shown unreliable for bounding this project's models on
+    unbounded list fields (see base_loader.py's GenerationConfig.
+    keywords_max_new_tokens docstring) - truncate defensively at parse
+    time rather than trust the prompt to self-limit.
+
+    Deliberately optional/default-None, NOT applied to every existing
+    caller - see docs/CODE_MAP.md or this function's own callers for
+    which loaders pass it. Only core/loaders/qwen_loader.py and
+    core/loaders/qwen3vl_loader.py (the two loaders actually exercised
+    live when this bug was found) pass it as of 2026-08-13; the other 9
+    loaders sharing parse_pipe_entries (deepseek_vl2, granite_vision,
+    granite_vision_4_1, hunyuan_ocr, internvl, lfm2_vl, moondream,
+    pixtral, smolvlm2) may have the same latent overflow risk but
+    haven't shown it live - add max_count to their call sites too if/
+    when they do, rather than assuming this fix already covers them.
     Entries missing a confidence tag, or with an unrecognized
     confidence word, are dropped rather than guessed - a malformed
     entry should not silently become CONFIRMED (or any other level)
     by default, since that defeats the point of mandatory per-field
     confidence tagging.
+
+    Anchors on the CONFIDENCE WORD boundary (`|confirmed`/`|partial`/
+    `|unclear`/`|not_present`), not on splitting by a fixed separator
+    character first - confirmed necessary 2026-08-13 (qwen3b, real
+    map_land_record extraction): the old split(";")-only version
+    silently merged an entire multi-entry place_names field into ONE
+    entry with a garbage concatenated name when the model drifted to
+    using ", " as its entry separator instead of the prompted "; "
+    (extractor_map_v1.txt explicitly says "; ", the model didn't follow
+    it) - split(";") on comma-separated input finds no semicolons at
+    all, treats the whole field as one chunk, and rpartition("|") only
+    strips the LAST confidence tag, leaving every other "name|confidence"
+    pair's pipe and tag embedded as literal garbage inside one oversized
+    "name" string. This is the exact same failure class already
+    documented and fixed for parse_keyword_list() below (comma vs.
+    semicolon drift) - never applied here until now.
+
+    Anchoring on the confidence word (rather than parse_keyword_list's
+    simpler "accept either delimiter" fix) is deliberately more robust
+    than a blind comma-or-semicolon split: a place name can legitimately
+    contain an internal comma ("Paris, France|confirmed") without being
+    incorrectly split mid-name, since the boundary is the confidence tag,
+    not the punctuation before it. Leading separator punctuation left
+    over between matches (", ", "; ") is stripped off each captured name.
+
+    Known, accepted limitation (not fixed - not observed in real model
+    output, unlike the comma/semicolon drift above, which was): an entry
+    with an UNRECOGNIZED confidence word ("Some Place|maybe") has no
+    valid match of its own, and the leftover text between its "|" and
+    the NEXT entry's valid "|confidence" can get swept into that next
+    entry's captured name instead of being cleanly discarded. Real model
+    drift seen so far is delimiter drift (comma vs. semicolon), not
+    inventing new confidence words outside the 4 known ones - if that
+    ever shows up in practice, this needs a real two-pass tokenizer, not
+    a single regex.
     """
     entries: list[tuple[str, ConfidenceLevel]] = []
     if not value.strip():
         return entries
-    for chunk in value.split(";"):
-        chunk = chunk.strip()
-        if not chunk or "|" not in chunk:
-            continue
-        name_part, _, conf_part = chunk.rpartition("|")
-        name_part = name_part.strip()
-        conf_key = conf_part.strip().lower()
+    for match in _PIPE_ENTRY.finditer(value):
+        if max_count is not None and len(entries) >= max_count:
+            break
+        name_part = match.group(1).strip(" \t\n;,")
+        conf_key = match.group(2).strip().lower()
         confidence = CONFIDENCE_MAP.get(conf_key)
         if not name_part or confidence is None:
             continue
@@ -172,7 +239,7 @@ def parse_pipe_entries(value: str) -> list[tuple[str, ConfidenceLevel]]:
     return entries
 
 
-def parse_keyword_list(value: str, max_len: int = 60) -> list[str]:
+def parse_keyword_list(value: str, max_len: int = 60, max_count: int = 25) -> list[str]:
     """
     Splits subject_keywords on EITHER comma or semicolon - not just one.
     The original convention (extractor_census_v1/v2/v3.txt) used commas;
@@ -183,10 +250,31 @@ def parse_keyword_list(value: str, max_len: int = 60) -> list[str]:
     exactly the kind of silent, undetected corruption this project has
     hit before (see project history 2026-07-11, Granite Vision) - both
     are accepted here.
+
+    max_count hard-truncates to core.schema.ExtractionResult's own
+    subject_keywords max_length (25), keeping the FIRST max_count
+    entries (generation order, not re-sorted). Added 2026-08-13 after a
+    live failure: a prompt-only attempt to bound keyword-list length
+    (telling the model "5-10 theme words only, never repeat place
+    names") did NOT work - a real qwen3b run generated 108/109 keywords
+    twice in a row across two different prompt wordings, hard-failing
+    ExtractionResult validation both times (no partial result recovered
+    at all - the whole extraction was lost). This matches
+    core/loaders/base_loader.py's own GenerationConfig.
+    keywords_max_new_tokens docstring, which already documented this
+    exact failure mode for a different reason (unbounded generation
+    length) and already concluded "only an external, tight,
+    field-specific ceiling reliably bounds it" - prompt wording alone
+    was already known not to be trustworthy for this field, just not
+    yet enforced here. Truncating at parse time means a genuinely
+    over-generating model still produces a VALID, usable (if partial)
+    result instead of losing the entire extraction to one field's
+    overflow.
     """
     if not value.strip():
         return []
-    return [k.strip()[:max_len] for k in _KEYWORD_SPLIT.split(value) if k.strip()]
+    keywords = [k.strip()[:max_len] for k in _KEYWORD_SPLIT.split(value) if k.strip()]
+    return keywords[:max_count]
 
 
 def parse_json_schema_output(raw_output: str) -> dict:

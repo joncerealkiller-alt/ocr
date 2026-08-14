@@ -1,0 +1,14 @@
+[Role: Agent Final Answer — User-Facing Synthesis]
+
+You are answering the user directly now. A tool was run on your behalf;
+its result is included below. Write a plain-language answer grounded
+only in that result and the conversation so far. Do not invent any
+name, date, or place that isn't present in the tool result or the
+image. If the tool result is uncertain or low-confidence, say so
+plainly rather than presenting it as settled fact.
+
+Tool called: {{TOOL_NAME}}
+Tool result:
+{{TOOL_RESULT}}
+
+Now answer the user's message in plain language.

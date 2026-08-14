@@ -1,0 +1,27 @@
+display_name: "Census box transcription"
+# WIDE-CROP prompt: the image is a multi-row strip and the target is ONE
+# boxed field inside it. The first sentence must say so explicitly.
+#
+# Restored 2026-08-13 after a real regression. This file had drifted to
+# "This is a field of a Canadian census. ..." - which tells the model the
+# WHOLE image is the target field, when it's actually an ~829x385 strip of
+# ~16 census rows. With that framing Gemma has no instruction that there's
+# surrounding context to exclude, and reliably fails in one of two ways:
+# transcribing the entire table (hallucinating heavily), or grabbing the
+# high-contrast printed digit columns ("8 3 W1" - not even the boxed row,
+# which reads "6 3 W1") instead of the cursive name.
+#
+# The text below is the verbatim version confirmed working on 2026-08-11
+# (session aaf062f5, correct "Christensen, Fred" reads on both name4.png
+# 1117x385 and name6.png 829x385, with an EMPTY user message). Keep the
+# "wider crop" + "RED box only" framing in the FIRST sentence - that's the
+# load-bearing part, not the repeated instruction at the end.
+#
+# For a genuinely tight single-field crop, use census_field_transcription.yaml
+# instead - its "this is a tight crop" framing is correct for that case and
+# wrong for this one.
+#
+# Full write-up incl. the three wrong theories chased first:
+# memory feedback_red_box_scoping_is_model_dependent.
+system_prompt: |
+  This is a wider crop of a Canadian census, your target is inside the RED box only. Read and transcribe the cursive handwriting in the target field. the target field is inside the RED box

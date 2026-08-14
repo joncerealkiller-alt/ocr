@@ -158,6 +158,101 @@ class GenerationConfig:
     # behavior change like reasoning_enabled, not silently applied.
     restrict_output_charset: bool = False
 
+    # Whether this model/loader combination can generate from text alone,
+    # with no image passed to _run_generate(). Defaults False (safe) -
+    # every loader is a VLM built to always receive an image, and most
+    # never had this path exercised. False here is NOT a claim that the
+    # underlying model architecture is incapable of text-only generation
+    # (several are vision fine-tunes of a text-only backbone, e.g. the
+    # Gemma/Qwen families, and likely could do it) - it means this
+    # SPECIFIC loader's _run_generate() has not been updated to build a
+    # text-only message/processor call AND had that path empirically
+    # confirmed against the real model. Only flip to True for a model
+    # after both: (1) _run_generate() has an explicit `if raw_image is
+    # None` branch (no image content block, no images= kwarg to the
+    # processor), and (2) a real generation call with raw_image=None has
+    # actually been run and produced sensible output - same
+    # "confirmed by real testing, not assumed" discipline as every other
+    # capability flag in this project. See model_console/adapter.py,
+    # which gates whether a chat turn without an image is even attempted
+    # on this flag rather than a blanket assumption either way.
+    text_only_supported: bool = False
+
+    # The mirror-image flag of text_only_supported above, for a
+    # different failure mode: whether this loader can accept an image
+    # AT ALL, not whether it can run without one. Defaults True - every
+    # loader until 2026-08-13 was a VLM with a real vision tower, so
+    # accepting an image was always safe. core/loaders/text_llm_loader.py
+    # (config/models/qwen_research_text.yaml - Qwen2.5-7B-Instruct, no
+    # vision tower, no processor) is the first loader where this must be
+    # False: its _run_generate()/_run_generate_with_history() already
+    # raise a loud RuntimeError if raw_image is not None (defense at the
+    # loader level, correct and unchanged), but that only surfaces AFTER
+    # a real model load - model_console/adapter.py's send_turn() checks
+    # this flag BEFORE that, so a user who attaches an image to a
+    # text-only-no-vision model gets an immediate, friendly ValueError
+    # instead of waiting through a multi-minute cold load first (see
+    # adapter.py's model_supports_image_input(), used the same way
+    # model_supports_text_only() already is by chat_tab.py).
+    image_input_supported: bool = True
+
+    # The model's real usable context window (input + output tokens
+    # combined), in tokens. None (default) means "unknown" - callers
+    # that need a budget (model_console's conversation-history trimming,
+    # see adapter.py's _resolve_context_length()) fall back to the
+    # tokenizer's own model_max_length if that looks sane (not one of
+    # the nonsense huge sentinel values - e.g. 1000000000000000019884624838656 -
+    # some HF tokenizers report when a model card never set a real one),
+    # else a conservative hardcoded default. No loader currently reads
+    # this field itself - it exists for external context-budgeting
+    # logic, not generation mechanics. Set explicitly per-model-profile
+    # from the real model card/config.json when known.
+    context_length: Optional[int] = None
+
+    # Which execution backend runs this model (2026-08-13, multi-runtime
+    # integration - see the plan's "Multi-Runtime Model Integration"
+    # addendum). "transformers" (default - every existing config,
+    # byte-identical behavior) means the normal loader path:
+    # LOADER_REGISTRY + core.model_residency in-process. "vllm" means
+    # the model runs as a vLLM OpenAI-compatible server subprocess
+    # managed by core/vllm_runtime.py (WSL backend only - no loader
+    # class is ever instantiated for it; api/agent_main.py dispatches
+    # on this field before touching ChatBackendAdapter). This field
+    # exists to make the (runtime, checkpoint) combination explicit and
+    # queryable: a checkpoint that fails or performs badly under one
+    # runtime is a combination result, never automatically a "failed
+    # model" - the E4B-under-plain-transformers misdiagnosis this
+    # session is the motivating case. vLLM-only knobs reuse existing
+    # fields: context_length -> --max-model-len, vram_headroom_gb ->
+    # --gpu-memory-utilization (see core/vllm_runtime.py).
+    runtime: str = "transformers"
+
+    # Purely descriptive - not read by any loader mechanics. Lets a
+    # config declare what it's FOR (e.g. "classifier", "extractor",
+    # "research_text") without inventing a structured capability system
+    # (the plan's own future "agent profiles" - system_prompt +
+    # generation_overrides + capabilities + output_mode - is explicitly
+    # NOT built here). Added 2026-08-12 for the research_text role
+    # (config/models/gemma_e4b_research.yaml) so that role is a real,
+    # queryable fact about a config rather than only inferrable from its
+    # filename/system_prompt. None (default) means unset - every
+    # existing config predates this field and is unaffected.
+    role: Optional[str] = None
+
+    # Optional cache_implementation string passed straight through to
+    # generate() (e.g. "static", "offloaded", "quantized") - see
+    # transformers.generation.configuration_utils.ALL_CACHE_IMPLEMENTATIONS
+    # for the full set the installed version recognizes. None (default,
+    # every existing config) means HF's own default (DynamicCache) -
+    # unchanged behavior for every model that doesn't set this.
+    # Deliberately NOT defaulted to anything more aggressive - quantized
+    # KV cache specifically needs a backend package (optimum-quanto or
+    # hqq) not currently installed in this project's environment, and a
+    # model/runtime combination should be empirically confirmed to
+    # accept a given value before it's set here, not assumed from this
+    # field merely existing. Only GemmaLoader reads this today.
+    cache_implementation: Optional[str] = None
+
     extra: dict[str, Any] = field(default_factory=dict)
 
     def build_max_memory_map(self) -> Optional[dict]:
@@ -214,6 +309,7 @@ class GenerationConfig:
             "reasoning_enabled": self.reasoning_enabled,
             "prompt_version": self.prompt_version,
             "restrict_output_charset": self.restrict_output_charset,
+            "cache_implementation": self.cache_implementation,
         }
         blob = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(blob).hexdigest()[:12]
@@ -275,6 +371,19 @@ class BaseLoader(ABC):
         self.tokenizer = None
         self.processor = None
 
+        # Opt-in per-call inference telemetry (Phase 3, 2026-08-12) -
+        # None by default; a loader that implements capture (currently
+        # only GemmaLoader) overwrites this at the end of its own
+        # _generate_from_messages()-equivalent tail with a dict of
+        # VRAM/timing/token-count/stop-reason fields. model_console/
+        # adapter.py's send_turn() reads this (getattr default None) and
+        # folds it into the meta dict it already returns, so a loader
+        # that never sets this is completely unaffected - same opt-in
+        # shape as GemmaLoader's existing _captured_vision_tensors debug
+        # side-channel. Overwritten (not accumulated) on every call -
+        # always reflects only the MOST RECENT generate() call.
+        self.last_inference_telemetry: Optional[dict[str, Any]] = None
+
     @abstractmethod
     def initialize_model_and_tokenizer(self) -> tuple[Any, Any, Any]:
         ...
@@ -291,6 +400,54 @@ class BaseLoader(ABC):
     def _run_generate(self, raw_image: Any, prompt: str) -> str:
         """Raw model call. Returns unvalidated text."""
         ...
+
+    def _run_generate_with_history(
+        self, history: list[dict[str, Any]], raw_image: Any, prompt: str
+    ) -> str:
+        """
+        Additive, NON-abstract (2026-08-11, model_console conversation
+        context) - default raises NotImplementedError, so every existing
+        loader that doesn't override this keeps working exactly as
+        before; nothing about ABC/dataclass instantiation requires this
+        be implemented. _run_generate() itself is NEVER touched by
+        adding this - one-shot pipeline callers (classify()/extract())
+        are completely unaffected.
+
+        `history` is a list of already role-tagged, TEXT-ONLY message
+        dicts: [{"role": "user"|"assistant", "content": [{"type":
+        "text", "text": "..."}]}, ...], oldest first, built generically
+        by model_console/adapter.py (no loader-specific knowledge
+        needed for a plain text content entry - every loader already
+        produces this exact shape for the text portion of its own
+        single-turn content list).
+
+        TEXT-ONLY BY DESIGN, not an oversight: real investigation found
+        Gemma's separate processor() call takes images= as a SINGULAR
+        PIL Image (core/loaders/gemma_loader.py), not a list - passing
+        multiple images across turns would need per-loader rework and
+        is unconfirmed for the other loaders too. Restricting history to
+        text keeps this additive: the current turn's raw_image (if any)
+        is still handled exactly as it already is by each loader's own
+        single-turn message-building code, appended as the LAST message
+        - only one image is ever in play per call, same invariant as
+        _run_generate() already has today.
+
+        A loader that supports this overrides it by reusing its own
+        existing "generate from a full messages list" tail (the part of
+        _run_generate() after message construction - apply_chat_template
+        -> generate -> decode), called with `history + [current_turn_message]`
+        instead of just `[current_turn_message]`. See gemma_loader.py/
+        qwen_loader.py/qwen3vl_loader.py/internvl_loader.py/
+        lfm2_vl_loader.py/smolvlm2_loader.py for the six real
+        implementations - each refactors _run_generate() into building
+        the current-turn message + calling a shared private tail method,
+        so this method and _run_generate() share that tail rather than
+        duplicating gen_kwargs/decode logic twice per file.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support conversation history "
+            "yet - _run_generate_with_history() has no override."
+        )
 
     def release(self) -> None:
         """

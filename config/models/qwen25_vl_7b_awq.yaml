@@ -1,0 +1,31 @@
+model_name: qwen25_vl_7b_awq
+repo_id: Qwen/Qwen2.5-VL-7B-Instruct-AWQ
+# Sentinel, never dispatched: runtime "vllm" models are executed by
+# core/vllm_runtime.py's server subprocess, not a BaseLoader subclass -
+# api/agent_main.py branches on `runtime` before any loader lookup.
+loader_class: vllm
+
+# 2026-08-13, multi-runtime integration (plan addendum). Genuine AWQ
+# checkpoint, confirmed live under vLLM 0.27.1 in ~/venv_vllm: 6.67GiB
+# resident / 0.26s generation - the smallest + fastest of the three
+# confirmed vLLM candidates, and the Phase 1 spike model (full
+# transformers<->vLLM eviction cycle proven with it). The SAME
+# checkpoint hard-failed a Marlin tiling assert under GPTQModel/plain
+# transformers - a (runtime, checkpoint) result, not a model verdict;
+# see GenerationConfig.runtime's docstring.
+runtime: vllm
+
+# Reused-field mappings (see core/vllm_runtime.py):
+#   vram_headroom_gb 2.4 on the 16GB card == the empirically confirmed
+#   --gpu-memory-utilization 0.85 every vLLM test this session used.
+#   context_length -> --max-model-len (tested value).
+vram_headroom_gb: 2.4
+context_length: 4096
+
+do_sample: false
+temperature: 0.1
+max_new_tokens: 400
+
+text_only_supported: true    # confirmed live - the PONG spike turn was text-only
+image_input_supported: true  # full VLM (vision tower intact, modules_to_not_convert: ["visual"])
+role: vision_candidate

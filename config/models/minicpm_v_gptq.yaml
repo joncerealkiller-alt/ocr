@@ -1,0 +1,41 @@
+model_name: minicpm_v_gptq
+repo_id: openbmb/MiniCPM-V-4_5-GPTQ
+# Sentinel - see qwen25_vl_7b_awq.yaml's comment; runtime "vllm" models
+# never instantiate a loader class. (core/loaders/minicpm_v_loader.py
+# exists as the transformers-path alternative but is currently UNUSED -
+# see the runtime note below for why.)
+loader_class: vllm
+
+# 2026-08-13, multi-runtime integration (plan addendum, Phase 4).
+# Genuine GPTQ checkpoint. Originally planned for the transformers path
+# (it works there - confirmed in ~/venv_test, ~8.3GB VRAM, Marlin
+# kernels), but gptqmodel 7.3.2 requires transformers>=5.15 and
+# venv_backend is deliberately pinned to 5.12.1 (matching the Windows
+# production stack) - installing it also downgraded numpy. That install
+# was ROLLED BACK; instead this runs under vLLM like the other
+# candidates, confirmed live under vLLM 0.27.1: 189s engine init,
+# 'PONG' in 0.2s. TIGHT FIT on the 16GB card: 7.3GiB weights +
+# 6.7GiB peak activation (heavy multimodal encoder) leaves only
+# ~0.66GiB KV cache (~4,800 tokens) even at 0.92 utilization - hence
+# the smaller context_length and lower headroom vs. the other vLLM
+# configs. If KV space proves too small in practice, the transformers
+# path via core/loaders/minicpm_v_loader.py is the fallback, but it
+# needs its own venv decision first (transformers 5.15 conflict above).
+runtime: vllm
+
+# 0.92 utilization on the 15.93GiB card == ~1.28GB headroom (tested
+# value - 0.85/4096 failed with "No available memory for cache blocks").
+vram_headroom_gb: 1.28
+context_length: 2048
+
+do_sample: false
+temperature: 0.1
+max_new_tokens: 400
+
+text_only_supported: true    # confirmed live - the PONG test was text-only
+image_input_supported: true  # full MiniCPM-V-4.5 VLM
+role: vision_candidate
+
+# MiniCPM-V's model/processor code is trust_remote_code (its whole chat
+# interface ships in the checkpoint). Read by core/vllm_runtime.py.
+vllm_trust_remote_code: true

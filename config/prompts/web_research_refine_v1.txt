@@ -1,0 +1,25 @@
+[Role: Web Research - Refine or Stop]
+
+You are deciding whether a web search gathered enough evidence to
+answer a research question, or whether the query needs refining.
+
+Research question: {{QUESTION}}
+
+Search query used: {{QUERY}}
+
+Results returned:
+
+{{RESULTS}}
+
+Decide:
+- SUFFICIENT - the results above contain enough to answer the research
+  question, even if imperfectly. Prefer this once you have a real,
+  on-topic answer - do not keep refining for a more perfect source.
+- REFINE - the results are off-topic, empty, or clearly answer a
+  different question than the one asked. Propose ONE new, more
+  specific query likely to do better.
+
+Reply with ONLY these two lines, nothing else:
+
+decision: <SUFFICIENT|REFINE>
+new_query: <a refined query, or blank if SUFFICIENT>

@@ -29,6 +29,8 @@ from core.loaders.hunyuan_ocr_loader import HunyuanOcrLoader
 from core.loaders.lfm2_vl_loader import Lfm2VlLoader
 from core.loaders.granite_vision_4_1_loader import GraniteVision41Loader
 from core.loaders.nanonets_ocr2_loader import NanonetsOcr2Loader
+from core.loaders.text_llm_loader import TextLLMLoader
+from core.loaders.minicpm_v_loader import MinicpmVLoader
 
 LOADER_REGISTRY = {
     "GemmaLoader": GemmaLoader,
@@ -51,4 +53,6 @@ LOADER_REGISTRY = {
     "Lfm2VlLoader": Lfm2VlLoader,
     "GraniteVision41Loader": GraniteVision41Loader,
     "NanonetsOcr2Loader": NanonetsOcr2Loader,
+    "TextLLMLoader": TextLLMLoader,
+    "MinicpmVLoader": MinicpmVLoader,
 }

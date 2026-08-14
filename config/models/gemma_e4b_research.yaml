@@ -1,0 +1,100 @@
+model_name: gemma_e4b_research
+repo_id: google/gemma-4-E4B-it-qat-mobile-transformers
+loader_class: GemmaLoader
+
+# Separate from config/models/gemma_e4b.yaml (2026-08-12) - that config
+# is deliberately pinned as a byte-for-byte mirror of gemma.yaml for
+# Benchmark 2.3's controlled E2B-vs-E4B CLASSIFICATION comparison ("if a
+# setting here ever drifts from gemma.yaml's, that's a bug - resync
+# both" - see that file's own header). Repurposing it for a different
+# role would break that reproducibility guarantee. This file follows
+# the gemma.yaml / gemma_extract.yaml precedent instead: same repo_id/
+# loader_class, a separate role-tuned profile. This is the
+# "research_text" role (Model Console) - a text-only research/reasoning
+# agent role, NOT the vision classification path. See docs/CODE_MAP.md
+# for the pointer to this file's role and role: field.
+#
+# Prior real measurement to be aware of (Benchmark 2.3, docs/
+# BENCHMARK2_3_E2B_VS_E4B.md): this exact checkpoint, run through the
+# VISION/classification path (image encoding + 280 image soft tokens +
+# 256-token generation), used MORE peak VRAM than E2B (12524.4MB vs
+# 10642.1MB) and was ~4.8x slower per call - Google's mobile-transformers
+# QAT scheme is tuned for real mobile/edge NPU low-bit compute, not this
+# desktop GPU's generic PyTorch/CUDA kernels. That was a different
+# workload (vision + short classification output) from this config's
+# text-only research-chat use case - a fresh measurement for THIS
+# config, via the Phase 3 telemetry fields, is what actually answers
+# whether the "comparable-or-smaller footprint" hypothesis holds here.
+# Do not assume either result transfers to the other without measuring.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+# Mirrors gemma_extract.yaml's tuning, not gemma.yaml's - open-ended
+# research replies are closer in kind to gemma_extract's multi-line OCR
+# output than to gemma.yaml's single-category classification answer,
+# and open-ended generation degrades via repetition more easily than a
+# short, constrained answer.
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5
+# Starting point, not a settled value - open item for Jon per the plan
+# this config was created from (research-chat replies need more room
+# than gemma_extract's 512-token OCR-row budget, but the right ceiling
+# for this role hasn't been tuned against real output yet).
+max_new_tokens: 1024
+
+min_pixels: null
+max_pixels: null
+
+# Confirmed 2026-08-12 by a real _run_generate(None, prompt) call
+# against THIS config (not inherited from gemma.yaml's confirmation -
+# see base_loader.py's GenerationConfig.text_only_supported docstring
+# for why that distinction matters): "Reply with exactly one word:
+# PONG." -> "PONG.", "What is the capital of France? Answer in one
+# word." -> "Paris". Both coherent, on-task, correct.
+text_only_supported: true
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+# Not yet enabled here - this role's output is open-ended prose, not a
+# constrained field format, and restrict_output_charset was built/tuned
+# against classification/extraction failure modes (off-script token
+# fallback under low visual confidence - see core/loaders/
+# constrained_decoding.py). Revisit if real testing shows a similar
+# off-script-token problem in open-ended research replies.
+restrict_output_charset: false
+
+prompt_version: v1
+prompt_text: ""
+
+# research_text (Phase 5) - purely descriptive (base_loader.py's
+# GenerationConfig.role docstring), not read by any loader mechanics.
+role: research_text
+
+# Left unset (HF default DynamicCache) - see base_loader.py's
+# GenerationConfig.cache_implementation docstring. Quantized KV
+# (int4/int8-equivalent) needs optimum-quanto or hqq, neither installed
+# in this project's environment as of 2026-08-12 - a new-dependency
+# decision for Jon to approve explicitly before it can be tested here,
+# not something to default into.
+cache_implementation: null
+
+# Verified directly from this checkpoint's own real config.json
+# (text_config.max_position_embeddings), already present in the local
+# HF cache - not assumed to match E2B's value.
+context_length: 131072
+
+extra:
+  # Deliberately light/neutral - NOT the full [A] source evidence /
+  # [B] interpretation / [C] hypothesis framework (explicitly future
+  # work, not built in this pass). Placeholder wording - open item for
+  # Jon per the plan this config was created from.
+  system_prompt: >
+    You are a careful research assistant helping with genealogical
+    research. Answer directly and precisely. If you are not certain of
+    something, say so explicitly rather than guessing.
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

@@ -1,0 +1,55 @@
+model_name: qwen_research_text
+repo_id: Qwen/Qwen2.5-7B-Instruct
+loader_class: TextLLMLoader
+
+# Built 2026-08-13 - dedicated text-only research LLM (no vision tower),
+# for core/agent_tools/web_research_agent.py's refine/synthesize calls
+# specifically. Jon's framing: "as this is a research agent only, we
+# could look at a quantized 8b LLM not VLM, so we're not carrying the
+# extra bloat the vision tower adds." Confirmed live in this same
+# session: InternVL3-8B (a VLM) correctly reproduced digits with no
+# fabrication on the first try, unlike Gemma-4-E2B or Qwen3VL-4B, but
+# strained a 16GB card and was noticeably slower - the vision tower is
+# pure dead weight for a call that never receives an image. See
+# core/loaders/text_llm_loader.py's module docstring for the full
+# reasoning and role: base_loader.py's GenerationConfig.role field
+# already anticipated a "research_text" role (see the E4B_QAT candidate
+# this replaces, ruled out in project_e4b_qat_research_role_ruled_out
+# memory - slower + higher peak VRAM than E2B, not vision-specific).
+role: research_text
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.1
+no_repeat_ngram_size: null
+max_new_tokens: 400   # research refine/synthesize prompts are short
+                        # judgments and structured summaries, not
+                        # long-form extraction - matches cpu_planner's
+                        # similarly modest MAX_NEW_TOKENS reasoning
+
+text_only_supported: true   # confirmed by construction - TextLLMLoader
+                              # has no vision path at all, not merely
+                              # untested (see its module docstring)
+image_input_supported: false   # mirror-image flag (base_loader.py) -
+                                 # TextLLMLoader has NO vision tower at
+                                 # all, so it's not just "doesn't need an
+                                 # image" but "cannot accept one" -
+                                 # confirmed live 2026-08-13 when an
+                                 # image was attached in chat_tab.py:
+                                 # the loader's own RuntimeError fired
+                                 # correctly, but only after a full cold
+                                 # load - this flag lets adapter.py catch
+                                 # it immediately instead
+
+# Only GenerationConfig field this loader's initialize_model_and_
+# tokenizer() actually reads for quantization - see text_llm_loader.py.
+# Defaults to True in the loader itself if omitted, but stated
+# explicitly here since it's the whole reason this config exists over
+# an unquantized load.
+extra:
+  load_in_4bit: true
+
+vram_headroom_gb: 1.5
+cpu_offload_limit_gb: 48.0

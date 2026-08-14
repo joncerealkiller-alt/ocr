@@ -1,0 +1,32 @@
+model_name: internvl3_5_8b_awq
+repo_id: cyankiwi/InternVL3_5-8B-AWQ-4bit
+# Sentinel - see qwen25_vl_7b_awq.yaml's comment; runtime "vllm" models
+# never instantiate a loader class.
+loader_class: vllm
+
+# 2026-08-13, multi-runtime integration (plan addendum, Phase 2 smoke
+# test). First confirmation of this checkpoint under ANY runtime:
+# vLLM 0.27.1 in ~/venv_vllm - 6.96GiB weights+non-torch, ~145s engine
+# init, generated 'PONG' correctly in 0.1s. Earlier in the project this
+# checkpoint was found to be compressed-tensors wearing an AWQ label
+# and was unusable under plain transformers (decompress-on-first-use) -
+# per the runtime-format lesson (GenerationConfig.runtime docstring),
+# that was a (transformers, checkpoint) result, and vLLM is the
+# runtime where it actually works.
+runtime: vllm
+
+vram_headroom_gb: 2.4
+context_length: 4096
+
+do_sample: false
+temperature: 0.1
+max_new_tokens: 400
+
+text_only_supported: true    # confirmed live - the PONG smoke test was text-only
+image_input_supported: true  # full InternVL3.5 VLM
+role: vision_candidate
+
+# InternVL's processor/config need trust_remote_code under vLLM (the
+# smoke test passed with it; not needed by the other three vLLM
+# configs). Read by core/vllm_runtime.py from config.extra.
+vllm_trust_remote_code: true
