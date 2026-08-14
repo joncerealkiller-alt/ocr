@@ -72,15 +72,24 @@ def parse_kv_block(raw_output: str) -> dict[str, str]:
             continue
         # Some models (confirmed: SmolVLM2) insert a stray space after the
         # underscore in multi-word field names - "personal_ names:" instead
-        # of "personal_names:". Without normalizing this, the line simply
-        # fails to match a known field and gets silently dropped entirely
-        # (not partially parsed) - the field then reads as "missing" rather
-        # than "malformed", which is a confusing error to debug from the
-        # schema-validation side alone. Stripping internal whitespace from
-        # the key (not the value) fixes this without weakening the
-        # duplicate-block degeneration guard below, since that guard keys
-        # off the normalized name either way.
-        key = match.group(1).replace(" ", "").lower()
+        # of "personal_names:". Others (confirmed 2026-08-15, a
+        # printed_document extraction on the WSL vLLM path) substitute a
+        # SPACE FOR the underscore entirely - "Personal names:"/"Place
+        # names:"/"Visible dates:"/"Subject keywords:", no underscore at
+        # all. Both are the same underlying corruption (the model treats
+        # the field name as a human-readable phrase, not a snake_case
+        # token) and both need the SAME fix: collapse any run of
+        # whitespace and/or underscores down to one underscore, rather
+        # than deleting whitespace outright. Deleting it (the old
+        # behavior) fixed the first case ("personal_ names" ->
+        # "personalnames" happened to still be wrong, just differently -
+        # actually collapsed to "personal_names" only by accident since
+        # there was already an underscore) but silently broke the second:
+        # "Personal names" -> "personalnames" (no separator at all),
+        # which matches no known field, so real, correctly-shaped data
+        # (a proper "name|confidence; ..." value) was discarded as
+        # "unrecognized" instead of parsed - the exact bug this closes.
+        key = re.sub(r"[\s_]+", "_", match.group(1).strip()).lower()
         key = _KEY_ALIASES.get(key, key)
         seen_keys[key] = seen_keys.get(key, 0) + 1
         result[key] = match.group(2).strip()
@@ -129,7 +138,11 @@ def _inline_field_split(raw_output: str) -> dict[str, str]:
     result: dict[str, str] = {}
     seen_keys: dict[str, int] = {}
     for i, m in enumerate(matches):
-        key = m.group(1).replace(" ", "").lower()
+        # Same normalization as parse_kv_block() above (collapse
+        # whitespace/underscore runs to one underscore, not delete
+        # whitespace) - kept in sync for the same reason, see that
+        # function's docstring for the 2026-08-15 motivating case.
+        key = re.sub(r"[\s_]+", "_", m.group(1).strip()).lower()
         key = _KEY_ALIASES.get(key, key)
         start = m.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(raw_output)
