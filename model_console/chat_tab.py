@@ -740,6 +740,20 @@ class ChatTab(Frame):
 
         pil_image = chat_image.pil_image if chat_image else None
         image_path = str(chat_image.source_path) if chat_image and chat_image.source_path else None
+        if chat_image is not None:
+            # session_log.write_turn() above already persisted this image to
+            # disk (<session_dir>/turns/<basename>_image.png), and nothing
+            # downstream ever reads a past turn's pil_image back out of
+            # session.turns - build_history_for_context()/_serialize_history()
+            # only check `turn.image is not None` for the text marker, never
+            # touch .pil_image (see adapter.py's _IMAGE_OMITTED_NOTE). Without
+            # this release, every image ever attached in a session stays
+            # fully decompressed in memory for the session's whole lifetime -
+            # confirmed as the real cause of a ~9GB idle Windows RSS reading
+            # with no model loaded (2026-08-14). `pil_image` above already
+            # holds the reference this turn's send actually needs, so this
+            # is safe to clear immediately.
+            chat_image.pil_image = None
         agent_mode = self.agent_mode_var.get()
         thread = threading.Thread(
             target=self._worker,

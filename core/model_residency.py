@@ -104,28 +104,62 @@ except OSError:  # pragma: no cover - non-glibc/non-Linux host
 
 def _trim_host_memory() -> None:
     """
-    Returns freed-but-not-yet-returned glibc heap arenas back to the OS
-    (2026-08-15, found live: the backend process held ~8.65GB RSS with
-    NO model resident and GPU VRAM already idle - a completely separate
-    leak from the earlier CUDA-allocator VRAM issue). gc.collect()
-    correctly drops the Python references, but glibc's ptmalloc doesn't
-    automatically unmap the underlying pages back to the kernel after a
-    large allocate-then-free cycle (loading a multi-GB model's weight
-    tensors into host memory during from_pretrained(), even when they're
-    then moved to GPU, leaves the heap fragmented) - this is the same
-    class of problem torch.cuda.empty_cache() solves for VRAM, just at
-    the OS/glibc layer instead of CUDA's. malloc_trim(0) asks glibc to
-    release every trimmable arena; called AFTER gc.collect() so nothing
-    still-referenced gets in the way. No-op (not an error) on a non-
-    glibc host (e.g. native Windows, if this module is ever imported
-    there) - _libc is None there, guarded below.
+    Returns freed-but-not-yet-returned heap memory back to the OS after
+    a model release (2026-08-15, found live: the WSL backend process
+    held ~8.65GB RSS with NO model resident and GPU VRAM already idle -
+    a completely separate leak from the earlier CUDA-allocator VRAM
+    issue). gc.collect() correctly drops the Python references, but the
+    underlying allocator doesn't automatically unmap the freed pages
+    back to the kernel after a large allocate-then-free cycle (loading a
+    multi-GB model's weight tensors into host memory during
+    from_pretrained(), even when they're then moved to GPU, leaves the
+    heap fragmented) - this is the same class of problem
+    torch.cuda.empty_cache() solves for VRAM, just at the OS/allocator
+    layer instead of CUDA's.
+
+    Two platform-specific mechanisms, since this module is imported by
+    BOTH the WSL backend (api/agent_main.py) AND model_console (Windows,
+    via adapter.py) - see feedback_platform_specific_env_var_fixes_
+    verify_both.md in project memory for why a one-platform fix here
+    would silently no-op on the other exactly like the earlier
+    expandable_segments bug did (2026-08-16, added after that gap was
+    caught before it shipped unverified):
+    - glibc (_libc.malloc_trim(0)): releases every trimmable heap arena.
+      No-op (not an error) when _libc is None (non-glibc/non-Linux host).
+    - Windows (kernel32.SetProcessWorkingSetSize): asks the OS to trim
+      the process's working set to its current minimum, forcing freed-
+      but-still-mapped pages out of the resident set rather than leaving
+      them cached against future reuse. -1/-1 for both min and max is
+      the documented "trim to current usage" idiom. No-op (not an error)
+      when ctypes.windll doesn't exist (non-Windows host).
     """
-    if _libc is None:
-        return
-    try:
-        _libc.malloc_trim(0)
-    except Exception:
-        pass
+    if _libc is not None:
+        try:
+            _libc.malloc_trim(0)
+        except Exception:
+            pass
+    windll = getattr(ctypes, "windll", None)
+    if windll is not None:
+        try:
+            # Explicit argtypes/restype are required here, not optional
+            # polish - confirmed live (2026-08-16) that calling this pair
+            # WITHOUT them on 64-bit Windows produces wrong behavior
+            # (RSS went UP after the "trim" in a real test, not down):
+            # ctypes' default c_int marshaling truncates/misaligns the
+            # pointer-sized HANDLE argument on the actual x64 calling
+            # convention. With argtypes/restype declared correctly,
+            # confirmed the call both returns True and actually drops
+            # RSS in the same test.
+            kernel32 = windll.kernel32
+            kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+            kernel32.SetProcessWorkingSetSize.argtypes = [
+                ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t,
+            ]
+            kernel32.SetProcessWorkingSetSize.restype = ctypes.c_bool
+            handle = kernel32.GetCurrentProcess()
+            kernel32.SetProcessWorkingSetSize(handle, ctypes.c_size_t(-1), ctypes.c_size_t(-1))
+        except Exception:
+            pass
 
 
 def _physical_identity(config: GenerationConfig) -> tuple:

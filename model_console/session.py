@@ -33,9 +33,17 @@ def _utcnow() -> datetime:
 @dataclass
 class ChatImage:
     """An image attached to one chat turn, already prepped for a loader
-    call (see image_prep.prep_for_chat - not built here)."""
+    call (see image_prep.prep_for_chat - not built here).
 
-    pil_image: Image.Image
+    pil_image is released (set to None) by chat_tab.py right after the
+    turn's own send, once session_log.write_turn() has already persisted
+    it to disk - nothing reads a past turn's pil_image back out of
+    session.turns, so keeping it resident indefinitely was pure memory
+    growth across a session's lifetime (confirmed cause of a ~9GB idle
+    Windows RSS reading, 2026-08-14). display_name/width/height/sha256/
+    source_path stay populated regardless, for session-log/UI use."""
+
+    pil_image: Optional[Image.Image]
     display_name: str
     width: int
     height: int
