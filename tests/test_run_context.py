@@ -210,6 +210,89 @@ def test_to_relative_rejects_external_path():
             check(True, "ValueError raised for a path outside ctx.run_root")
 
 
+def test_update_metadata_producers_and_merge():
+    """2026-08-13 provenance audit: metadata.json's model_config/
+    prompt_versions/preprocessing_config/artifact_summary existed since
+    the run system shipped but had no producer (every real run carried
+    null). update_metadata() is the producer API - dict values MERGE so
+    two stages can each contribute without clobbering, unknown keys are
+    rejected loudly, and lifecycle/identity keys are not updatable."""
+    print("\ntest_update_metadata_producers_and_merge")
+    with _TempWorkspace() as ws:
+        ctx = RunContext.create(ws, run_type="diagnostic", source_input="t")
+        ctx.update_metadata(model_config={"classifier": {"model_name": "m1", "runtime": "transformers"}})
+        ctx.update_metadata(model_config={"extractor": {"model_name": "m2", "runtime": "vllm"}})
+        ctx.update_metadata(prompt_versions={"classifier": "v1"})
+        meta = ctx._read_metadata()
+        check(meta["model_config"]["classifier"]["runtime"] == "transformers",
+              "first stage's model_config entry survives a second stage's merge")
+        check(meta["model_config"]["extractor"]["runtime"] == "vllm",
+              "second stage's entry merged in alongside, not clobbering")
+        check(meta["prompt_versions"] == {"classifier": "v1"}, "prompt_versions populated")
+        check(meta["status"] == "in_progress", "lifecycle fields untouched by update_metadata")
+        try:
+            ctx.update_metadata(status="completed")
+            check(False, "non-updatable key rejected")
+        except ValueError:
+            check(True, "non-updatable key rejected")
+
+
+def test_content_hash_includes_runtime():
+    """A result is identified by CHECKPOINT + RUNTIME (multi-runtime
+    lesson): two otherwise-identical configs differing only in runtime
+    must not hash identically."""
+    print("\ntest_content_hash_includes_runtime")
+    from core.loaders.base_loader import GenerationConfig
+    a = GenerationConfig(model_name="m", repo_id="r", loader_class="L", runtime="transformers")
+    b = GenerationConfig(model_name="m", repo_id="r", loader_class="L", runtime="vllm")
+    check(a.content_hash() != b.content_hash(),
+          "content_hash differs when only runtime differs")
+
+
+def test_genealogy_memory_runtime_column_and_unknown_preserved():
+    """Additive runtime column: new rows record it when given; rows
+    written without it (and all historical rows) stay NULL - unknown
+    provenance is preserved, never guessed (audit evidence rule)."""
+    print("\ntest_genealogy_memory_runtime_column_and_unknown_preserved")
+    import tempfile as _tf
+    from types import SimpleNamespace
+    from core.genealogy_memory import GenealogyMemory
+    from core.schema import ConfidenceLevel, DocumentCategory
+    tmp = Path(_tf.mkdtemp())
+    try:
+        mem = GenealogyMemory(db_path=tmp / "mem.db")
+        entity = SimpleNamespace(value="John Kemper", confidence=ConfidenceLevel.CONFIRMED)
+        result = SimpleNamespace(
+            personal_names=[entity], place_names=[], visible_dates=[],
+            file_path="x.png", category=DocumentCategory.PRINTED_DOCUMENT,
+            model="gemma_extract", prompt_version="v1",
+        )
+        mem.record_extraction_result(result, runtime="vllm")
+        mem.record_extraction_result(result)  # runtime unknown at call site
+        import sqlite3
+        conn = sqlite3.connect(tmp / "mem.db")
+        rows = conn.execute("SELECT runtime FROM discoveries ORDER BY id").fetchall()
+        conn.close()
+        check(rows[0][0] == "vllm", "runtime recorded when provided")
+        check(rows[1][0] is None, "runtime stays NULL (unknown) when not provided - never guessed")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_legacy_run_unknown_provenance_preserved():
+    """The synthetic legacy run's metadata must keep null (unknown)
+    provenance fields rather than gaining fabricated values - checked
+    against the migration constructor, not the real workspace."""
+    print("\ntest_legacy_run_unknown_provenance_preserved")
+    with _TempWorkspace() as ws:
+        ctx = RunContext.create_legacy_migration_run(ws, source_input="fake_legacy")
+        meta = ctx._read_metadata()
+        for key in ("created_at", "pipeline_version", "taxonomy_hash",
+                     "model_config", "prompt_versions", "preprocessing_config"):
+            check(meta[key] is None, f"legacy run {key} preserved as null/unknown")
+        check(meta["status"] == "completed", "legacy run immediately completed")
+
+
 def main():
     test_workspace_context_sibling_default()
     test_run_id_uniqueness_and_hash_stability()
@@ -221,6 +304,10 @@ def main():
     test_db_rows_are_run_relative_and_resolve()
     test_resolve_path_independent_of_ambient_workspace()
     test_to_relative_rejects_external_path()
+    test_update_metadata_producers_and_merge()
+    test_content_hash_includes_runtime()
+    test_genealogy_memory_runtime_column_and_unknown_preserved()
+    test_legacy_run_unknown_provenance_preserved()
 
     print(f"\n{'='*60}")
     print(f"RESULTS: {_PASS} passed, {_FAIL} failed")

@@ -63,6 +63,20 @@ CREATE INDEX IF NOT EXISTS ix_discoveries_type ON discoveries(entity_type);
 CREATE INDEX IF NOT EXISTS ix_discoveries_source ON discoveries(source_file_path);
 """
 
+# Additive columns applied after CREATE TABLE IF NOT EXISTS (same
+# convention as core/pipeline_db.py's _ADDITIVE_COLUMNS): existing DBs
+# gain the column with NULL for every historical row - which is the
+# CORRECT provenance for those rows (their runtime genuinely wasn't
+# recorded at the time; NULL = unknown, never backfilled with a guess,
+# per the 2026-08-13 provenance audit's evidence rule).
+_ADDITIVE_COLUMNS = (
+    # runtime: which execution backend produced this discovery
+    # (transformers / vllm / ...) - a result is identified by
+    # CHECKPOINT + RUNTIME, not model name alone (multi-runtime lesson,
+    # see GenerationConfig.runtime).
+    ("discoveries", "runtime", "TEXT"),
+)
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -89,10 +103,14 @@ class GenealogyMemory:
         conn = self._connect()
         try:
             conn.executescript(_SCHEMA)
+            for table, column, decl in _ADDITIVE_COLUMNS:
+                cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+                if column not in cols:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
         finally:
             conn.close()
 
-    def record_extraction_result(self, result) -> int:
+    def record_extraction_result(self, result, runtime: Optional[str] = None) -> int:
         """
         Records every entity in a core.schema.ExtractionResult as one
         discoveries row each. `result` is typed loosely (not
@@ -118,28 +136,28 @@ class GenealogyMemory:
             for name in result.personal_names:
                 conn.execute(
                     "INSERT INTO discoveries (entity_type, value, confidence, "
-                    "source_file_path, source_category, model, prompt_version, created_at) "
-                    "VALUES ('personal_name', ?, ?, ?, ?, ?, ?, ?)",
+                    "source_file_path, source_category, model, prompt_version, created_at, runtime) "
+                    "VALUES ('personal_name', ?, ?, ?, ?, ?, ?, ?, ?)",
                     (name.value, name.confidence.value, result.file_path,
-                     result.category.value, result.model, result.prompt_version, now),
+                     result.category.value, result.model, result.prompt_version, now, runtime),
                 )
                 inserted += 1
             for place in result.place_names:
                 conn.execute(
                     "INSERT INTO discoveries (entity_type, value, confidence, "
-                    "source_file_path, source_category, model, prompt_version, created_at) "
-                    "VALUES ('place_name', ?, ?, ?, ?, ?, ?, ?)",
+                    "source_file_path, source_category, model, prompt_version, created_at, runtime) "
+                    "VALUES ('place_name', ?, ?, ?, ?, ?, ?, ?, ?)",
                     (place.value, place.confidence.value, result.file_path,
-                     result.category.value, result.model, result.prompt_version, now),
+                     result.category.value, result.model, result.prompt_version, now, runtime),
                 )
                 inserted += 1
             for date in result.visible_dates:
                 conn.execute(
                     "INSERT INTO discoveries (entity_type, value, confidence, "
-                    "source_file_path, source_category, model, prompt_version, created_at) "
-                    "VALUES ('visible_date', ?, ?, ?, ?, ?, ?, ?)",
+                    "source_file_path, source_category, model, prompt_version, created_at, runtime) "
+                    "VALUES ('visible_date', ?, ?, ?, ?, ?, ?, ?, ?)",
                     (date.value, date.confidence.value, result.file_path,
-                     result.category.value, result.model, result.prompt_version, now),
+                     result.category.value, result.model, result.prompt_version, now, runtime),
                 )
                 inserted += 1
             conn.execute("COMMIT")

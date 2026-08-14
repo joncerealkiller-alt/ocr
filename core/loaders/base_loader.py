@@ -310,6 +310,18 @@ class GenerationConfig:
             "prompt_version": self.prompt_version,
             "restrict_output_charset": self.restrict_output_charset,
             "cache_implementation": self.cache_implementation,
+            # Added 2026-08-13 (RunContext/provenance audit): runtime is
+            # part of what identifies a result - the same checkpoint
+            # under transformers vs vLLM uses different kernels and can
+            # behave differently (the whole multi-runtime lesson), so a
+            # config whose runtime is edited must NOT hash identically
+            # to its previous self. This changes new hashes relative to
+            # historical ones for otherwise-identical settings; that is
+            # correct, not a regression - the settings universe genuinely
+            # gained a dimension, and the hash is a provenance stamp
+            # written into results, never a join key (verified: no
+            # caller joins on generation_config_hash).
+            "runtime": self.runtime,
         }
         blob = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(blob).hexdigest()[:12]

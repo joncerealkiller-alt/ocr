@@ -222,7 +222,11 @@ def extract_fields_tool(args: ExtractFieldsArgs) -> ExtractFieldsResult:
     # is caught and printed, not raised.
     try:
         from core.genealogy_memory import memory as genealogy_memory
-        genealogy_memory.record_extraction_result(result)
+        # runtime passed explicitly (2026-08-13 provenance audit): a
+        # discovery is provenanced by CHECKPOINT + RUNTIME, not model
+        # name alone - model_cfg.runtime is the execution backend this
+        # extraction actually ran under.
+        genealogy_memory.record_extraction_result(result, runtime=model_cfg.runtime)
     except Exception as e:  # noqa: BLE001
         print(f"[core.agent_tools.tools] WARNING: extract_fields succeeded but "
               f"failed to record discoveries to genealogy memory: {e}")

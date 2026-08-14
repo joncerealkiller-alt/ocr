@@ -254,6 +254,31 @@ def run(manifest_path: Path, debug: bool = False, db_path: Path = DEFAULT_DB_PAT
     writers = open_bucket_writers(bucket_dir)
     db = PipelineDatabase(db_path)
 
+    # Populate the run's model/prompt provenance (2026-08-13 audit:
+    # metadata.json's model_config/prompt_versions fields existed since
+    # the run system shipped but had no producer - every real run
+    # carried null). Records CHECKPOINT + RUNTIME, not just a name,
+    # per the multi-runtime provenance rule: a result is identified by
+    # the (checkpoint, runtime) combination. Best-effort - a metadata
+    # bookkeeping failure must never block real classification.
+    if ctx is not None:
+        try:
+            ctx.update_metadata(
+                model_config={
+                    "classifier": {
+                        "model_name": loader.config.model_name,
+                        "repo_id": loader.config.repo_id,
+                        "runtime": loader.config.runtime,
+                        "loader_class": loader.config.loader_class,
+                        "generation_config_hash": loader.config.content_hash(),
+                    }
+                },
+                prompt_versions={"classifier": loader.config.prompt_version},
+            )
+        except Exception as e:
+            print(f"  WARNING: could not record model provenance in run "
+                  f"metadata ({type(e).__name__}: {e}) - classification proceeds.")
+
     with open(manifest_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         rows = list(reader)

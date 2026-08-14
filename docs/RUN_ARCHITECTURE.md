@@ -2,6 +2,64 @@
 
 Status: **Both Phase 1 and Phase 2 have run for real** (2026-08-08).
 
+**2026-08-13/14 provenance audit addendum** (repository-wide RunContext
+reconciliation, verified live):
+
+- **`RunContext.update_metadata()`** is the producer API for the four
+  metadata fields that existed since day one but were null in every
+  real run (`model_config`, `prompt_versions`, `preprocessing_config`,
+  `artifact_summary`). Dict values merge (two stages contribute without
+  clobbering); identity/lifecycle keys are rejected.
+  `core/classifier.py::run(ctx=...)` is the first real producer -
+  records the classifier's model_name/repo_id/**runtime**/loader_class/
+  generation_config_hash + prompt version. Verified live (real Gemma
+  classification, run `20260814T060340071232_af1dd7bf`).
+- **Checkpoint + runtime is the provenance unit, not model name.**
+  `GenerationConfig.runtime` is included in `content_hash()` (new
+  hashes differ from historical ones for otherwise-identical settings -
+  intended: the settings universe gained a dimension; the hash is a
+  stamp, never a join key - verified no caller joins on it), and
+  `core/genealogy_memory.py`'s `discoveries` gained an additive
+  `runtime` column (historical rows stay NULL = genuinely unknown,
+  never backfilled). `extract_fields_tool` passes it live (verified on
+  WSL: real extraction recorded runtime="transformers").
+- **Stray post-migration writer fixed**:
+  `diagnostics/compare_v26_baseline_vs_census_checkpoint.py` was the
+  only writer created AFTER the 2026-08-08 migration still targeting
+  `data/outputs/`; its output (20 files, 226M) moved by same-volume
+  rename to `genealogy_workspace/research/experiments/
+  layout_v26_vs_census_checkpoint_comparison/` and the script
+  repointed. (`data/outputs/manual_test_images/` is an INPUT image
+  referenced by `scripts/real_image_negative_control_test.py` - a
+  dataset-shaped item, left in place, flagged as an ownership
+  question.)
+- **Gemma E2B hidden-state linear probe closed** (Jon's direction):
+  11 probe-only diagnostics scripts archived to
+  `genealogy_workspace/research/experiments/gemma_hidden_state_probe_archive/`,
+  the 153.2MB of feature caches deleted (131 files, per-file manifest
+  in `deleted_caches_manifest.json` there; path keys were verified
+  RESOLVABLE at deletion time - deleted because the experiment is
+  closed, not because the data was broken). The live logit-margin
+  adapter (`core/gemma_logit_margin_adapter.py`) is a DIFFERENT
+  mechanism used by the Decision Engine and is untouched.
+- **Historical conclusion corrected, raw data untouched**:
+  `research/benchmarks/benchmark2_3_e2b_vs_e4b/CORRECTION_RUNTIME_CONTEXT.md`
+  records that the "E4B 4.8x slower" finding describes a
+  (mobile-QAT-checkpoint, transformers-runtime) combination, not the
+  E4B model.
+- **Intentionally separate stores confirmed, not migrated into
+  RunContext** (boundary audit): `model_console/session_log.py`
+  (conversation identity), `benchmark/benchmark_db.py` + prompt-sweep
+  run ids (experiment semantics, [D] special-purpose),
+  `core/genealogy_memory.py` (durable discoveries),
+  `core/pipeline_db.py` (per-image pipeline state). Agent/chat tool
+  invocations are session-scoped work, deliberately NOT pipeline runs -
+  their provenance lives in session logs + genealogy memory
+  (now with runtime), not in synthetic RunContexts.
+- **`core/debug_dump.py`** was already RunContext-backed
+  (run_type="diagnostic") with a documented flat-dir fallback - no
+  change needed.
+
 **Phase 1**: `data/working/`, `data/raw_from_pdf/`, `data/buckets/`,
 `data/manifest.csv`, `data/manifest_provenance.json`, and
 `data/pipeline.db` have been migrated into

@@ -338,6 +338,47 @@ class RunContext:
         ctx._create_dirs()
         return ctx
 
+    # Metadata keys a stage may legitimately populate after create().
+    # These four have existed in every run's metadata.json since the
+    # run system shipped (2026-08-08) but had NO producer anywhere in
+    # the codebase - every real run carried them as null (confirmed by
+    # inspecting all 9 real runs on disk, 2026-08-13 audit). This
+    # method is the missing producer API, not a new concept.
+    _UPDATABLE_METADATA_KEYS = frozenset(
+        {"model_config", "prompt_versions", "preprocessing_config", "artifact_summary"}
+    )
+
+    def update_metadata(self, **fields) -> None:
+        """Populates the stage-owned metadata fields (model_config,
+        prompt_versions, preprocessing_config, artifact_summary) on an
+        in-progress run. Dict-valued fields MERGE into any existing
+        dict value rather than replacing it, so two stages can each
+        contribute their own keys (classifier contributes its model,
+        a later extraction stage contributes its own) without one
+        clobbering the other. Rejects unknown keys loudly - identity/
+        lifecycle fields (run_id, status, timestamps, hashes) are NOT
+        updatable through this; they belong to create()/mark_*().
+
+        Per the provenance discipline (2026-08-13 audit): a model entry
+        recorded here should identify CHECKPOINT + RUNTIME, not a bare
+        model name - see GenerationConfig.runtime and the runtime-format
+        lesson in the architecture plan's multi-runtime addendum.
+        """
+        unknown = set(fields) - self._UPDATABLE_METADATA_KEYS
+        if unknown:
+            raise ValueError(
+                f"update_metadata() got non-updatable key(s) {sorted(unknown)} - "
+                f"allowed: {sorted(self._UPDATABLE_METADATA_KEYS)}"
+            )
+        metadata = self._read_metadata()
+        for key, value in fields.items():
+            existing = metadata.get(key)
+            if isinstance(existing, dict) and isinstance(value, dict):
+                existing.update(value)
+            else:
+                metadata[key] = value
+        self._write_metadata(metadata)
+
     def mark_completed(self) -> None:
         metadata = self._read_metadata()
         metadata["status"] = "completed"
