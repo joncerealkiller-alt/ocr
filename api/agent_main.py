@@ -68,6 +68,7 @@ early, in the process's environment.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
@@ -80,7 +81,6 @@ from fastapi import FastAPI, HTTPException
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from core.agent_tools.planner import run_agent_turn
 from core.network_gate import network_gate
 from core.vllm_runtime import vllm_runtime
 from model_console.adapter import (
@@ -153,6 +153,30 @@ def _decode_image(image_base64: Optional[str]) -> Optional[Image.Image]:
         raise HTTPException(status_code=400, detail=f"Could not decode image_base64: {e}") from e
 
 
+def _localize_client_path(path: Optional[str]) -> Optional[str]:
+    """
+    Converts a Windows drive path (J:\\..., E:/...) from the client into
+    this host's local form when running on POSIX/WSL (J:\\x -> /mnt/j/x).
+    THE one normalization point for client-supplied filesystem paths -
+    applied at the request boundary so everything downstream (the
+    image-open fallback, run_agent_chat_turn, the planner putting the
+    path into tool args like extract_fields' file_path) sees a locally
+    valid path. Found live 2026-08-14: an agent turn's extract_fields
+    failed not_found because the planner received the Windows-form
+    image_path verbatim inside WSL. No-op on Windows, for non-drive
+    paths, and when the /mnt translation doesn't actually exist (an
+    unmounted drive letter shouldn't silently produce a different
+    wrong path - the original at least names what the client meant).
+    """
+    if not path or os.name != "posix":
+        return path
+    if len(path) >= 3 and path[1] == ":" and path[2] in ("\\", "/"):
+        candidate = f"/mnt/{path[0].lower()}/" + path[3:].replace("\\", "/")
+        if Path(candidate).exists():
+            return candidate
+    return path
+
+
 def _encode_image_data_uri(image: Image.Image) -> str:
     buf = io.BytesIO()
     image.save(buf, format="PNG")
@@ -183,6 +207,18 @@ def _make_vllm_send_turn_fn(model_name: str, config):
 
     def send_turn_fn(prompt_text: str, image=None, system_prompt: str = "",
                       history=None) -> tuple[str, dict[str, Any]]:
+        # Re-acquire per call, not just once per turn (2026-08-14, found
+        # live the moment the path-localization fix let extract_fields
+        # actually run): a GPU tool dispatched mid-agent-turn loads a
+        # transformers model via residency.borrow(), whose
+        # gpu_coordinator.claim("transformers") correctly EVICTS this
+        # turn's own vLLM subprocess - so the final-answer step must
+        # re-establish it. acquire() is a cheap no-op when the server is
+        # still running; after an eviction it pays a full engine re-init
+        # (~3min) - a known cost of mixing a vLLM chat model with
+        # transformers GPU tools in one turn on a single 16GB card, not
+        # a bug. The alternative (skipping the answer) is worse.
+        vllm_runtime.acquire(model_name, config)
         messages: list[dict[str, Any]] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -232,9 +268,13 @@ def chat_turn(req: ChatTurnRequest) -> dict:
     into chat_tab.py's UI, but already a real, separate code path).
     """
     image = _decode_image(req.image_base64)
-    if image is None and req.image_path:
+    # Localize the client's path ONCE at the boundary - image_path from a
+    # Windows client is Windows-form; everything below (image-open
+    # fallback, planner tool args) needs this host's form.
+    image_path = _localize_client_path(req.image_path)
+    if image is None and image_path:
         try:
-            image = Image.open(req.image_path).convert("RGB")
+            image = Image.open(image_path).convert("RGB")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Could not open image_path: {e}") from e
 
@@ -266,28 +306,28 @@ def chat_turn(req: ChatTurnRequest) -> dict:
     # sentinel). Everything downstream of send_turn_fn (planner loop,
     # response shaping) is identical between the two branches.
     config = build_config(req.model_name, overrides=req.config_overrides)
-    if config.runtime == "vllm":
-        vllm_runtime.acquire(req.model_name, config)
-        send_turn_fn = _make_vllm_send_turn_fn(req.model_name, config)
-        if req.use_agent:
-            result = run_agent_turn(
-                send_turn_fn, req.user_text, image, req.system_prompt,
-                history, image_path=req.image_path,
-            )
-            return {
-                "raw_text": result.final_answer,
-                "meta": result.answer_meta or {},
-                "agent_result": asdict(result),
-            }
-        raw_text, meta = send_turn_fn(req.user_text, image, req.system_prompt, history)
-        return {"raw_text": raw_text, "meta": meta, "agent_result": None}
-
-    _adapter.ensure_loaded(req.model_name, config)
 
     if req.use_agent:
+        # Agent turns ALWAYS run on the text-only research LLM
+        # (transformers), regardless of which model the request named -
+        # 2026-08-14, Jon's policy: "default qwen 7b as the transformers
+        # model, if it needs VLM it can call an agent." Vision happens
+        # inside tools (extract_fields' borrowed extraction model, the
+        # planner's borrowed category-classify VLM - see
+        # core/agent_tools/planner.py); the chat/planning/synthesis
+        # brain never receives pixels. This also eliminates the
+        # confirmed runtime-thrash failure (2026-08-14: an agent turn
+        # on a vLLM chat model alternated GPU owners 3-4x, ~15+ min,
+        # past the client's HTTP timeout) - agent turns now stay
+        # entirely inside the transformers residency system, where
+        # tool-model borrows are cheap swap-and-restore. The requested
+        # model_name still applies to PLAIN chat turns below.
+        from core.agent_tools.research_llm import MODEL_NAME as research_model_name
+        research_config = build_config(research_model_name)
+        _adapter.ensure_loaded(research_model_name, research_config)
         result = run_agent_chat_turn(
             _adapter, req.user_text, image, req.system_prompt,
-            history=history, image_path=req.image_path,
+            history=history, image_path=image_path,
         )
         return {
             "raw_text": result.final_answer,

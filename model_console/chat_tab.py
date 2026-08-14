@@ -134,18 +134,6 @@ MVP_ALLOWED_MODELS = [
     "minicpm_v_gptq",
 ]
 
-# The VLM agent mode auto-swaps to when the dropdown-selected model has
-# no vision tower but the current turn has an image attached (see
-# _worker()'s agent_mode branch below) - the missing "call a VLM if an
-# image is attached" half of Jon's own original framing (2026-08-13,
-# already quoted in that branch's comment for the "default to the LLM
-# when there isn't" half that WAS implemented first). Jon's explicit
-# call for now: "we have newer vision models to test, so gemma4 for
-# now. but this may need to be changed once the new VLMs get tested" -
-# revisit this constant (not the swap logic itself) once a better-
-# tested candidate exists.
-DEFAULT_VISION_MODEL_NAME = "gemma_extract"
-
 OVERRIDABLE_FIELDS = [
     "temperature", "top_p", "top_k", "max_new_tokens",
     "do_sample", "repetition_penalty", "no_repeat_ngram_size",
@@ -694,21 +682,21 @@ class ChatTab(Frame):
             # cold model load, instead of surfacing the loader's own
             # RuntimeError only after that load completes.
             #
-            # Agent mode is EXEMPT from this block (2026-08-13, same
-            # day, Jon caught the gap: "I thought we already figured
-            # out earlier that if a text only model has an image
-            # attached, it calls a VLM?") - _worker() below auto-swaps
-            # to DEFAULT_VISION_MODEL_NAME in that case instead of
-            # erroring, mirroring the existing no-image -> LLM swap
-            # that already exists for the opposite case. Plain chat
-            # mode has no such swap (the picker is a more literal
-            # "run exactly this model" choice there), so it still blocks.
+            # Agent mode is EXEMPT from this block (2026-08-14
+            # text-only-brain policy): in agent mode the dropdown model
+            # isn't what looks at the image anyway - the turn's chat/
+            # planning model is always the research LLM, and vision
+            # happens inside tools (extract_fields' borrowed extraction
+            # model, the planner's borrowed category-classify VLM - see
+            # core/agent_tools/planner.py). Plain chat mode has no such
+            # indirection (the picker is a literal "run exactly this
+            # model" choice there), so it still blocks.
             messagebox.showwarning(
                 "No vision support",
                 f"{model_name!r} has no vision tower (config/models/<name>.yaml's "
                 "image_input_supported is False) - it cannot accept an attached "
                 "image. Remove the image, pick a model with vision support, or "
-                "turn on agent mode (which will use a vision model automatically).",
+                "turn on agent mode (where vision is handled by tools).",
             )
             return
 
@@ -766,45 +754,26 @@ class ChatTab(Frame):
                 prompt_text: str, pil_image, history_snapshot, agent_mode: bool,
                 image_path: Optional[str]) -> None:
         try:
-            if agent_mode and pil_image is None:
-                # Text-only agent turn - no vision is needed anywhere in
-                # this turn's planning/research/synthesis (2026-08-13,
-                # Jon's framing: "call a VLM if an image is attached and
-                # default to the LLM when there isn't - that would cut
-                # latency just by changing the order"). Load the
-                # dedicated research LLM (core/agent_tools/research_llm.py)
-                # as the turn's OWN resident model, rather than whatever
-                # VLM the model dropdown says - core.model_residency's
-                # borrow() calls inside web_research_agent.py/planner.py
-                # then find it ALREADY resident and skip the swap-and-
-                # restore dance entirely (previously: load the VLM
-                # upfront, immediately displace it for research, restore
-                # it, displace it AGAIN for final-answer synthesis,
-                # restore it again - two full wasted reloads on a turn
-                # that never needed the VLM at all). An image-bearing
-                # turn is unaffected - still loads exactly the model the
-                # dropdown says, since vision genuinely may be needed.
+            if agent_mode:
+                # 2026-08-14 (Jon's text-only-brain policy: "default
+                # qwen 7b as the transformers model, if it needs VLM it
+                # can call an agent"): agent mode ALWAYS uses the
+                # dedicated research LLM as the turn's chat/planning/
+                # synthesis model, image or no image - vision work
+                # happens inside tools (extract_fields borrows its
+                # extraction model; the planner's category classify
+                # borrows a VLM - see core/agent_tools/planner.py),
+                # never by making the chat model itself a VLM. This
+                # supersedes both earlier special cases below (text-only
+                # -> research LLM swap; image + no-vision-model ->
+                # DEFAULT_VISION_MODEL_NAME swap) with one uniform rule,
+                # and eliminates the confirmed runtime-thrash failure
+                # (2026-08-14: a vLLM chat model + transformers tools
+                # alternated GPU owners 3-4x in one turn, ~15+ min).
                 from core.agent_tools.research_llm import MODEL_NAME as research_model_name
                 from core.loaders.base_loader import load_model_config as load_research_config
                 config = load_research_config(research_model_name)
                 self.adapter.ensure_loaded(research_model_name, config)
-            elif agent_mode and pil_image is not None and not model_supports_image_input(model_name):
-                # The missing other half of the same rule (2026-08-13,
-                # same day - Jon caught this was never finished: "I
-                # thought we already figured out earlier that if a text
-                # only model has an image attached, it calls a VLM?").
-                # The dropdown picked a text-only-no-vision model (e.g.
-                # qwen_research_text) but this turn genuinely has an
-                # image, so load DEFAULT_VISION_MODEL_NAME instead of
-                # erroring - agent mode already treats the dropdown as
-                # a preference it can override for the opposite case
-                # above, so this is the direct symmetric extension of
-                # that same policy, not a new one. _on_send()'s own
-                # image_input_supported pre-check exempts agent mode
-                # for exactly this reason - plain (non-agent) chat mode
-                # still hard-blocks there instead of reaching this branch.
-                config = build_config(DEFAULT_VISION_MODEL_NAME, overrides=overrides)
-                self.adapter.ensure_loaded(DEFAULT_VISION_MODEL_NAME, config)
             else:
                 config = build_config(model_name, overrides=overrides)
                 self.adapter.ensure_loaded(model_name, config)

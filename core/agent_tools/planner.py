@@ -185,11 +185,18 @@ _EXTRACT_FIELDS_CATEGORIES = frozenset({
 })
 
 
+# The VLM borrowed for the narrow category-classification call below -
+# a config-level choice, not per-turn: the agent's CHAT model is
+# text-only by policy (2026-08-14, Jon: "default qwen 7b as the
+# transformers model, if it needs VLM it can call an agent"), so any
+# genuinely-vision step borrows a VLM the way extract_fields_tool
+# already borrows its extraction model.
+_CATEGORY_CLASSIFY_VLM = "gemma_extract"
+
+
 def _classify_category_for_extraction(
-    send_turn_fn: SendTurnFn,
     image: Optional[Image.Image],
     system_prompt: str,
-    history: Optional[list],
 ) -> Optional[str]:
     """
     A narrow, isolated vision call to pick extract_fields' required
@@ -199,15 +206,32 @@ def _classify_category_for_extraction(
     do ("judge it yourself from what you can see in the image") -
     confirmed live: the CPU planner correctly decided extract_fields
     was the right tool but left args={} since it genuinely can't see
-    the image at all. Rather than let that dispatch fail category-
-    missing and force a wasted retry loop, run ONE small, isolated
-    vision classification call (Gemma, GPU) - this is exactly the kind
-    of task that genuinely needs vision, so it stays on the GPU model,
-    just as a narrow single-purpose call rather than folded into the
-    old do-everything planning call.
+    the image at all.
+
+    2026-08-14 (text-only-brain policy): no longer routed through
+    send_turn_fn - the chat model is text-only by default now, so this
+    borrows _CATEGORY_CLASSIFY_VLM via core.model_residency (the same
+    borrow-and-restore discipline extract_fields_tool uses) and runs
+    one direct _run_generate() call. Same established pattern as
+    model_console/adapter.py's send_turn: _run_generate() is the
+    free-form-call primitive, with the system prompt flowing through
+    config.extra["system_prompt"].
     """
+    if image is None:
+        return None
+    from core.loaders.base_loader import load_model_config
+    from core.model_residency import residency
+
     prompt = _load_prompt("agent_category_classify_v1.txt")
-    raw, _meta = send_turn_fn(prompt_text=prompt, image=image, system_prompt=system_prompt, history=history)
+    try:
+        vlm_cfg = load_model_config(_CATEGORY_CLASSIFY_VLM)
+        vlm_cfg.extra["system_prompt"] = system_prompt
+        with residency.borrow(_CATEGORY_CLASSIFY_VLM, vlm_cfg) as loader:
+            raw = loader._run_generate(image, prompt)
+    except Exception as e:  # noqa: BLE001 - a failed classify falls back to no-category
+        print(f"[core.agent_tools.planner] borrowed-VLM category classification "
+              f"failed ({type(e).__name__}: {e}) - proceeding without a category.")
+        return None
     candidate = raw.strip().lower().strip(".").split()[0] if raw.strip() else ""
     if candidate in _EXTRACT_FIELDS_CATEGORIES:
         return candidate
@@ -677,7 +701,7 @@ def _run_agent_turn_inner(
             # bearing categorization it happened to get right shouldn't
             # be second-guessed by a redundant extra call).
             status_hub.emit("generation_started", operation="generating", active_step="classify_category")
-            category = _classify_category_for_extraction(send_turn_fn, image, system_prompt, history)
+            category = _classify_category_for_extraction(image, system_prompt)
             status_hub.emit("generation_finished", operation="idle")
             if category:
                 call_args["category"] = category
@@ -715,8 +739,12 @@ def _run_agent_turn_inner(
         # cheap case) - no tool evidence to fold in, answer straight from
         # the conversation exactly as Phase 2 did.
         status_hub.emit("generation_started", operation="generating", active_step="answer")
+        # image deliberately NOT forwarded (2026-08-14 text-only-brain
+        # policy): the agent's chat model is text-only by default; if
+        # this turn genuinely needed the pixels, the planner should have
+        # chosen a vision tool above rather than answer_directly.
         answer_raw, answer_meta = send_turn_fn(
-            prompt_text=user_text, image=image, system_prompt=system_prompt, history=history,
+            prompt_text=user_text, image=None, system_prompt=system_prompt, history=history,
         )
         status_hub.emit("generation_finished", operation="idle")
         return AgentTurnResult(steps, answer_raw, planner_raw, planner_meta, answer_meta)
@@ -727,30 +755,22 @@ def _run_agent_turn_inner(
     readable_evidence = _readable_evidence_summary(steps)
     status_hub.emit("generation_started", operation="generating", active_step="answer")
 
-    if image is None:
-        # Text-only synthesis - dedicated research LLM, not the VLM
-        # (2026-08-13, Jon's principle: "keep Gemma as the VLM front
-        # end, but if it's a research task that's text only, no vision
-        # required, handing back to Gemma doesn't make sense for
-        # synthesis"). One borrow covers both the initial attempt and
-        # the correction retry (research_llm.borrowed()'s own
-        # efficiency guarantee - see its docstring), so this costs at
-        # most one GPU residency swap regardless of whether a retry
-        # happens.
-        with research_llm.borrowed() as research_generate:
-            def generate_fn(prompt_text: str) -> tuple[str, dict[str, Any]]:
-                return research_generate(prompt_text), {"model": research_llm.MODEL_NAME}
-            answer_raw, answer_meta = _generate_final_answer_with_year_provenance(
-                generate_fn, final_input, scratchpad_text, readable_evidence=readable_evidence,
-            )
-    else:
-        # An image IS attached this turn - the final answer may need to
-        # reference it (e.g. cross-checking a tool result against what's
-        # actually visible), so this genuinely needs the VLM.
+    # Final synthesis is ALWAYS text-only via the dedicated research LLM
+    # (2026-08-14, extending the 2026-08-13 principle to image-bearing
+    # turns per Jon's text-only-brain policy: "default qwen 7b as the
+    # transformers model, if it needs VLM it can call an agent"). The
+    # image's evidence reaches this step through the tool results in
+    # the scratchpad, not through re-showing pixels to the synthesizer -
+    # the old image-branch here (VLM cross-checks the tool result
+    # against the image) is deliberately given up: on a 16GB card it
+    # cost a full runtime swap per answer, and confirmed live 2026-08-14
+    # it made vLLM-chat agent turns alternate GPU owners 3-4x per turn
+    # (~15+ min, past the client's HTTP timeout). One borrow covers
+    # both the initial attempt and the correction retry
+    # (research_llm.borrowed()'s own efficiency guarantee).
+    with research_llm.borrowed() as research_generate:
         def generate_fn(prompt_text: str) -> tuple[str, dict[str, Any]]:
-            return send_turn_fn(
-                prompt_text=prompt_text, image=image, system_prompt=system_prompt, history=history,
-            )
+            return research_generate(prompt_text), {"model": research_llm.MODEL_NAME}
         answer_raw, answer_meta = _generate_final_answer_with_year_provenance(
             generate_fn, final_input, scratchpad_text, readable_evidence=readable_evidence,
         )
