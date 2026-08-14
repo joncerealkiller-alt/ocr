@@ -278,17 +278,29 @@ def chat_turn(req: ChatTurnRequest) -> dict:
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Could not open image_path: {e}") from e
 
-    if image is None and req.history is None and not model_supports_text_only(req.model_name):
-        raise HTTPException(
-            status_code=422,
-            detail=f"{req.model_name!r} does not support text-only input - attach an image.",
-        )
-    if image is not None and not model_supports_image_input(req.model_name):
-        raise HTTPException(
-            status_code=422,
-            detail=f"{req.model_name!r} has no vision tower - it cannot accept an image "
-                    "(config/models/<name>.yaml's image_input_supported is False).",
-        )
+    # Modality pre-checks are skipped entirely for agent turns
+    # (2026-08-15 fix - regression from the 2026-08-14 text-only-brain
+    # policy): req.model_name is whatever the client's picker had
+    # selected, but an agent turn ALWAYS routes its chat/planning/
+    # synthesis brain to the text-only research LLM regardless (see
+    # below) - an image-bearing agent request legitimately carries a
+    # text-only req.model_name (image_input_supported=False) because
+    # the image is for TOOLS to see, not the brain. Checking modality
+    # against req.model_name here was live-firing a false 422 on every
+    # image-bearing agent turn. Plain (non-agent) turns still need
+    # these checks - there, model_name IS what actually runs.
+    if not req.use_agent:
+        if image is None and req.history is None and not model_supports_text_only(req.model_name):
+            raise HTTPException(
+                status_code=422,
+                detail=f"{req.model_name!r} does not support text-only input - attach an image.",
+            )
+        if image is not None and not model_supports_image_input(req.model_name):
+            raise HTTPException(
+                status_code=422,
+                detail=f"{req.model_name!r} has no vision tower - it cannot accept an image "
+                        "(config/models/<name>.yaml's image_input_supported is False).",
+            )
 
     history: Optional[list[ChatTurn]] = None
     if req.history is not None:
