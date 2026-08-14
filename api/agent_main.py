@@ -462,3 +462,42 @@ def debug_gpu() -> dict:
         "reserved_mb": round(torch.cuda.memory_reserved() / 1e6, 1),
         "max_allocated_mb": round(torch.cuda.max_memory_allocated() / 1e6, 1),
     }
+
+
+def _current_rss_mb() -> float:
+    with open("/proc/self/status") as f:
+        for line in f:
+            if line.startswith("VmRSS:"):
+                return round(int(line.split()[1]) / 1024, 1)  # kB -> MB
+    return -1.0
+
+
+@app.get("/debug/rss")
+def debug_rss() -> dict:
+    """
+    This process's CURRENT host RAM (RSS), not GPU VRAM - added
+    2026-08-15 alongside core.model_residency's _trim_host_memory()
+    fix, for the same reason /debug/gpu exists for VRAM: lets a caller
+    directly measure "did release actually give memory back to the OS"
+    instead of inferring it from `free -h` in a separate shell.
+    """
+    return {"rss_mb": _current_rss_mb()}
+
+
+@app.post("/debug/trim_memory")
+def debug_trim_memory() -> dict:
+    """
+    Diagnostic-only manual trigger for the same host-memory reclaim
+    core.model_residency._release_current() now runs automatically on
+    every model release (gc.collect() + glibc malloc_trim(0)) - lets
+    this be re-run/observed independently of a release cycle.
+    """
+    import gc as _gc
+
+    from core.model_residency import _trim_host_memory
+
+    before = _current_rss_mb()
+    _gc.collect()
+    _trim_host_memory()
+    after = _current_rss_mb()
+    return {"before_mb": before, "after_mb": after, "reclaimed_mb": round(before - after, 1)}
