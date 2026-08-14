@@ -18,9 +18,27 @@ runtime: vllm
 # Reused-field mappings (see core/vllm_runtime.py):
 #   vram_headroom_gb 2.4 on the 16GB card == the empirically confirmed
 #   --gpu-memory-utilization 0.85 every vLLM test this session used.
-#   context_length -> --max-model-len (tested value).
+#   context_length -> --max-model-len.
 vram_headroom_gb: 2.4
-context_length: 4096
+# 2026-08-15: bumped 4096 -> 16384 after a real production-shaped test
+# (a full-page 1968x4880 scan, not the small blob crops the original
+# 4096 was tuned against) needed 12627 image tokens and got rejected
+# outright ("Input length exceeds model's maximum context length").
+# Paired with min_pixels/max_pixels below (the actual fix - caps
+# image tokens at the source) so this ceiling is headroom, not the
+# only thing preventing overflow.
+context_length: 16384
+
+# Resolution cap (2026-08-15) - same values as qwen3b.yaml's proven
+# ones, so a model-choice comparison between the two is apples-to-
+# apples (same visual detail budget), not accidentally favoring
+# whichever model happens to see a higher-resolution version of the
+# image. Wired through to vLLM's --mm-processor-kwargs by
+# core/vllm_runtime.py - previously this field existed on
+# GenerationConfig but the vLLM launch path silently ignored it
+# entirely (only the transformers-path loaders ever read it).
+min_pixels: 200704    # 256*28*28
+max_pixels: 1003520   # 1280*28*28
 
 do_sample: false
 temperature: 0.1

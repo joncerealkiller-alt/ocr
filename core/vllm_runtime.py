@@ -111,6 +111,26 @@ class VllmRuntime:
             # Qwen/Gemma checkpoints. Off unless the config says so.
             if config.extra.get("vllm_trust_remote_code"):
                 cmd.append("--trust-remote-code")
+            # Resolution capping (2026-08-15, real gap found live): every
+            # transformers-path loader already caps image resolution via
+            # GenerationConfig.min_pixels/max_pixels BEFORE tokenization
+            # (e.g. qwen3b.yaml: 200704-1003520) - vLLM configs never had
+            # this wired through at all. Confirmed live: a full-page scan
+            # (1968x4880, ~9.6MP) sent to qwen25_vl_7b_awq with no cap
+            # produced 12627 image tokens, blowing a 4096 context_length
+            # ("Input length exceeds model's maximum context length").
+            # --mm-processor-kwargs is vLLM's equivalent knob for Qwen2/
+            # 2.5-VL's dynamic-resolution processor - only passed when the
+            # config actually sets these fields, so checkpoints that don't
+            # need it (Gemma, MiniCPM) are unaffected.
+            if config.min_pixels is not None or config.max_pixels is not None:
+                import json as _json
+                mm_kwargs = {}
+                if config.min_pixels is not None:
+                    mm_kwargs["min_pixels"] = config.min_pixels
+                if config.max_pixels is not None:
+                    mm_kwargs["max_pixels"] = config.max_pixels
+                cmd.extend(["--mm-processor-kwargs", _json.dumps(mm_kwargs)])
             env = dict(os.environ)
             # Do NOT leak the parent process's allocator config into the
             # vLLM subprocess - api/agent_main.py sets PYTORCH_CUDA_ALLOC_
