@@ -347,6 +347,20 @@ def chat_turn(req: ChatTurnRequest) -> dict:
             "agent_result": asdict(result),
         }
 
+    # Plain chat (use_agent=False): mirrors the SAME runtime branch the
+    # agent path already handles implicitly via _adapter/tools - dropped
+    # here in the 2026-08-14 dispatch rewrite (real regression: every
+    # plain-chat request against a runtime="vllm" model fell straight
+    # to _adapter.send_turn() below, which has no model loaded
+    # server-side (only vllm_runtime got the load from /model/load) ->
+    # RuntimeError: no model resident -> 500, confirmed live 2026-08-15).
+    if config.runtime == "vllm":
+        vllm_runtime.acquire(req.model_name, config)
+        send_turn_fn = _make_vllm_send_turn_fn(req.model_name, config)
+        raw_text, meta = send_turn_fn(req.user_text, image, req.system_prompt, history)
+        return {"raw_text": raw_text, "meta": meta, "agent_result": None}
+
+    _adapter.ensure_loaded(req.model_name, config)
     raw_text, meta = _adapter.send_turn(req.user_text, image, req.system_prompt, history=history)
     return {"raw_text": raw_text, "meta": meta, "agent_result": None}
 
