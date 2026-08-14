@@ -89,6 +89,7 @@ from core.agent_status import status_hub
 from core.gpu_coordinator import gpu_coordinator
 from core.loader_registry import LOADER_REGISTRY
 from core.loaders.base_loader import BaseLoader, GenerationConfig
+from core.resource_guard import check_resources_or_raise, log_resource_trend as _log_resource_trend
 
 try:
     import torch
@@ -232,6 +233,17 @@ class ModelResidencyManager:
         if self._current is not None:
             self._release_current()
 
+        # OOM-hardening pre-flight check (2026-08-15) - refuses to start
+        # a load when host RAM or free VRAM is already critically low,
+        # same placement discipline as the gpu_coordinator claim below
+        # (AFTER the reuse-in-place fast path, since that path consumes
+        # no new memory and must never be blocked by this). Raises
+        # ResourceExhaustedError, deliberately NOT caught here - the
+        # caller (api/agent_main.py) turns it into a clean 503; letting
+        # it propagate raw is correct for other callers (agent tool
+        # borrows) too, per this project's loud-error discipline.
+        check_resources_or_raise(context=f"loading {model_name!r}")
+
         # Cross-runtime GPU claim (2026-08-13, multi-runtime integration)
         # - evicts a running vLLM subprocess (or any other registered
         # runtime's holdings) before this process loads transformers
@@ -321,6 +333,7 @@ class ModelResidencyManager:
             vram_idle_mb=vram_after_release_mb,
         )
         gpu_coordinator.release_noted("transformers")
+        _log_resource_trend("model_residency")
 
     def release_all(self) -> None:
         """Full teardown - nothing left resident. Safe to call when

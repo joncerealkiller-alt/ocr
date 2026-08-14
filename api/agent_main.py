@@ -77,11 +77,13 @@ import io
 from dataclasses import asdict
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from PIL import Image
 from pydantic import BaseModel, Field
 
 from core.network_gate import network_gate
+from core.resource_guard import ResourceExhaustedError, current_rss_mb, free_vram_mb
 from core.vllm_runtime import vllm_runtime
 from model_console.adapter import (
     ChatBackendAdapter, build_config, model_supports_image_input, model_supports_text_only,
@@ -101,6 +103,22 @@ app = FastAPI(
 )
 
 _adapter = ChatBackendAdapter()
+
+
+@app.exception_handler(ResourceExhaustedError)
+def _resource_exhausted_handler(request: Request, exc: ResourceExhaustedError) -> JSONResponse:
+    """
+    Global handler (2026-08-15 OOM-hardening pass) - catches
+    core.resource_guard.check_resources_or_raise() regardless of WHERE
+    it was raised (chat_turn's agent branch, plain-chat branch,
+    /model/load, or even inside a tool call several layers deep via
+    core.model_residency.residency.borrow()) and turns it into a clean
+    503, rather than either an unhandled 500 or - worse - letting the
+    caller proceed into an actual OOM. A FastAPI exception_handler
+    catches this at every route uniformly, so no individual call site
+    needs its own try/except for it.
+    """
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 class HistoryTurn(BaseModel):
@@ -501,3 +519,25 @@ def debug_trim_memory() -> dict:
     _trim_host_memory()
     after = _current_rss_mb()
     return {"before_mb": before, "after_mb": after, "reclaimed_mb": round(before - after, 1)}
+
+
+@app.get("/debug/resources")
+def debug_resources() -> dict:
+    """
+    Combined RSS + free-VRAM + free-system-RAM snapshot (2026-08-15,
+    OOM-hardening pass) - one call instead of separately hitting
+    /debug/rss + /debug/gpu + shelling out to `free`/`nvidia-smi`.
+    Also surfaces the resource_guard floors this process is currently
+    enforcing, so it's visible whether a load is close to being
+    refused before it actually is.
+    """
+    from core.resource_guard import (
+        MIN_AVAILABLE_RAM_MB, MIN_FREE_VRAM_MB, available_ram_mb,
+    )
+    return {
+        "rss_mb": current_rss_mb(),
+        "available_system_ram_mb": available_ram_mb(),
+        "free_vram_mb": free_vram_mb(),
+        "min_available_ram_mb_floor": MIN_AVAILABLE_RAM_MB,
+        "min_free_vram_mb_floor": MIN_FREE_VRAM_MB,
+    }

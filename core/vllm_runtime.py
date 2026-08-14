@@ -48,6 +48,19 @@ import requests
 
 from core.gpu_coordinator import gpu_coordinator
 from core.loaders.base_loader import GenerationConfig
+from core.resource_guard import check_resources_or_raise, log_resource_trend
+
+# Process-name patterns confirmed live 2026-08-15 to match every real
+# process this runtime spawns (both the top-level API server and its
+# child engine-core worker) - used by _kill_stray_processes() below,
+# NOT by the normal SIGTERM/SIGKILL teardown in release() (which tracks
+# self._process directly). This is the reconciliation safety net for
+# orphans that fall OUTSIDE that tracking - confirmed real: an external
+# kill -9 of a test script (before it could tear down its own
+# subprocess tree) left a full vLLM server+engine-core pair running
+# with nothing in THIS process's bookkeeping aware of them, stranding
+# ~13GB of VRAM+RAM until a manual `wsl --shutdown`.
+_STRAY_PROCESS_PATTERNS = ("vllm.entrypoints.openai.api_server", "VLLM::EngineCore")
 
 VLLM_PORT = int(os.environ.get("GENEALOGY_VLLM_PORT", "8502"))
 VLLM_VENV_PYTHON = os.environ.get(
@@ -94,6 +107,19 @@ class VllmRuntime:
                 return self.base_url
             if self._process is not None:
                 self.release()
+
+            # Reconciliation sweep (2026-08-15 hardening pass) - kills
+            # any stray vLLM process this runtime's own bookkeeping
+            # doesn't know about, BEFORE trusting a clean slate to
+            # launch into. See _kill_stray_processes()'s docstring.
+            _kill_stray_processes()
+
+            # OOM-hardening pre-flight check - same discipline as
+            # core/model_residency.py's acquire(): only on the real-
+            # launch path (the reuse-already-running fast path above
+            # returns before this), raises ResourceExhaustedError which
+            # api/agent_main.py turns into a clean 503.
+            check_resources_or_raise(context=f"launching vLLM server for {model_name!r}")
 
             gpu_coordinator.claim("vllm")
 
@@ -199,9 +225,18 @@ class VllmRuntime:
         SIGTERM -> grace wait -> SIGKILL, on the whole process group,
         then verify via nvidia-smi that VRAM actually returned to the
         driver. Safe no-op when nothing is running.
+
+        2026-08-15 hardening: ALSO sweeps for stray processes outside
+        this instance's own tracking, even when self._process is
+        already None - a caller hitting "release/Eject" wants genuine
+        confidence the GPU is actually free, not just that THIS
+        instance's last-known handle is gone (which could be stale if
+        an earlier instance's process leaked past its own tracking).
         """
         with self._lock:
             if self._process is None:
+                _kill_stray_processes()
+                log_resource_trend("vllm_runtime")
                 return
             model_name = self._model_name
             print(f"[core.vllm_runtime] release: {model_name!r}")
@@ -223,6 +258,9 @@ class VllmRuntime:
             used_mb = _nvidia_smi_used_mb()
             if used_mb is not None:
                 print(f"[core.vllm_runtime] post-release GPU memory.used: {used_mb} MiB")
+
+            _kill_stray_processes()
+            log_resource_trend("vllm_runtime")
 
     def chat_completion(self, config: GenerationConfig, messages: list[dict[str, Any]],
                          max_tokens: int, temperature: float) -> str:
@@ -248,6 +286,37 @@ class VllmRuntime:
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
+
+
+def _kill_stray_processes() -> list[int]:
+    """
+    Finds and force-kills any process matching _STRAY_PROCESS_PATTERNS
+    regardless of whether this runtime instance's own bookkeeping
+    (self._process) knows about it - see that constant's docstring for
+    the real incident this closes. SIGKILL directly (not the graceful
+    SIGTERM-then-wait release() uses for a KNOWN process) - a stray is
+    by definition already outside normal lifecycle management, so
+    there's nothing to gracefully hand off to.
+    """
+    killed: list[int] = []
+    for pattern in _STRAY_PROCESS_PATTERNS:
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", pattern], capture_output=True, text=True, timeout=5,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+        for pid_str in result.stdout.split():
+            try:
+                pid = int(pid_str)
+                os.kill(pid, signal.SIGKILL)
+                killed.append(pid)
+            except (ValueError, ProcessLookupError, PermissionError):
+                pass
+    if killed:
+        print(f"[core.vllm_runtime] reaped {len(killed)} stray process(es) not in this "
+              f"runtime's own tracking: {killed}")
+    return killed
 
 
 def _gpu_memory_utilization(config: GenerationConfig) -> float:
