@@ -1,0 +1,61 @@
+# Generated 2026-08-15 (Fable session) - see description.
+suite_id: census_name_context
+version: '2'
+display_name: Census Name-with-Context v2 (tested widecrop prompt)
+description: 'Same four mid-scale marked crops as v1, but using the VERBATIM confirmed-working prompt
+  from config/console_prompts/census_field_transcription_box_widecrop.yaml, replicated in its tested POSITION:
+  suite-level system_prompt with an EMPTY user message (that file''s own comment records this exact condition
+  producing correct "Christensen, Fred" reads at up to 1117x385 on 2026-08-11). v1 used a different wording
+  in the user-message position - keeping both versions gives a direct prompt-sensitivity comparison on
+  identical assets/scorers.'
+required_capability: vision
+system_prompt: This is a wider crop of a Canadian census, your target is inside the RED box only. Read
+  and transcribe the cursive handwriting in the target field. the target field is inside the RED box
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.15
+  max_new_tokens: 60
+cases:
+- case_id: r4_name_ctx
+  category: name_with_context
+  image_path: data/_test_fixtures/census_1931_namectx_r4.png
+  prompt: ''
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Dorothy
+  expected_display: 'GT: ditto + "Dorothy"'
+- case_id: r5_name_ctx
+  category: name_with_context
+  image_path: data/_test_fixtures/census_1931_namectx_r5.png
+  prompt: ''
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Hyzie
+    - Bertha
+  expected_display: 'GT: Hyzie Bertha'
+- case_id: r6_name_ctx
+  category: name_with_context
+  image_path: data/_test_fixtures/census_1931_namectx_r6.png
+  prompt: ''
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Roberts
+    - Burton
+  expected_display: 'GT: Mc Roberts Burton C'
+- case_id: r9_name_ctx
+  category: name_with_context
+  image_path: data/_test_fixtures/census_1931_namectx_r9.png
+  prompt: ''
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Knott
+    - Alfred
+    - William
+  expected_display: 'GT: Knott Alfred William'

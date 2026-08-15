@@ -231,7 +231,7 @@ def run_suite(
             if on_progress is not None:
                 on_progress(index, total, case.case_id)
 
-            case_results.append(_run_one_case(adapter, case))
+            case_results.append(_run_one_case(adapter, case, suite.system_prompt))
 
         else:
             # for/else: loop completed without break -> not cancelled.
@@ -322,7 +322,7 @@ class _AbortRun(Exception):
     pass
 
 
-def _run_one_case(adapter: ChatBackendAdapter, case) -> CaseResult:
+def _run_one_case(adapter: ChatBackendAdapter, case, system_prompt: str = "") -> CaseResult:
     image = None
     resolved_image_path = case.resolve_image_path()
     if resolved_image_path is not None:
@@ -339,7 +339,7 @@ def _run_one_case(adapter: ChatBackendAdapter, case) -> CaseResult:
 
     start = time.time()
     try:
-        raw_output, meta = adapter.send_turn(case.prompt, image, system_prompt="", history=None)
+        raw_output, meta = adapter.send_turn(case.prompt, image, system_prompt=system_prompt, history=None)
     except Exception as e:
         return CaseResult(
             case_id=case.case_id, category=case.category, prompt=case.prompt,

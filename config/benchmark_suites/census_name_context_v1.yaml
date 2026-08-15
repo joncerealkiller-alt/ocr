@@ -1,0 +1,76 @@
+# Generated 2026-08-15 (Fable session) - see description.
+suite_id: census_name_context
+version: '1'
+display_name: Census Name-with-Context v1 (mid-scale marked crops)
+description: 'Tests the "larger crop lets the model compare adjacent handwriting" hypothesis behind feeding
+  Stage 2 more than a single cell: the same four hard Name cells as census_fieldcrops_v1, but cropped
+  as the Name column spanning target row +/-2 neighbors (same writer), target red-boxed, ~370px wide -
+  inside the measured ~1117px red-box working ceiling, prompt truthfully describing the crop. NO OCR hint
+  in any condition. Compare against the same cells at cell-only scale (census_fieldcrops_v1 name cases)
+  and full-row scale (census_headtohead_v1): if letterform-comparison context helps, this mid scale should
+  beat cell-only on these names. Scorers identical to the cell-only cases for apples-to-apples.'
+required_capability: vision
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.15
+  max_new_tokens: 60
+cases:
+- case_id: r4_name_ctx
+  category: name_with_context
+  image_path: data/_test_fixtures/census_1931_namectx_r4.png
+  prompt: 'This is a crop of the Name column from a 1931 Canadian census page, spanning several rows by
+    the same handwriting. Exactly one entry is marked with a red box: transcribe the name written inside
+    the red box. The neighboring rows are shown only so you can compare how this writer forms letters
+    - do not transcribe them. Reply with only the transcription of the red-boxed entry; if unreadable,
+    reply only "?".'
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Dorothy
+  expected_display: 'GT: ditto + "Dorothy"'
+- case_id: r5_name_ctx
+  category: name_with_context
+  image_path: data/_test_fixtures/census_1931_namectx_r5.png
+  prompt: 'This is a crop of the Name column from a 1931 Canadian census page, spanning several rows by
+    the same handwriting. Exactly one entry is marked with a red box: transcribe the name written inside
+    the red box. The neighboring rows are shown only so you can compare how this writer forms letters
+    - do not transcribe them. Reply with only the transcription of the red-boxed entry; if unreadable,
+    reply only "?".'
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Hyzie
+    - Bertha
+  expected_display: 'GT: Hyzie Bertha'
+- case_id: r6_name_ctx
+  category: name_with_context
+  image_path: data/_test_fixtures/census_1931_namectx_r6.png
+  prompt: 'This is a crop of the Name column from a 1931 Canadian census page, spanning several rows by
+    the same handwriting. Exactly one entry is marked with a red box: transcribe the name written inside
+    the red box. The neighboring rows are shown only so you can compare how this writer forms letters
+    - do not transcribe them. Reply with only the transcription of the red-boxed entry; if unreadable,
+    reply only "?".'
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Roberts
+    - Burton
+  expected_display: 'GT: Mc Roberts Burton C'
+- case_id: r9_name_ctx
+  category: name_with_context
+  image_path: data/_test_fixtures/census_1931_namectx_r9.png
+  prompt: 'This is a crop of the Name column from a 1931 Canadian census page, spanning several rows by
+    the same handwriting. Exactly one entry is marked with a red box: transcribe the name written inside
+    the red box. The neighboring rows are shown only so you can compare how this writer forms letters
+    - do not transcribe them. Reply with only the transcription of the red-boxed entry; if unreadable,
+    reply only "?".'
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Knott
+    - Alfred
+    - William
+  expected_display: 'GT: Knott Alfred William'

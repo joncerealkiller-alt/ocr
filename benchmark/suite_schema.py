@@ -80,6 +80,15 @@ class BenchmarkSuite:
     # built for).
     generation_settings: dict[str, Any]
     cases: list[BenchmarkCase]
+    # Optional suite-level system prompt (2026-08-15, added for
+    # census_name_context_v2): some tested prompt techniques live in the
+    # SYSTEM message with an empty user message (see config/console_
+    # prompts/census_field_transcription_box_widecrop.yaml's own comment
+    # - prompt position was part of the confirmed-working condition, and
+    # this project has confirmed prompt wording/position sensitivity
+    # repeatedly). Default "" preserves every existing suite's behavior
+    # byte-for-byte (the runner already passed system_prompt="").
+    system_prompt: str = ""
 
     @property
     def qualified_id(self) -> str:
@@ -148,6 +157,7 @@ def load_suite(path_or_stem: str | Path) -> BenchmarkSuite:
         required_capability=data["required_capability"],
         generation_settings=dict(data["generation_settings"]),
         cases=cases,
+        system_prompt=data.get("system_prompt", ""),
     )
 
 
