@@ -1,0 +1,1 @@
+This image shows ONE field cropped from a row of a form - not the whole row. Transcribe exactly what is written in it. Reply with ONLY the transcription itself - no reasoning, no explanation, no thinking out loud, no preamble. If unreadable, reply only "?".
