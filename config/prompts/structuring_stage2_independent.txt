@@ -1,0 +1,23 @@
+The image is ONE FIELD - a single column, cropped from one row of a census/tabular record.
+
+Your job: report this ONE field's real value by reading the image directly. The image is the only source - there is no other reading to check against.
+
+The field is: {columns_str}
+{field_hint}
+
+Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete worked example using invented data (not from your image - just showing the format):
+
+{example_lines}
+
+Now do the same thing for the REAL field shown in the image ({columns_str}), using the value actually visible there - not the example value.
+
+Confidence must be exactly one of: confirmed, partial, unclear
+- confirmed: every character is clearly readable with no doubt
+- partial: mostly readable, some uncertainty
+- unclear: not legible enough to read with confidence
+
+If the field is genuinely blank on the form, write the field name and colon followed immediately by the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+If you genuinely cannot determine a value from the image, write ? as the value with confidence unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation not shown in the example. Output ONLY {num_columns} line{plural}, nothing else, then stop.
