@@ -1,0 +1,308 @@
+# Generated 2026-08-15 (Fable session) - see description.
+suite_id: census_pairing_1921
+version: '1'
+display_name: Census Pairing 1921 v1 (confirmation page, 29 cells)
+description: Confirmation pass for the ensemble-pairing decision on a SECOND page/writer (1921_022-E002880409
+  - documented as faded with cross-outs, i.e. deliberately harder material). 29 single-cell crops from
+  the sidecar calibrated columns, GT from ground_truth_log.jsonl readable cells (row 37 name excluded
+  - its GT itself contains a question mark). Manual scorer on purpose - same offline pairwise analysis
+  as census_pairing_v1.
+required_capability: vision
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.15
+  max_new_tokens: 60
+cases:
+- case_id: r14_age
+  category: field_age
+  image_path: data/_test_fixtures/census_1921_r14_age.png
+  prompt: This is a small crop of a single handwritten cell from the Age column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''41'']'
+- case_id: r14_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1921_r14_rel.png
+  prompt: This is a small crop of a single handwritten cell from the Relationship to Head column of a
+    1921 Canadian census table (the page is faded in places; a fragment of the adjacent row may show at
+    the edge - read the central entry only). Transcribe exactly what is written in this cell. Reply with
+    only the transcription; if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''head'']'
+- case_id: r14_sex
+  category: field_sex
+  image_path: data/_test_fixtures/census_1921_r14_sex.png
+  prompt: This is a small crop of a single handwritten cell from the Sex column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''m'', ''male'']'
+- case_id: r15_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1921_r15_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1921 Canadian
+    census table (the page is faded in places; a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''ont'']'
+- case_id: r15_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1921_r15_rel.png
+  prompt: This is a small crop of a single handwritten cell from the Relationship to Head column of a
+    1921 Canadian census table (the page is faded in places; a fragment of the adjacent row may show at
+    the edge - read the central entry only). Transcribe exactly what is written in this cell. Reply with
+    only the transcription; if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''wife'']'
+- case_id: r15_sex
+  category: field_sex
+  image_path: data/_test_fixtures/census_1921_r15_sex.png
+  prompt: This is a small crop of a single handwritten cell from the Sex column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''f'', ''female'']'
+- case_id: r17_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1921_r17_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1921 Canadian
+    census table (the page is faded in places; a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''man'']'
+- case_id: r17_name
+  category: field_name
+  image_path: data/_test_fixtures/census_1921_r17_name.png
+  prompt: This is a small crop of a single handwritten cell from the Name column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''edna'']'
+- case_id: r17_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1921_r17_rel.png
+  prompt: This is a small crop of a single handwritten cell from the Relationship to Head column of a
+    1921 Canadian census table (the page is faded in places; a fragment of the adjacent row may show at
+    the edge - read the central entry only). Transcribe exactly what is written in this cell. Reply with
+    only the transcription; if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''daughter'']'
+- case_id: r17_sex
+  category: field_sex
+  image_path: data/_test_fixtures/census_1921_r17_sex.png
+  prompt: This is a small crop of a single handwritten cell from the Sex column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''f'', ''female'']'
+- case_id: r18_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1921_r18_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1921 Canadian
+    census table (the page is faded in places; a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''man'']'
+- case_id: r18_name
+  category: field_name
+  image_path: data/_test_fixtures/census_1921_r18_name.png
+  prompt: This is a small crop of a single handwritten cell from the Name column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''clifford'']'
+- case_id: r18_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1921_r18_rel.png
+  prompt: This is a small crop of a single handwritten cell from the Relationship to Head column of a
+    1921 Canadian census table (the page is faded in places; a fragment of the adjacent row may show at
+    the edge - read the central entry only). Transcribe exactly what is written in this cell. Reply with
+    only the transcription; if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''son'']'
+- case_id: r18_sex
+  category: field_sex
+  image_path: data/_test_fixtures/census_1921_r18_sex.png
+  prompt: This is a small crop of a single handwritten cell from the Sex column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''m'', ''male'']'
+- case_id: r21_age
+  category: field_age
+  image_path: data/_test_fixtures/census_1921_r21_age.png
+  prompt: This is a small crop of a single handwritten cell from the Age column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''67'']'
+- case_id: r21_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1921_r21_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1921 Canadian
+    census table (the page is faded in places; a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''eng'']'
+- case_id: r21_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1921_r21_rel.png
+  prompt: This is a small crop of a single handwritten cell from the Relationship to Head column of a
+    1921 Canadian census table (the page is faded in places; a fragment of the adjacent row may show at
+    the edge - read the central entry only). Transcribe exactly what is written in this cell. Reply with
+    only the transcription; if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''mother'']'
+- case_id: r23_age
+  category: field_age
+  image_path: data/_test_fixtures/census_1921_r23_age.png
+  prompt: This is a small crop of a single handwritten cell from the Age column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''30'']'
+- case_id: r23_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1921_r23_rel.png
+  prompt: This is a small crop of a single handwritten cell from the Relationship to Head column of a
+    1921 Canadian census table (the page is faded in places; a fragment of the adjacent row may show at
+    the edge - read the central entry only). Transcribe exactly what is written in this cell. Reply with
+    only the transcription; if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''head'']'
+- case_id: r23_sex
+  category: field_sex
+  image_path: data/_test_fixtures/census_1921_r23_sex.png
+  prompt: This is a small crop of a single handwritten cell from the Sex column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''m'', ''male'']'
+- case_id: r43_age
+  category: field_age
+  image_path: data/_test_fixtures/census_1921_r43_age.png
+  prompt: This is a small crop of a single handwritten cell from the Age column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''4'']'
+- case_id: r43_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1921_r43_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1921 Canadian
+    census table (the page is faded in places; a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''man'']'
+- case_id: r43_name
+  category: field_name
+  image_path: data/_test_fixtures/census_1921_r43_name.png
+  prompt: This is a small crop of a single handwritten cell from the Name column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''campbell'']'
+- case_id: r43_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1921_r43_rel.png
+  prompt: This is a small crop of a single handwritten cell from the Relationship to Head column of a
+    1921 Canadian census table (the page is faded in places; a fragment of the adjacent row may show at
+    the edge - read the central entry only). Transcribe exactly what is written in this cell. Reply with
+    only the transcription; if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''son'']'
+- case_id: r43_sex
+  category: field_sex
+  image_path: data/_test_fixtures/census_1921_r43_sex.png
+  prompt: This is a small crop of a single handwritten cell from the Sex column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''m'', ''male'']'
+- case_id: r49_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1921_r49_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1921 Canadian
+    census table (the page is faded in places; a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''man'']'
+- case_id: r49_name
+  category: field_name
+  image_path: data/_test_fixtures/census_1921_r49_name.png
+  prompt: This is a small crop of a single handwritten cell from the Name column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''edward'']'
+- case_id: r49_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1921_r49_rel.png
+  prompt: This is a small crop of a single handwritten cell from the Relationship to Head column of a
+    1921 Canadian census table (the page is faded in places; a fragment of the adjacent row may show at
+    the edge - read the central entry only). Transcribe exactly what is written in this cell. Reply with
+    only the transcription; if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (any): [''daughter'']'
+- case_id: r49_sex
+  category: field_sex
+  image_path: data/_test_fixtures/census_1921_r49_sex.png
+  prompt: This is a small crop of a single handwritten cell from the Sex column of a 1921 Canadian census
+    table (the page is faded in places; a fragment of the adjacent row may show at the edge - read the
+    central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: manual
+  scorer_args: {}
+  expected_display: 'GT accept (exact): [''m'', ''male'']'

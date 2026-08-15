@@ -1,0 +1,183 @@
+{
+ "r14_age": [
+  "exact",
+  [
+   "41"
+  ]
+ ],
+ "r14_rel": [
+  "any",
+  [
+   "head"
+  ]
+ ],
+ "r14_sex": [
+  "exact",
+  [
+   "m",
+   "male"
+  ]
+ ],
+ "r15_birthplace": [
+  "any",
+  [
+   "ont"
+  ]
+ ],
+ "r15_rel": [
+  "any",
+  [
+   "wife"
+  ]
+ ],
+ "r15_sex": [
+  "exact",
+  [
+   "f",
+   "female"
+  ]
+ ],
+ "r17_birthplace": [
+  "any",
+  [
+   "man"
+  ]
+ ],
+ "r17_name": [
+  "any",
+  [
+   "edna"
+  ]
+ ],
+ "r17_rel": [
+  "any",
+  [
+   "daughter"
+  ]
+ ],
+ "r17_sex": [
+  "exact",
+  [
+   "f",
+   "female"
+  ]
+ ],
+ "r18_birthplace": [
+  "any",
+  [
+   "man"
+  ]
+ ],
+ "r18_name": [
+  "any",
+  [
+   "clifford"
+  ]
+ ],
+ "r18_rel": [
+  "any",
+  [
+   "son"
+  ]
+ ],
+ "r18_sex": [
+  "exact",
+  [
+   "m",
+   "male"
+  ]
+ ],
+ "r21_age": [
+  "exact",
+  [
+   "67"
+  ]
+ ],
+ "r21_birthplace": [
+  "any",
+  [
+   "eng"
+  ]
+ ],
+ "r21_rel": [
+  "any",
+  [
+   "mother"
+  ]
+ ],
+ "r23_age": [
+  "exact",
+  [
+   "30"
+  ]
+ ],
+ "r23_rel": [
+  "any",
+  [
+   "head"
+  ]
+ ],
+ "r23_sex": [
+  "exact",
+  [
+   "m",
+   "male"
+  ]
+ ],
+ "r43_age": [
+  "exact",
+  [
+   "4"
+  ]
+ ],
+ "r43_birthplace": [
+  "any",
+  [
+   "man"
+  ]
+ ],
+ "r43_name": [
+  "any",
+  [
+   "campbell"
+  ]
+ ],
+ "r43_rel": [
+  "any",
+  [
+   "son"
+  ]
+ ],
+ "r43_sex": [
+  "exact",
+  [
+   "m",
+   "male"
+  ]
+ ],
+ "r49_birthplace": [
+  "any",
+  [
+   "man"
+  ]
+ ],
+ "r49_name": [
+  "any",
+  [
+   "edward"
+  ]
+ ],
+ "r49_rel": [
+  "any",
+  [
+   "daughter"
+  ]
+ ],
+ "r49_sex": [
+  "exact",
+  [
+   "m",
+   "male"
+  ]
+ ]
+}
