@@ -1,0 +1,879 @@
+# Generated 2026-08-15 (Fable session) - prompts produced by the REAL
+# build_structuring_prompt() for fidelity to the two-stage pipeline.
+suite_id: census_hint_anchoring
+version: '1'
+display_name: Census Hint Anchoring v1 (correct vs wrong-plausible hints)
+description: 'Measures OCR-hint anchoring on the same 1931 GT cells as census_fieldcrops_v1 (whose runs
+  are the no-hint control): each cell is presented with the REAL production Stage-2 prompt (core/row_extraction.build_structuring_prompt,
+  structuring_stage2_default template) filled with either the CORRECT value or a WRONG-BUT-PLAUSIBLE one
+  (taken from actual model misreads recorded tonight, e.g. "Huzie Bertha", "Kuott"). Wrong-hint cases
+  discriminate: output=GT means genuinely read, output=hint means parroted, output=? means honest abstention.
+  Names (hard fields, where anchoring was reported) + two birthplaces (easy fields - does clear ink override
+  a wrong hint?).'
+required_capability: vision
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.15
+  max_new_tokens: 80
+cases:
+- case_id: r4_name_correcthint
+  category: correct_hint
+  image_path: data/_test_fixtures/census_1931_r4_name.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    " Dorothy
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Name
+
+    Expected content: A personal name - given name and/or surname - as written.
+
+    Typical format: One or more words.
+
+    May appear as a ditto mark or "Do." meaning the same surname as the row above - transcribe those literally,
+    do not expand them into a name.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Name: Zzyx Q. Bleeth|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Name), using the value actually visible
+    there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: &id001
+    - Dorothy
+  expected_display: 'GT: Dorothy | hint given: "" Dorothy" (correct)'
+- case_id: r4_name_wronghint
+  category: wrong_hint
+  image_path: data/_test_fixtures/census_1931_r4_name.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Dorthy
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Name
+
+    Expected content: A personal name - given name and/or surname - as written.
+
+    Typical format: One or more words.
+
+    May appear as a ditto mark or "Do." meaning the same surname as the row above - transcribe those literally,
+    do not expand them into a name.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Name: Zzyx Q. Bleeth|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Name), using the value actually visible
+    there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: *id001
+  expected_display: 'GT: Dorothy | hint given: "Dorthy" (wrong)'
+- case_id: r5_name_correcthint
+  category: correct_hint
+  image_path: data/_test_fixtures/census_1931_r5_name.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Hyzie Bertha
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Name
+
+    Expected content: A personal name - given name and/or surname - as written.
+
+    Typical format: One or more words.
+
+    May appear as a ditto mark or "Do." meaning the same surname as the row above - transcribe those literally,
+    do not expand them into a name.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Name: Zzyx Q. Bleeth|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Name), using the value actually visible
+    there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: &id002
+    - Hyzie
+    - Bertha
+  expected_display: 'GT: Hyzie Bertha | hint given: "Hyzie Bertha" (correct)'
+- case_id: r5_name_wronghint
+  category: wrong_hint
+  image_path: data/_test_fixtures/census_1931_r5_name.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Huzie Bertha
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Name
+
+    Expected content: A personal name - given name and/or surname - as written.
+
+    Typical format: One or more words.
+
+    May appear as a ditto mark or "Do." meaning the same surname as the row above - transcribe those literally,
+    do not expand them into a name.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Name: Zzyx Q. Bleeth|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Name), using the value actually visible
+    there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: *id002
+  expected_display: 'GT: Hyzie Bertha | hint given: "Huzie Bertha" (wrong)'
+- case_id: r6_name_correcthint
+  category: correct_hint
+  image_path: data/_test_fixtures/census_1931_r6_name.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Mc Roberts Burton C
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Name
+
+    Expected content: A personal name - given name and/or surname - as written.
+
+    Typical format: One or more words.
+
+    May appear as a ditto mark or "Do." meaning the same surname as the row above - transcribe those literally,
+    do not expand them into a name.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Name: Zzyx Q. Bleeth|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Name), using the value actually visible
+    there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: &id003
+    - Roberts
+    - Burton
+  expected_display: 'GT: Roberts Burton | hint given: "Mc Roberts Burton C" (correct)'
+- case_id: r6_name_wronghint
+  category: wrong_hint
+  image_path: data/_test_fixtures/census_1931_r6_name.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Robert Burton C.
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Name
+
+    Expected content: A personal name - given name and/or surname - as written.
+
+    Typical format: One or more words.
+
+    May appear as a ditto mark or "Do." meaning the same surname as the row above - transcribe those literally,
+    do not expand them into a name.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Name: Zzyx Q. Bleeth|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Name), using the value actually visible
+    there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: *id003
+  expected_display: 'GT: Roberts Burton | hint given: "Robert Burton C." (wrong)'
+- case_id: r9_name_correcthint
+  category: correct_hint
+  image_path: data/_test_fixtures/census_1931_r9_name.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Knott Alfred William
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Name
+
+    Expected content: A personal name - given name and/or surname - as written.
+
+    Typical format: One or more words.
+
+    May appear as a ditto mark or "Do." meaning the same surname as the row above - transcribe those literally,
+    do not expand them into a name.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Name: Zzyx Q. Bleeth|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Name), using the value actually visible
+    there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: &id004
+    - Knott
+    - Alfred
+    - William
+  expected_display: 'GT: Knott Alfred William | hint given: "Knott Alfred William" (correct)'
+- case_id: r9_name_wronghint
+  category: wrong_hint
+  image_path: data/_test_fixtures/census_1931_r9_name.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Kuott Alfred William
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Name
+
+    Expected content: A personal name - given name and/or surname - as written.
+
+    Typical format: One or more words.
+
+    May appear as a ditto mark or "Do." meaning the same surname as the row above - transcribe those literally,
+    do not expand them into a name.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Name: Zzyx Q. Bleeth|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Name), using the value actually visible
+    there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: *id004
+  expected_display: 'GT: Knott Alfred William | hint given: "Kuott Alfred William" (wrong)'
+- case_id: r6_birthplace_correcthint
+  category: correct_hint
+  image_path: data/_test_fixtures/census_1931_r6_birthplace.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Manitoba
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Birthplace
+
+    Expected content: A place name.
+
+    Typical format: Town, county, province, state, or country.
+
+    Preserve abbreviations exactly.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Birthplace: Atlantis|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Birthplace), using the value actually
+    visible there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: &id005
+    - Manitoba
+  expected_display: 'GT: Manitoba | hint given: "Manitoba" (correct)'
+- case_id: r6_birthplace_wronghint
+  category: wrong_hint
+  image_path: data/_test_fixtures/census_1931_r6_birthplace.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Ontario
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Birthplace
+
+    Expected content: A place name.
+
+    Typical format: Town, county, province, state, or country.
+
+    Preserve abbreviations exactly.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Birthplace: Atlantis|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Birthplace), using the value actually
+    visible there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: *id005
+  expected_display: 'GT: Manitoba | hint given: "Ontario" (wrong)'
+- case_id: r9_birthplace_correcthint
+  category: correct_hint
+  image_path: data/_test_fixtures/census_1931_r9_birthplace.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    England
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Birthplace
+
+    Expected content: A place name.
+
+    Typical format: Town, county, province, state, or country.
+
+    Preserve abbreviations exactly.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Birthplace: Atlantis|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Birthplace), using the value actually
+    visible there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: &id006
+    - England
+  expected_display: 'GT: England | hint given: "England" (correct)'
+- case_id: r9_birthplace_wronghint
+  category: wrong_hint
+  image_path: data/_test_fixtures/census_1931_r9_birthplace.png
+  prompt: 'Below is a raw OCR reading of ONE FIELD - a single column, cropped from one row of a census/tabular
+    record - produced by a different tool. The image shown to you is that SAME field crop, not the whole
+    row and not any other column.
+
+
+    Raw OCR reading of this field:
+
+    """
+
+    Ireland
+
+    """
+
+
+    Your job: report this ONE field''s real value, using the actual image as the authoritative source
+    - check or correct the raw OCR reading where it looks wrong, incomplete, or unrelated to what the
+    image shows. Do not just copy the raw reading blindly if the image shows something different, and
+    do not treat a garbled, rambling, or off-topic raw reading as if it describes this field at all -
+    that kind of text is noise, not evidence.
+
+
+    The field is: Birthplace
+
+    Expected content: A place name.
+
+    Typical format: Town, county, province, state, or country.
+
+    Preserve abbreviations exactly.
+
+
+    Write the field name, a colon, the value, a pipe character, then a confidence word. Here is a complete
+    worked example using invented data (not from your image - just showing the format):
+
+
+    Birthplace: Atlantis|confirmed
+
+
+    Now do the same thing for the REAL field shown in the image (Birthplace), using the value actually
+    visible there - not the example value.
+
+
+    Confidence must be exactly one of: confirmed, partial, unclear
+
+    - confirmed: every character is clearly readable with no doubt
+
+    - partial: mostly readable, some uncertainty
+
+    - unclear: not legible enough to read with confidence
+
+
+    If the field is genuinely blank on the form, write the field name and colon followed immediately by
+    the pipe and confirmed, with nothing in between - for example: Occupation:|confirmed
+
+
+    If the raw OCR reading above is empty, garbled, or describes something other than a form field (e.g.
+    an unrelated sentence, a description of a different kind of image entirely), ignore it completely
+    - it is not evidence about what''s on the form. Look at the image directly and read it yourself; if
+    you genuinely cannot determine a value from the image either, write ? as the value with confidence
+    unclear - never guess a plausible-sounding value that is not actually supported by what you can see.
+
+
+    Do not invent a value that is not visible in the image. Do not add commentary, brackets, or any punctuation
+    not shown in the example. Output ONLY 1 line, nothing else, then stop.'
+  scorer: contains_all
+  scorer_args:
+    keywords: *id006
+  expected_display: 'GT: England | hint given: "Ireland" (wrong)'
