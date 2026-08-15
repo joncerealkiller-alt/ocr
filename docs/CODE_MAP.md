@@ -72,6 +72,50 @@ value.
   `"NanonetsOcr2Loader"`) to the loader class. Look a model up via
   `LOADER_REGISTRY.get(config.loader_class)`, not a hardcoded per-model
   if/else.
+  - `validate_model_assignment(model_name, *, require_vision=False,
+    context="") -> GenerationConfig` (2026-08-14) — the one place that
+    checks a pipeline/console model assignment actually resolves to a
+    real, `enabled: true`, registered-loader, capability-appropriate
+    config. Raises `ValueError` naming the offending assignment
+    (`context`) instead of a generic error. Use this, not a bare
+    `load_model_config()` + membership check, whenever code accepts a
+    model name from config (pipeline.yaml, model_console) rather than
+    hardcoding one.
+  - `build_loader(model_name, *, debug=False) -> BaseLoader` — the
+    generic "config → registry → loader" dispatch (validate, look up
+    `LOADER_REGISTRY[loader_class]`, instantiate, `initialize_model_
+    and_tokenizer()`). Use this instead of re-copying the
+    `load_model_config` + `LOADER_REGISTRY.get` + instantiate triplet
+    (`core/classifier.py`'s `build_classifier_loader()` still does its
+    own variant because it must set `prompt_text` on the config
+    *before* load — see that function for why it can't just call
+    `build_loader()`).
+  - `GenerationConfig.enabled: bool` (default `True`) and
+    `.vision_validation_status: str` (default `"validated"`) — registry
+    metadata, not generation mechanics: `enabled: false` in a model's
+    YAML removes it from every pipeline/console assignment without
+    deleting the file; `vision_validation_status` records whether a
+    VLM's vision output has actually been checked, independent of
+    `image_input_supported` (capability) — a model can be
+    `image_input_supported: true` + `vision_validation_status:
+    "untested"` at once, and must never be silently treated as
+    text-only just because it hasn't been validated yet.
+- **`core/classifier.py`**: `validate_pipeline_config(pipeline_cfg)`
+  (2026-08-14) — validates every `config/pipeline.yaml` model
+  assignment (`classifier.model`, each bucket's `model`/
+  `extraction_model`) via `validate_model_assignment()`. Called at the
+  start of `classifier.run()`, NOT inside `load_pipeline_config()`
+  itself (several callers, e.g. `ui/classifier_validation_ui.py`, load
+  the config purely to list bucket names and must keep working even
+  with an intentionally-unset `model: null` bucket).
+- **`config/pipeline.yaml`**'s `console:` section (2026-08-14) — Model
+  Console's model list (`console.allowed_models`) and default
+  (`allowed_models[0]`), read via
+  `model_console/adapter.py`'s `list_console_models()` /
+  `default_console_model()`. Replaces the old hardcoded
+  `MVP_ALLOWED_MODELS` Python list in `model_console/chat_tab.py` — to
+  add/remove/reorder Model Console's model list or change its default,
+  edit this config section, not chat_tab.py.
 - **`core/loaders/base_loader.py`**:
   - `load_model_config(model_name: str) -> GenerationConfig` — reads
     `config/models/<model_name>.yaml`.
@@ -104,6 +148,73 @@ value.
     *then* loads stage-2 — never two models loaded at once.
   - **Before editing any loader file or launching inference**: check
     `nvidia-smi` first — see `CLAUDE.md`'s gate at the top of the repo.
+- **`GenerationConfig.text_only_supported: bool`** (added 2026-08-10,
+  `model_console`) — per-model declaration that a loader's
+  `_run_generate(raw_image, prompt)` has BOTH an explicit
+  `raw_image is None` branch (no image content block, no `images=`
+  kwarg to the processor) AND has had that branch confirmed by a real
+  generation call, not just "the underlying model architecture could
+  probably do it." Defaults `False` for every loader that hasn't been
+  updated/tested this way — most loaders in `core/loaders/` still
+  unconditionally build an image content block and will crash
+  (`AttributeError`/`TypeError`) on `raw_image=None`. **Confirmed
+  working today**: `GemmaLoader` (`gemma.yaml`), `Qwen3VLLoader`
+  (`qwen3vl4b.yaml`), `InternVLLoader` (`internvl3_8b.yaml`) — all three
+  produced correct real output from a text-only call. Reference for the
+  no-image message/chat-template shape:
+  `scripts/gemma_semantic_definition_experiment.py` (a working
+  text-only Gemma caller that predates this flag) and any of the three
+  loaders above. `model_console/adapter.py`'s `model_supports_text_only(name)`
+  is the cheap (no model load) way to read this flag from a config
+  YAML. Not yet checked for the other ~23 loaders — don't assume either
+  way without reading the specific loader's `_run_generate`.
+- **`GenerationConfig.role: Optional[str]`** and **`.cache_implementation:
+  Optional[str]`** (both added 2026-08-12, Model Console E4B research-role
+  work) — `role` is purely descriptive (e.g. `"research_text"`, set by
+  `config/models/gemma_e4b_research.yaml`), not read by any loader
+  mechanics; it's the minimal "what is this config FOR" concept, not the
+  richer capability/profile system the plan's "agent profiles" note
+  (`chat_tab.py`'s own comment) describes as future work.
+  `cache_implementation` is passed straight through to `generate()` as
+  the `cache_implementation=` kwarg when set (only `GemmaLoader` reads
+  it today) — `None` (every config as of this writing) leaves HF's
+  default `DynamicCache` untouched. **Verified, not installed**: neither
+  `optimum-quanto` nor `hqq` is in this project's environment, so
+  `cache_implementation="quantized"` (HF's int4/int8-equivalent KV
+  option) will `ImportError` until one is installed — a new-dependency
+  decision, not silently added. Also verified: Gemma4
+  (`configuration_gemma4.py`) uses a hybrid sliding-window/full-attention
+  layer pattern (5:1 ratio, same shape as Gemma3's `HybridCache`
+  requirement) — `cache_implementation="static"` needs its own live
+  verification against `Gemma4ForConditionalGeneration` before being
+  trusted, not assumed from `transformers.generation.configuration_utils
+  .ALL_CACHE_IMPLEMENTATIONS` merely listing `"static"` as a valid string.
+- **Per-call inference telemetry** (`BaseLoader.last_inference_telemetry:
+  Optional[dict]`, added 2026-08-12) — opt-in side-channel, `None` by
+  default, parallel to `GemmaLoader`'s existing `_captured_vision_tensors`
+  debug-capture pattern. Only `GemmaLoader._generate_from_messages()`
+  populates it today, with `prompt_tokens`, `generated_tokens`,
+  `vram_after_prefill_mb`, `peak_vram_mb`, `final_vram_mb`,
+  `prefill_time_s`, `generation_time_s`, `tokens_per_sec`, `stop_reason`,
+  `cache_implementation`. Prefill/time-to-first-token is captured via a
+  small custom `BaseStreamer` (`_FirstGeneratedTokenStreamer` in
+  `gemma_loader.py`) — verified against the installed transformers'
+  `generate()` source that `streamer.put()` fires ONCE with the raw
+  prompt `input_ids` before the decode loop starts, then once per real
+  generated token; the streamer deliberately captures on the *second*
+  `put()` call, not the first, since the first is just an echo of the
+  prompt, not a "prefill finished" signal. Separately, `core/
+  model_residency.py::ModelResidencyManager.acquire()` captures
+  load-side telemetry (`baseline_vram_mb`, `after_load_vram_mb`,
+  `after_load_reserved_mb`, `load_time_s`) into
+  `residency.last_load_telemetry`, since loading and generating are
+  different events with different owners. `model_console/adapter.py`'s
+  `send_turn()` merges both into `meta["telemetry"] = {"load": ..., 
+  "generate": ...}`, which flows through the same existing `meta` dict
+  plumbing to `chat_tab.py`'s transcript (`_format_telemetry_summary()`)
+  and `session_log.py`'s per-turn JSON (`ChatTurn.telemetry`) — no new
+  channel invented, reused the existing one `runtime_seconds` already
+  used.
 
 ## Prompt & column-list files
 
@@ -1597,6 +1708,52 @@ mode-preserves-the-in-progress-value, mutual exclusion with the header-
 anchor mode, render with both lines present, save/reload round-trip, and
 the schema_version=1 → 2 migration path (synthetic old record, real
 function).
+
+**Substantial further work landed on this tool between 2026-08-07 and
+2026-08-08** (outside this indexer's direct involvement — picked up and
+re-verified 2026-08-08 after `docs/RUN_ARCHITECTURE.md`'s repo/workspace
+split): auto-select-first-unreviewed-divider on page load, an
+"awaiting-placement priority" click rule (a real bug fix — a click meant
+for the currently-selected unreviewed divider was previously getting
+hijacked by `_nearest_divider()` landing on a different, already-visible
+divider's line first) with auto-advance-to-next-unreviewed after every
+placement/confirm/accept, a "Load columns file..." per-session column-
+list override (for a page whose real doc_type has no template YAML yet),
+a no-args folder-picker launch path routed through
+`core/calibration_workspace.py`'s `prepare_evaluation_workspace()` (raw
+folder → isolated evaluation workspace, never opened as production
+input directly), and an exploratory "Test rotation refinement (row-number
+band)" button wired to the new shared `core/rotation_refinement.py`
+(`refine_rotation()`/`BlobCandidate` — a reusable "baseline vs. swept-
+angle, must clear both a relative margin AND an absolute floor, else
+quarantine rather than guess" utility, not yet wired into any live
+pipeline stage) — display-only preview rotation, never written to disk.
+`merge_column_corrections()` also gained a **column_order sync** fix:
+found via a real 1906 census page routed to the wrong template, where
+"Load columns file..." let a human correct the column list but the
+merged sidecar's own top-level `column_order`/`active_column`/`progress`
+were still left naming the wrong template's columns — now replaced (and
+stale wrong-template `columns` entries pruned) whenever the correction
+record's `column_order` differs from the sidecar's own, a no-op
+otherwise.
+
+**Re-verified working, real data, after the `docs/RUN_ARCHITECTURE.md`
+repo/workspace restructuring (2026-08-08)**: this tool's two output
+directories (`data/outputs/column_calibration/`,
+`data/outputs/lac_pull_1901_batch1/` test fixtures) now resolve through
+NTFS junctions into `genealogy_workspace/research/calibration/` and
+`genealogy_workspace/datasets/reference/` respectively — confirmed
+transparent, no code changes needed for path resolution.
+`data/outputs/row_segmentation/` (this tool's sidecar source) got the
+copy-only/no-junction treatment per that doc (protected from `rm -rf`),
+so `DEFAULT_SIDECAR_DIR` still resolves directly, unchanged. One real
+(if minor) hiccup found and fixed: `apply_deskew_angle` was imported
+from `core.row_segmentation` but never actually called anywhere in the
+file — dead import, removed. Full click/place/auto-advance/drag-to-
+adjust/header-anchor/row-number-anchor/rotation-test/save/resume/merge
+cycle re-run end to end against the real `z000077117` page through the
+junctioned paths; the column_order-sync fix separately verified with a
+synthetic wrong-template-then-corrected scenario.
 
 ## Dewarp ground truth — the labelled corner set (measured 2026-07-29)
 

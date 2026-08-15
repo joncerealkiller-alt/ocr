@@ -37,6 +37,7 @@ from core.network_gate import network_gate
 from model_console.adapter import (
     ChatBackendAdapter, build_config, model_requires_remote_backend,
     model_supports_image_input, model_supports_text_only,
+    list_console_models,
 )
 from model_console.agent_bridge import run_agent_chat_turn
 from model_console.conversation_manager import get_effective_context, maybe_summarize_session
@@ -44,95 +45,15 @@ from model_console.image_prep import prep_for_chat, max_dimension_for_model
 from model_console.session import ChatSession, ChatTurn
 from model_console import session_log
 
-# MVP gate (plan's Architectural Risks #3): chat-template quirks are
-# NOT unified across loaders (see adapter.py's docstring) - a model
-# mishandling a short/unfamiliar chat message surfaces silently, so
-# MVP only exposes a small, already-well-exercised subset rather than
-# all 26 profiles on day one. Expand as each model is spot-checked in
-# chat mode (Phase 2).
-#
-# Text-only support is per-model, NOT a blanket property of "chat mode"
-# (2026-08-10 finding - see base_loader.py's GenerationConfig.
-# text_only_supported and adapter.py's model_supports_text_only()): each
-# model below has been confirmed by a real generation call and has its
-# own config/models/<name>.yaml text_only_supported flag set
-# accordingly - that's a per-model config fact this file reads at send
-# time, not something hardcoded here. A future MVP_ALLOWED_MODELS
-# addition without a confirmed flag will correctly still require an
-# image (gemma, gemma_extract, qwen3vl4b, internvl3_8b, lfm2_vl_1_6b,
-# qwen2b/qwen3b text-only confirmed or extended by same-repo-id
-# precedent; smolvlm2_2b's text-only path works mechanically but
-# showed weaker instruction-following in testing - see its own yaml
-# comment). NOTE: gemma_extract is a SEPARATE config from gemma -
-# gemma.yaml is the real pipeline's classification/routing config
-# (config/pipeline.yaml), gemma_extract.yaml is for extraction/OCR-
-# style tasks. Tuning discovered here for one must not be assumed to
-# apply to or be copied into the other without deciding that
-# deliberately - see gemma_extract.yaml's own header comment.
-MVP_ALLOWED_MODELS = [
-    # gemma_extract listed FIRST (2026-08-13, was gemma) - the model
-    # dropdown defaults to list_model_profiles()[0], i.e. whichever
-    # name is first here. gemma.yaml (also the classifier's own config,
-    # config/pipeline.yaml's top-level classifier bucket) has NO
-    # repetition guard at all (repetition_penalty=1.0 neutral,
-    # no_repeat_ngram_size=null - see feedback_gemma_needed_repetition_
-    # guard, confirmed to loop live). gemma_extract.yaml already has a
-    # real, tuned guard (repetition_penalty=1.15, no_repeat_ngram_size=5)
-    # and is a SEPARATE config, so defaulting chat/agent mode to it
-    # avoids the repetition-loop risk without touching gemma.yaml's own
-    # classifier tuning at all.
-    "gemma_extract", "gemma", "qwen3vl4b", "internvl3_8b",
-    "lfm2_vl_1_6b", "qwen2b", "qwen3b", "smolvlm2_2b",
-    # gemma_e4b_research (2026-08-12) - text-only research role for the
-    # E4B QAT checkpoint, config/models/gemma_e4b_research.yaml. Its
-    # text_only_supported flag starts False and stays False until a real
-    # _run_generate(None, prompt) call against THIS config is actually
-    # run and confirmed - see that YAML's own header comment. Listed
-    # here now so it's selectable once that confirmation happens,
-    # without a second code change.
-    "gemma_e4b_research",
-    # qwen_research_text (2026-08-13) - the dedicated quantized
-    # Qwen2.5-7B-Instruct text-only research/synthesis model (no vision
-    # tower - config/models/qwen_research_text.yaml, TextLLMLoader).
-    # Already used internally via core.model_residency.residency.borrow()
-    # for web_research_agent's refine/synthesize calls and planner.py's
-    # tool-evidence final-answer step (see core/agent_tools/research_llm.py)
-    # but was never added here, so it was never directly pickable for a
-    # manual chat session - text_only_supported is confirmed True BY
-    # CONSTRUCTION (TextLLMLoader has no vision path at all), so no
-    # separate confirmation step is needed before listing it, unlike
-    # gemma_e4b_research above.
-    "qwen_research_text",
-    # Multi-runtime candidates (2026-08-13, plan addendum "Multi-Runtime
-    # Model Integration") - runtime: vllm configs served by the WSL
-    # backend's core/vllm_runtime.py subprocess; selectable ONLY with
-    # Backend=remote (the _on_send() pre-check blocks them on local,
-    # since vLLM has no Windows support at all). Each was confirmed by
-    # a real generation under vLLM before being listed here:
-    # qwen25_vl_7b_awq additionally passed the full Phase 1 spike +
-    # live plain-chat AND agent-mode turns through the production API;
-    # the other three passed PONG smoke tests under vLLM (gemma_12b/
-    # e4b also each measured for resident size + generation time).
-    # Vision spot-check status (2026-08-13, all five checked on the
-    # same real 1906 census crop - full table in
-    # docs/WSL_COMPUTE_BACKEND_BASELINE.md): qwen25_vl_7b_awq,
-    # gemma_e4b_w4a16, gemma_12b_w4a16, minicpm_v_gptq all PASSED with
-    # honest cut-off-word handling; internvl3_5_8b_awq PARTIAL FAIL -
-    # it FABRICATED "Nova" as the completion of an edge-cut word (the
-    # exact failure mode feedback_abstention_is_a_feature names) - one
-    # sample, not a verdict, but weigh it when picking a model for
-    # real transcription work.
-    "qwen25_vl_7b_awq",
-    "gemma_12b_w4a16",
-    "gemma_e4b_w4a16",
-    "internvl3_5_8b_awq",
-    # minicpm_v_gptq also runs under vLLM (confirmed PONG, 0.2s) after
-    # the transformers-path plan hit the gptqmodel/transformers-5.12.1
-    # conflict (see its YAML header). TIGHT FIT: only ~0.66GiB KV cache
-    # (~4,800 tokens) at 2048 context - fine for spot-checks, watch for
-    # KV exhaustion on long turns.
-    "minicpm_v_gptq",
-]
+# Model list + default (2026-08-14, config-driven registry pass) now
+# live in config/pipeline.yaml's console.allowed_models, read via
+# model_console.adapter.list_console_models() - NOT a hardcoded Python
+# list here anymore. See that config section's own comment block for
+# the full history/reasoning behind which models are listed, in what
+# order, and why gemma_extract (not gemma) is the default. This file
+# still enforces the import boundary from its own module docstring
+# above: it reads the list through adapter.py, never touches
+# core.loaders/core.loader_registry directly.
 
 OVERRIDABLE_FIELDS = [
     "temperature", "top_p", "top_k", "max_new_tokens",
@@ -154,8 +75,7 @@ CONSOLE_PROMPTS_DIR = MODELS_DIR.parent / "console_prompts"
 
 
 def list_model_profiles() -> list[str]:
-    available = {p.stem for p in MODELS_DIR.glob("*.yaml")}
-    return [name for name in MVP_ALLOWED_MODELS if name in available]
+    return list_console_models()
 
 
 def load_console_prompts() -> dict[str, dict]:

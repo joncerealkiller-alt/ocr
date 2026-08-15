@@ -60,7 +60,55 @@ buckets:
     prompt_file: config/prompts/extractor_portrait_v1.txt
 
   map_land_record:
-    model: qwen3b                # placeholder
+    # 2026-08-13: model swapped qwen3b -> qwen3vl4b (isolating model
+    # choice as a variable) STAYS - see below for why.
+    #
+    # PROMPT reverted to v1, NOT v2/v3. v2/v3's "scan the whole image
+    # systematically, don't stop after the first pass, re-scan for
+    # missed labels" instruction was meant to fix v1's under-extraction
+    # (missed ~50% of real labels) - but on qwen3vl4b it instead
+    # triggered a much worse failure: 86 place_names, ending in a long
+    # run of real-but-unrelated US military forts (Fort Knox, Fort
+    # Bragg, Fort Apache...) that have nothing to do with this Canadian
+    # map. Jon's read, and the working hypothesis until tested
+    # otherwise: "don't stop, keep looking" framing plausibly pushes a
+    # model toward COMPLETING A LIST rather than genuinely re-examining
+    # the image - pattern-completion, not renewed perception. v1 never
+    # showed this failure mode (only under-extraction + one fabricated
+    # entry, both far less severe). See core/schema.py's
+    # flag_suspicious_place_count validator (added the same session) as
+    # the structural safety net regardless of which prompt is active -
+    # that quarantines an implausible run instead of accepting it, but
+    # the prompt itself should not be inviting the runaway generation
+    # in the first place.
+    #
+    # RESOLVED 2026-08-13: the v1-on-qwen3vl4b run ALSO ran away (59
+    # place_names ending in "Fort Belle" repeated ~56 times - classic
+    # autoregressive repetition degeneration at greedy decoding, a
+    # DIFFERENT failure mode from v3's pattern-completion run, but still
+    # broken). Root cause wasn't the prompt at all - qwen3vl4b's
+    # repetition_penalty (1.15) was blindly carried over from qwen3vl2b
+    # untested at this size. Lowered to 1.05 in config/models/
+    # qwen3vl4b.yaml - re-tested live, clean result (16/16 real labels
+    # found, no crash, no runaway generation) BUT one remaining issue:
+    # "Alberta"/"Saskatchewan"/"Manitoba" appeared in place_names tagged
+    # "unclear" - the map never prints province names at all, so this
+    # wasn't a low-confidence READ, it was the model recognizing town
+    # names it knew (Fort Edmonton etc.) and INFERRING the modern
+    # province from outside knowledge, then hedging that inference with
+    # "unclear" instead of leaving it out. v4 tried making that
+    # explicit ("a confidence tag is only valid for something actually
+    # printed... inferred/absent content must be omitted entirely, not
+    # hedged"), naming this exact case as a cautionary example -
+    # RE-TESTED LIVE, DID NOT HOLD: same three province names came back
+    # unchanged. Reverted to v1 (the verified-clean baseline) rather
+    # than keep an unproven variant live - see
+    # feedback_province_inference_needs_structural_fix memory note.
+    # This is now a logged, deferred residual issue (3 extra "unclear"
+    # entries out of ~19), not something to keep prompt-iterating on -
+    # a real fix needs a structural post-extraction filter, not another
+    # prompt wording attempt.
+    model: qwen3vl4b
     prompt_file: config/prompts/extractor_map_v1.txt
 
   mixed_text_image:
@@ -89,6 +137,102 @@ buckets:
     # for it yet.
     model: null
     prompt_file: null
+
+  # photo_collage / casual_photo / cemetery_photo: added to the taxonomy
+  # 2026-08-04 (config/taxonomy.yaml, data/buckets/*.csv already exist)
+  # but never added HERE - this is why ui/classifier_validation_ui.py
+  # (which reads its bucket list from THIS mapping via
+  # core.classifier.load_pipeline_config(), by design - see that file's
+  # own docstring for why bucket lists are never hardcoded in UI code)
+  # was still only showing the old flat-8 buckets. model: null/
+  # prompt_file: null for now, same reason as uncertain_review above -
+  # no extraction workflow has been designed for these three yet
+  # (classifier_guidance itself is also deliberately still unwritten for
+  # all three, pending enough reviewed ground truth - see
+  # core/document_templates.py / taxonomy discussion). Review-only until
+  # that's decided, not a placeholder oversight.
+  photo_collage:
+    model: null
+    prompt_file: null
+
+  casual_photo:
+    model: null
+    prompt_file: null
+
+  cemetery_photo:
+    model: null
+    prompt_file: null
+
+  # TEMPORARY (added 2026-08-08, Jon: "do 2 i can remove later") - lets
+  # ui/classifier_validation_ui.py show diagnostics/
+  # classify_external_folder.py's real-classifier output for Jon's
+  # personal Kemper_Ancestry folder (J:\Screenshots\Kemper_Ancestry,
+  # never copied/moved - the CSV's file_path column points there
+  # in place). This is a REVIEW-ONLY entry - no extraction workflow,
+  # and the underlying images are explicitly NOT part of the production
+  # corpus (per Jon's own constraint) despite being reachable through
+  # BUCKET_DIR the same way every other bucket is. Remove this whole
+  # entry (and the CSV at BUCKET_DIR/kemper_ancestry_review.csv) once
+  # the review pass is done - it isn't meant to be permanent.
+  kemper_ancestry_review:
+    model: null
+    prompt_file: null
+
+# Model Console's chat-mode model list and default (2026-08-14,
+# config-driven registry pass). Previously a hardcoded Python list
+# (model_console/chat_tab.py's old MVP_ALLOWED_MODELS) - moved here so
+# Model Console consumes the same config/models/*.yaml registry as the
+# extraction pipeline instead of maintaining its own separate, drifting
+# list. allowed_models[0] is the dropdown default (was the old list's
+# first entry: gemma_extract - see reasoning below). model_console/
+# adapter.py's list_console_models() intersects this against {name:
+# config/models/name.yaml exists AND enabled: true} - an entry here for
+# a model later disabled or removed is silently skipped, not an error,
+# same tolerance the old MVP_ALLOWED_MODELS/list_model_profiles() had.
+#
+# MVP gate (plan's Architectural Risks #3): chat-template quirks are NOT
+# unified across loaders (see adapter.py's own docstring) - a model
+# mishandling a short/unfamiliar chat message surfaces silently, so this
+# list only exposes a small, already-well-exercised subset rather than
+# every registered profile. Expand only after a model is spot-checked in
+# chat mode.
+#
+# gemma_extract listed first (2026-08-13, was gemma): gemma.yaml (also
+# the classifier's own config above) has NO repetition guard at all
+# (repetition_penalty=1.0 neutral, no_repeat_ngram_size=null - confirmed
+# to loop live). gemma_extract.yaml is a SEPARATE config with a real,
+# tuned guard (repetition_penalty=1.15, no_repeat_ngram_size=5), so
+# defaulting chat/agent mode to it avoids the repetition-loop risk
+# without touching gemma.yaml's own classifier tuning.
+#
+# qwen25_vl_7b_awq / gemma_12b_w4a16 / gemma_e4b_w4a16 /
+# internvl3_5_8b_awq / minicpm_v_gptq are vLLM-runtime configs (WSL
+# backend, core/vllm_runtime.py) - selectable only with Backend=remote
+# in Model Console (local blocks them, vLLM has no Windows support).
+# Vision spot-check status (2026-08-13, full table in
+# docs/WSL_COMPUTE_BACKEND_BASELINE.md): qwen25_vl_7b_awq,
+# gemma_e4b_w4a16, gemma_12b_w4a16, minicpm_v_gptq PASSED with honest
+# cut-off-word handling; internvl3_5_8b_awq PARTIAL FAIL (fabricated
+# "Nova" completing an edge-cut word - see
+# feedback_abstention_is_a_feature) - one sample, not a verdict, weigh
+# it when picking a model for real transcription work.
+console:
+  allowed_models:
+    - gemma_extract
+    - gemma
+    - qwen3vl4b
+    - internvl3_8b
+    - lfm2_vl_1_6b
+    - qwen2b
+    - qwen3b
+    - smolvlm2_2b
+    - gemma_e4b_research
+    - qwen_research_text
+    - qwen25_vl_7b_awq
+    - gemma_12b_w4a16
+    - gemma_e4b_w4a16
+    - internvl3_5_8b_awq
+    - minicpm_v_gptq
 
 # Anomaly detection pass, run across each bucket's output after
 # extraction completes, before anything is written to the vector DB.

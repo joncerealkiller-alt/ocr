@@ -253,6 +253,30 @@ class GenerationConfig:
     # field merely existing. Only GemmaLoader reads this today.
     cache_implementation: Optional[str] = None
 
+    # Registry enable/disable switch (config-driven model registry,
+    # 2026-08-14). False means this config exists on disk but must not be
+    # selectable by any pipeline stage assignment or Model Console -
+    # lets a problematic/deprecated model (e.g. qwen2b.yaml, a documented
+    # near-duplicate of qwen3b.yaml) be turned off from config alone,
+    # without deleting the file or touching pipeline/loader code. Checked
+    # by core.loader_registry.build_loader()/validate_model_assignment() -
+    # NOT enforced inside BaseLoader itself, since a direct
+    # loader_cls(config) call (tests, one-off scripts) should still work.
+    # Defaults True so every pre-existing config is unaffected.
+    enabled: bool = True
+
+    # Vision-capability VALIDATION status, distinct from capability itself
+    # (image_input_supported above). A model can be vision: true (has a
+    # real vision tower, accepts an image) while its vision output has
+    # never actually been checked against ground truth in THIS pipeline -
+    # "untested" must not be collapsed into "text_only" or "disabled".
+    # "validated" | "untested" | "failed". Defaults "validated" for every
+    # pre-existing config, since image_input_supported=True configs were
+    # already being used for real vision extraction/classification before
+    # this field existed - "untested" is for newly added registry entries
+    # that haven't been run yet, not a retroactive downgrade.
+    vision_validation_status: str = "validated"
+
     extra: dict[str, Any] = field(default_factory=dict)
 
     def build_max_memory_map(self) -> Optional[dict]:

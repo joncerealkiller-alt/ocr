@@ -42,8 +42,6 @@ from typing import Callable
 
 from PIL import Image
 
-from core.loaders.base_loader import load_model_config
-from core.loader_registry import LOADER_REGISTRY
 from core.loaders.gemma_loader import GemmaLoader
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -70,16 +68,8 @@ def load_gemma_loader(model_name: str = "gemma") -> GemmaLoader:
     this runner passes each stage's own prompt per-call instead - one
     loaded model, many different prompts across stages/images.
     """
-    model_cfg = load_model_config(model_name)
-    loader_cls = LOADER_REGISTRY.get(model_cfg.loader_class)
-    if loader_cls is None:
-        raise ValueError(
-            f"No loader registered for loader_class={model_cfg.loader_class!r}. "
-            f"Known loaders: {list(LOADER_REGISTRY.keys())}"
-        )
-    loader = loader_cls(model_cfg)
-    loader.initialize_model_and_tokenizer()
-    return loader
+    from core.loader_registry import build_loader
+    return build_loader(model_name)
 
 
 def run_stage(loader: GemmaLoader, stage: SemanticStage) -> Path:

@@ -648,6 +648,53 @@ def build_config(model_name: str, system_prompt: str = "",
     return config
 
 
+def list_console_models() -> list[str]:
+    """
+    Config-driven Model Console model list (2026-08-14) - reads
+    config/pipeline.yaml's console.allowed_models instead of the old
+    hardcoded MVP_ALLOWED_MODELS Python list in chat_tab.py, so Model
+    Console consumes the same registry the extraction pipeline does
+    rather than maintaining its own separate, drifting curation. Filters
+    to models that both have a config file on disk AND are enabled -
+    same tolerance the old list_model_profiles() had for a listed name
+    with no matching YAML, extended to also honor the registry's
+    enabled: false switch (see GenerationConfig.enabled).
+    """
+    import yaml
+    from core.classifier import PROJECT_ROOT
+    from core.loaders.base_loader import CONFIG_DIR
+
+    with open(PROJECT_ROOT / "config" / "pipeline.yaml", "r", encoding="utf-8") as f:
+        pipeline_cfg = yaml.safe_load(f)
+    allowed = (pipeline_cfg.get("console") or {}).get("allowed_models") or []
+
+    available = {p.stem for p in CONFIG_DIR.glob("*.yaml")}
+    result = []
+    for name in allowed:
+        if name not in available:
+            continue
+        try:
+            if not load_model_config(name).enabled:
+                continue
+        except Exception:
+            continue
+        result.append(name)
+    return result
+
+
+def default_console_model() -> str:
+    """First entry of list_console_models() - the Model Console dropdown
+    default. Raises if the registry produced no usable models at all,
+    rather than letting the UI silently start with nothing selected."""
+    models = list_console_models()
+    if not models:
+        raise ValueError(
+            "config/pipeline.yaml console.allowed_models produced no "
+            "usable models (none exist/are enabled in config/models/)."
+        )
+    return models[0]
+
+
 def model_supports_text_only(model_name: str) -> bool:
     """
     Cheap capability check - reads config/models/<model_name>.yaml (no

@@ -56,8 +56,7 @@ from typing import Any
 import yaml
 from PIL import Image
 
-from core.loaders.base_loader import load_model_config
-from core.loader_registry import LOADER_REGISTRY
+from core.loader_registry import LOADER_REGISTRY, validate_model_assignment
 from core.schema import DocumentCategory, ClassificationResult
 from core.pipeline_db import PipelineDatabase, DEFAULT_DB_PATH, sync_bucket_classifications, hash_file
 from core.workspace_context import WorkspaceContext
@@ -84,6 +83,45 @@ UNCERTAIN_FIELDS = CSV_FIELDS + ["error"]
 def load_pipeline_config() -> dict:
     with open(PROJECT_ROOT / "config" / "pipeline.yaml", "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def validate_pipeline_config(pipeline_cfg: dict) -> None:
+    """
+    Config-driven model assignment validation (2026-08-14). Checks every
+    model referenced by pipeline.yaml - classifier.model and each
+    bucket's model/extraction_model - resolves to a real, enabled,
+    correctly-loadable, vision-capable config. Raises ValueError on the
+    first problem found, with a message naming the exact assignment at
+    fault, rather than letting a bad assignment surface later as a
+    confusing load error or - worse - a wrong-model run nobody notices.
+
+    Deliberately NOT called from load_pipeline_config() itself: several
+    callers (ui/classifier_validation_ui.py among them, per that file's
+    own docstring) read pipeline.yaml purely to list bucket names for
+    display and must keep working even if a not-yet-configured bucket
+    has model: null. Call this explicitly at the start of an actual
+    pipeline run (see run() below) instead.
+
+    model: null / extraction_model unset is a legitimate, intentional
+    "no automated pass for this bucket yet" state (uncertain_review,
+    website_screenshot, photo_collage, casual_photo, cemetery_photo,
+    kemper_ancestry_review - see pipeline.yaml's own comments) and is
+    skipped, not flagged as missing.
+    """
+    validate_model_assignment(
+        pipeline_cfg["classifier"]["model"], context="pipeline.yaml classifier.model"
+    )
+
+    for bucket_name, bucket_cfg in (pipeline_cfg.get("buckets") or {}).items():
+        model_name = bucket_cfg.get("model") or bucket_cfg.get("extraction_model")
+        if not model_name:
+            continue
+        field_name = "extraction_model" if "extraction_model" in bucket_cfg else "model"
+        validate_model_assignment(
+            model_name,
+            require_vision=True,
+            context=f"pipeline.yaml buckets.{bucket_name}.{field_name}",
+        )
 
 
 CLASSIFIER_CATEGORY_PLACEHOLDER = "{{CLASSIFIER_CATEGORY_CHOICES}}"
@@ -114,18 +152,14 @@ def render_classifier_prompt(prompt_text: str, taxonomy: "Taxonomy | None" = Non
 
 def build_classifier_loader(pipeline_cfg: dict, debug: bool = False) -> GemmaLoader:
     model_name = pipeline_cfg["classifier"]["model"]
-    model_cfg = load_model_config(model_name)
+    model_cfg = validate_model_assignment(
+        model_name, require_vision=True, context="pipeline.yaml classifier.model"
+    )
 
     prompt_path = PROJECT_ROOT / pipeline_cfg["classifier"]["prompt_file"]
     model_cfg.prompt_text = render_classifier_prompt(prompt_path.read_text(encoding="utf-8"))
 
-    loader_cls = LOADER_REGISTRY.get(model_cfg.loader_class)
-    if loader_cls is None:
-        raise ValueError(
-            f"No loader registered for loader_class={model_cfg.loader_class!r}. "
-            f"Known loaders: {list(LOADER_REGISTRY.keys())}"
-        )
-
+    loader_cls = LOADER_REGISTRY[model_cfg.loader_class]  # already confirmed registered above
     loader = loader_cls(model_cfg)
     # Read by GemmaLoader.initialize_model_and_tokenizer() to decide
     # whether to register vision-instrumentation hooks (docs/GEMMA_
@@ -242,6 +276,7 @@ def run(manifest_path: Path, debug: bool = False, db_path: Path = DEFAULT_DB_PAT
     ctx.to_relative()/scoped by ctx.run_id.
     """
     pipeline_cfg = load_pipeline_config()
+    validate_pipeline_config(pipeline_cfg)
     min_confidence = pipeline_cfg["classifier"]["min_confidence"]
 
     if ctx is not None:

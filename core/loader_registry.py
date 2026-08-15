@@ -9,6 +9,8 @@ adding a new model loader only requires one registration point.
 
 from __future__ import annotations
 
+from core.loaders.base_loader import BaseLoader, GenerationConfig, load_model_config
+
 from core.loaders.gemma_loader import GemmaLoader
 from core.loaders.gemma_unified_loader import Gemma4UnifiedLoader
 from core.loaders.chameleon_loader import ChameleonLoader
@@ -56,3 +58,69 @@ LOADER_REGISTRY = {
     "TextLLMLoader": TextLLMLoader,
     "MinicpmVLoader": MinicpmVLoader,
 }
+
+
+def validate_model_assignment(
+    model_name: str, *, require_vision: bool = False, context: str = "",
+) -> GenerationConfig:
+    """
+    Loads model_name's config and checks it's actually usable as a
+    pipeline/console assignment: exists, enabled, has a registered
+    loader_class, and (if require_vision) can accept an image. Raises
+    ValueError with a specific, actionable message rather than letting
+    an unknown/disabled/wrong-capability model fail later as a confusing
+    load error or - worse - silently run with the wrong model. `context`
+    is a short label (e.g. "pipeline.yaml buckets.map_land_record.model")
+    prepended to the error so a config-validation failure points straight
+    at the offending config line, not just the model name.
+    """
+    prefix = f"{context}: " if context else ""
+    try:
+        cfg = load_model_config(model_name)
+    except FileNotFoundError:
+        raise ValueError(
+            f"{prefix}assignment references unknown model '{model_name}' - "
+            f"no config/models/{model_name}.yaml exists."
+        )
+
+    if not cfg.enabled:
+        raise ValueError(
+            f"{prefix}assignment references disabled model '{model_name}' "
+            f"(config/models/{model_name}.yaml has enabled: false)."
+        )
+
+    if cfg.loader_class not in LOADER_REGISTRY:
+        raise ValueError(
+            f"{prefix}model '{model_name}' declares loader_class="
+            f"{cfg.loader_class!r}, which is not registered in "
+            f"LOADER_REGISTRY. Known loaders: {sorted(LOADER_REGISTRY)}."
+        )
+
+    if require_vision and not cfg.image_input_supported:
+        raise ValueError(
+            f"{prefix}model '{model_name}' is assigned to a vision stage "
+            f"but its config sets image_input_supported: false (text-only "
+            f"model)."
+        )
+
+    return cfg
+
+
+def build_loader(model_name: str, *, debug: bool = False) -> BaseLoader:
+    """
+    The one real "config -> registry -> loader" dispatch: load the
+    model's YAML config, look up its loader_class in LOADER_REGISTRY,
+    instantiate and initialize it. Callers that need to set config
+    fields (e.g. classifier.py's prompt_text) before load should build
+    the GenerationConfig via load_model_config() themselves and pass it
+    to the loader_cls directly instead - this helper is for the common
+    "just give me a ready-to-use loader for this model" case
+    (semantic_stages.py, benchmark scripts, ad hoc tooling), so that
+    call sequence isn't copy-pasted at every one of them.
+    """
+    cfg = validate_model_assignment(model_name)
+    loader_cls = LOADER_REGISTRY[cfg.loader_class]
+    loader = loader_cls(cfg)
+    loader._debug_mode = debug
+    loader.initialize_model_and_tokenizer()
+    return loader
