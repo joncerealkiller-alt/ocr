@@ -43,6 +43,7 @@ import os
 import sys
 from pathlib import Path
 from tkinter import Tk
+from tkinter import ttk
 
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "backend:cudaMallocAsync")
 
@@ -57,6 +58,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from core.agent_status_server import start_status_server  # noqa: E402
 from model_console.chat_tab import ChatTab  # noqa: E402
+from model_console.benchmark_tab import BenchmarkTab  # noqa: E402
 
 
 def main() -> None:
@@ -78,8 +80,19 @@ def main() -> None:
     root.title("Model Console")
     root.geometry("900x700")
 
-    tab = ChatTab(root)
-    tab.pack(fill="both", expand=True)
+    # Notebook added 2026-08-15 for the Benchmark tab, alongside the
+    # existing Chat tab - each tab owns its own ChatBackendAdapter
+    # instance (see BenchmarkTab's own docstring on why it doesn't share
+    # ChatTab's), so nothing about ChatTab's behavior changes by being
+    # inside a Notebook instead of packed directly into root.
+    notebook = ttk.Notebook(root)
+    notebook.pack(fill="both", expand=True)
+
+    tab = ChatTab(notebook)
+    notebook.add(tab, text="Chat")
+
+    benchmark_tab = BenchmarkTab(notebook)
+    notebook.add(benchmark_tab, text="Benchmark")
 
     def on_close():
         tab.shutdown()

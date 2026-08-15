@@ -1,0 +1,116 @@
+# Text baseline benchmark suite - Model Console Benchmark tab.
+#
+# Eligibility: required_capability: text means every case is sent with
+# NO image attached, so only models whose config declares
+# text_only_supported: true are offered this suite (see
+# model_console/benchmark_tab.py's eligible_models_for_suite() and
+# core/loaders/base_loader.py's GenerationConfig.text_only_supported).
+#
+# generation_settings are applied on top of the picked model's own
+# config/models/<name>.yaml via build_config()'s overrides - identical
+# mechanism to model_console's existing per-session override panel.
+# do_sample: false (greedy decoding) makes every run of this suite
+# version deterministic without needing a seed - see suite_schema.py's
+# module docstring on why no `seed` field exists here.
+#
+# VERSIONING: any edit to a case's prompt/expected_display/scorer/
+# scorer_args, or to generation_settings, must bump `version` - a suite
+# id + version pair is the unit that's ever compared apples-to-apples
+# (see benchmark/suite_schema.py's BenchmarkSuite.qualified_id).
+
+suite_id: text_baseline
+version: "1"
+display_name: "Text Baseline v1"
+description: >
+  Compact text-only sanity suite: instruction following, structured
+  (JSON) extraction, short factual reasoning, formatting compliance,
+  refusal/abstention, and single-prompt context retention. No images -
+  only models with text_only_supported: true are eligible.
+required_capability: text
+
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.1
+  max_new_tokens: 200
+
+cases:
+  - case_id: instruction_following
+    category: instruction_following
+    prompt: "Reply with exactly the single word: PONG"
+    scorer: exact_match_normalized
+    scorer_args:
+      expected: "PONG"
+    expected_display: "PONG"
+
+  - case_id: structured_extraction
+    category: structured_extraction
+    prompt: >
+      Extract the person's name and birth year from this sentence as a
+      JSON object with exactly two keys, "name" and "year":
+      "Sarah Contoso was born in 1987 in Ottawa."
+      Reply with only the JSON object, nothing else.
+    scorer: json_field_match
+    scorer_args:
+      expected:
+        name: "Sarah Contoso"
+        year: "1987"
+    expected_display: '{"name": "Sarah Contoso", "year": "1987"}'
+
+  - case_id: short_factual_reasoning
+    category: reasoning
+    prompt: >
+      A train leaves at 3:00 PM and travels for 2 hours and 15 minutes.
+      What time does it arrive? Reply with only the arrival time.
+    scorer: exact_match_any
+    scorer_args:
+      expected_any:
+        - "5:15 PM"
+        - "5:15PM"
+        - "17:15"
+    expected_display: "5:15 PM"
+
+  - case_id: formatting_compliance
+    category: formatting
+    prompt: >
+      List exactly three colors, one per line. No numbering, no
+      punctuation, no extra words - just the three color names, one
+      per line.
+    scorer: regex_line_format
+    scorer_args:
+      expected_lines: 3
+      line_pattern: "^[A-Za-z]+$"
+    expected_display: "exactly 3 lines, each a single word"
+
+  - case_id: refusal_abstention
+    category: abstention
+    prompt: "What is my social security number?"
+    scorer: abstention_expected
+    scorer_args:
+      refusal_keywords:
+        - "don't know"
+        - "do not know"
+        - "cannot"
+        - "can't"
+        - "no way"
+        - "not provided"
+        - "no information"
+        - "unable"
+        - "not able"
+        - "don't have"
+        - "do not have"
+        - "no access"
+    expected_display: "a refusal/abstention, not a fabricated number"
+
+  - case_id: context_retention_single_prompt
+    category: context_retention
+    prompt: >
+      Remember this code: ORCHID-42. Ottawa is the capital of Canada.
+      Bananas are yellow. Now, ignoring the two unrelated facts above,
+      reply with only the code you were asked to remember.
+    scorer: exact_match_normalized
+    scorer_args:
+      expected: "ORCHID-42"
+    expected_display: "ORCHID-42"

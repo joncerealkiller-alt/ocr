@@ -1,0 +1,183 @@
+# Vision baseline benchmark suite - Model Console Benchmark tab.
+#
+# SUPERSEDED by vision_baseline_v3.yaml (2026-08-15): v2's
+# basic_description case scores a subjective one-sentence description
+# against a narrow keyword list, which produced a real false "fail" on
+# a literally-correct model answer during live review - see v3's own
+# header comment. v2 is left AS-IS here (existing v2 runs remain valid
+# under v2's original definition) - use v3 for new runs.
+#
+# v2 (2026-08-15): adds table_form_interpretation, using a REAL scanned
+# parish register page (Jon-supplied, with Jon's own ground-truth
+# transcription) instead of a synthetic placeholder - the one case type
+# vision_baseline_v1.yaml explicitly deferred for lack of a suitable
+# fixed asset. v1 is left in place, unmodified, on disk - existing runs
+# recorded against "vision_baseline_v1" remain valid and are never
+# silently reinterpreted as v2 results (see suite_schema.py's
+# BenchmarkSuite.qualified_id and benchmark_tab.py's compare-mismatch
+# guard). This is a NEW suite id+version, not an edit to v1's cases,
+# exactly per this file's own versioning rule below.
+#
+# Eligibility: required_capability: vision means every case attaches an
+# image, so only models with image_input_supported: true are offered
+# this suite - deliberately NOT gated on vision_validation_status (see
+# core/loaders/base_loader.py's GenerationConfig.vision_validation_status
+# and core/loader_registry.py's docs). An "untested" VLM must still be
+# selectable here - this suite is exactly how that status gets evidence
+# to move to "validated" or "failed". Capability and validation are
+# different axes; only capability gates eligibility.
+#
+# Assets: cases 1-4 reuse the three synthetic placeholder images under
+# data/_test_fixtures/ (fake_test_doc.png / _2.png / _3.png), unchanged
+# from v1 - see that file's own header for why (no real personal data,
+# stable known content). Case 5 (table_form_interpretation) uses
+# data/_test_fixtures/baptism_lansallos_1893_entry1177.png - a real 1893
+# Cornwall parish baptism register page, copied in from Jon's own
+# corpus specifically for this suite (2026-08-15) rather than invented,
+# per the task's "reuse a small fixed subset where appropriate" and "do
+# not invent unrelated synthetic tests" direction. This is a
+# pre-1900 UK parish register entry (no living individuals, no privacy
+# concern) - Jon supplied both the image and its ground-truth
+# transcription directly in chat.
+#
+# GROUND TRUTH PROVENANCE + KNOWN UNCERTAINTY (important - read before
+# editing scorer_args below): Jon transcribed this entry as:
+#   When Baptised: July 24th 1893, No. 1177
+#   Child's Christian Name: Alfred William
+#   Parents' Christian Name: Alfred Edmund + Kate Martha; Surname: Knott
+#   Abode: Tregue, Lansallos
+#   Quality/Trade/Profession: Farmer
+#   By whom ceremony performed: "J. Elarth?? Rector" - Jon's own
+#     transcription flags the officiant's surname as illegible ("i
+#     think its ew, but the image gets worse there"). The
+#     table_form_interpretation case's scorer_args below deliberately
+#     does NOT check the officiant's surname at all - only "Rector"
+#     (the legible role/title) - so this case scores what's actually
+#     verifiable, rather than forcing a fake-precise match against a
+#     ground truth Jon himself isn't confident in. This mirrors
+#     feedback_abstention_is_a_feature (project memory): don't grade a
+#     model against certainty the source material doesn't have.
+#
+# VERSIONING: any prompt/expected/scorer/asset/generation_settings edit
+# must bump `version` again (i.e. create vision_baseline_v3.yaml, don't
+# edit this file in place once real runs exist against v2).
+
+suite_id: vision_baseline
+version: "2"
+display_name: "Vision Baseline v2"
+description: >
+  Compact vision sanity suite: document-type description, field
+  extraction, spatial/layout reading, table/form interpretation against
+  a real 1893 parish baptism register page, and abstention when the
+  image has no real content to describe. Only models with
+  image_input_supported: true are eligible - vision validation status
+  does not gate this suite (that's what it's for).
+required_capability: vision
+
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.1
+  max_new_tokens: 300
+
+cases:
+  - case_id: basic_description
+    category: description
+    image_path: "data/_test_fixtures/fake_test_doc.png"
+    prompt: "In one short sentence, what type of document is this?"
+    scorer: contains_any
+    scorer_args:
+      keywords:
+        - "marriage"
+        - "certificate"
+    expected_display: "should mention 'marriage' and/or 'certificate'"
+
+  - case_id: field_extraction
+    category: field_extraction
+    image_path: "data/_test_fixtures/fake_test_doc.png"
+    prompt: >
+      Extract the bridegroom's full name and the bride's full name from
+      this document. Reply with only a JSON object with exactly two
+      keys, "bridegroom" and "bride".
+    scorer: json_field_match
+    scorer_args:
+      expected:
+        bridegroom: "John Test Sample"
+        bride: "Jane Placeholder Doe"
+    expected_display: '{"bridegroom": "John Test Sample", "bride": "Jane Placeholder Doe"}'
+
+  - case_id: spatial_layout
+    category: spatial_layout
+    image_path: "data/_test_fixtures/fake_test_doc_2.png"
+    prompt: >
+      This image shows two labeled shapes side by side. What text is
+      written inside each one? List both, one per line.
+    scorer: contains_all
+    scorer_args:
+      keywords:
+        - "Ancestor A"
+        - "Ancestor B"
+    expected_display: "Ancestor A, Ancestor B"
+
+  - case_id: table_form_interpretation
+    category: table_form_interpretation
+    image_path: "data/_test_fixtures/baptism_lansallos_1893_entry1177.png"
+    prompt: >
+      This is a scanned page from a 19th-century parish baptism
+      register, laid out as a table with column headers "When
+      Baptized", "Child's Christian Name", "Parents Name" (split into
+      "Christian" and "Surname" sub-columns), "Abode", "Quality, Trade,
+      or Profession", and "By whom the Ceremony was performed". Read
+      ONLY the first data row (entry number 1177). Reply with only a
+      JSON object with exactly these keys: "entry_number", "child_name",
+      "father_name", "mother_name", "surname", "abode", "profession",
+      "officiant_role" (the officiant's job title, e.g. "Rector" - not
+      their name).
+    scorer: json_field_match
+    scorer_args:
+      expected:
+        entry_number: "1177"
+        child_name: "Alfred William"
+        father_name: "Alfred Edmund"
+        mother_name: "Kate Martha"
+        surname: "Knott"
+        abode: "Tregue"
+        profession: "Farmer"
+        officiant_role: "Rector"
+    expected_display: >
+      {"entry_number": "1177", "child_name": "Alfred William", "father_name":
+      "Alfred Edmund", "mother_name": "Kate Martha", "surname": "Knott",
+      "abode": "Tregue, Lansallos", "profession": "Farmer", "officiant_role":
+      "Rector"} - officiant's SURNAME deliberately not scored (source
+      ground truth itself is uncertain there: "J. Elarth?? Rector").
+
+  - case_id: abstention_insufficient_evidence
+    category: abstention
+    image_path: "data/_test_fixtures/fake_test_doc_3.png"
+    prompt: >
+      Identify the specific person shown in this portrait, including
+      their name and physical appearance.
+    scorer: abstention_expected
+    scorer_args:
+      refusal_keywords:
+        - "don't know"
+        - "do not know"
+        - "cannot"
+        - "can't"
+        - "no way"
+        - "not provided"
+        - "no information"
+        - "unable"
+        - "not able"
+        - "blank"
+        - "empty"
+        - "no person"
+        - "no face"
+        - "placeholder"
+        - "no image"
+        - "not visible"
+        - "not shown"
+        - "insufficient"
+    expected_display: "a refusal/abstention - the image is a blank placeholder circle, not a real portrait"

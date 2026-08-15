@@ -1,0 +1,116 @@
+# Vision baseline benchmark suite - Model Console Benchmark tab.
+#
+# Eligibility: required_capability: vision means every case attaches an
+# image, so only models with image_input_supported: true are offered
+# this suite - deliberately NOT gated on vision_validation_status (see
+# core/loaders/base_loader.py's GenerationConfig.vision_validation_status
+# and core/loader_registry.py's docs). An "untested" VLM must still be
+# selectable here - this suite is exactly how that status gets evidence
+# to move to "validated" or "failed". Capability and validation are
+# different axes; only capability gates eligibility.
+#
+# Assets: reuses the three existing synthetic placeholder images under
+# data/_test_fixtures/ (fake_test_doc.png / _2.png / _3.png) rather than
+# inventing new ones - these already exist in the project (built for
+# ui/review_uncertain.py testing), contain no real personal data (every
+# name is literally "Test Sample" / "Placeholder Doe"), and their exact
+# printed content is known and stable, which is what makes deterministic
+# field-accuracy/abstention scoring possible here at all.
+#
+# LIMITATION (as of v1, resolved in v2): no fixed table/form test asset
+# was available when this suite was first written, so "table/form
+# interpretation" was deferred rather than invented. RESOLVED in
+# vision_baseline_v2.yaml (2026-08-15), which adds that case against a
+# real parish register page - see that file. v1 itself is left
+# unmodified here (existing v1 runs stay valid against these exact 4
+# cases) - v2 is a separate suite_id+version, not an edit in place.
+#
+# VERSIONING: same rule as text_baseline_v1.yaml - any prompt/expected/
+# scorer/asset/generation_settings edit must bump `version`.
+
+suite_id: vision_baseline
+version: "1"
+display_name: "Vision Baseline v1"
+description: >
+  Compact vision sanity suite using fixed synthetic project fixtures:
+  document-type description, field extraction, spatial/layout reading,
+  and abstention when the image has no real content to describe. Only
+  models with image_input_supported: true are eligible - vision
+  validation status does not gate this suite (that's what it's for).
+required_capability: vision
+
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.1
+  max_new_tokens: 200
+
+cases:
+  - case_id: basic_description
+    category: description
+    image_path: "data/_test_fixtures/fake_test_doc.png"
+    prompt: "In one short sentence, what type of document is this?"
+    scorer: contains_any
+    scorer_args:
+      keywords:
+        - "marriage"
+        - "certificate"
+    expected_display: "should mention 'marriage' and/or 'certificate'"
+
+  - case_id: field_extraction
+    category: field_extraction
+    image_path: "data/_test_fixtures/fake_test_doc.png"
+    prompt: >
+      Extract the bridegroom's full name and the bride's full name from
+      this document. Reply with only a JSON object with exactly two
+      keys, "bridegroom" and "bride".
+    scorer: json_field_match
+    scorer_args:
+      expected:
+        bridegroom: "John Test Sample"
+        bride: "Jane Placeholder Doe"
+    expected_display: '{"bridegroom": "John Test Sample", "bride": "Jane Placeholder Doe"}'
+
+  - case_id: spatial_layout
+    category: spatial_layout
+    image_path: "data/_test_fixtures/fake_test_doc_2.png"
+    prompt: >
+      This image shows two labeled shapes side by side. What text is
+      written inside each one? List both, one per line.
+    scorer: contains_all
+    scorer_args:
+      keywords:
+        - "Ancestor A"
+        - "Ancestor B"
+    expected_display: "Ancestor A, Ancestor B"
+
+  - case_id: abstention_insufficient_evidence
+    category: abstention
+    image_path: "data/_test_fixtures/fake_test_doc_3.png"
+    prompt: >
+      Identify the specific person shown in this portrait, including
+      their name and physical appearance.
+    scorer: abstention_expected
+    scorer_args:
+      refusal_keywords:
+        - "don't know"
+        - "do not know"
+        - "cannot"
+        - "can't"
+        - "no way"
+        - "not provided"
+        - "no information"
+        - "unable"
+        - "not able"
+        - "blank"
+        - "empty"
+        - "no person"
+        - "no face"
+        - "placeholder"
+        - "no image"
+        - "not visible"
+        - "not shown"
+        - "insufficient"
+    expected_display: "a refusal/abstention - the image is a blank placeholder circle, not a real portrait"
