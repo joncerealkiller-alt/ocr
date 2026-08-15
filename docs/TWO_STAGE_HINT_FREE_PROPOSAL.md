@@ -1,9 +1,10 @@
 # Proposal: Hint-Free Two-Stage Extraction (independent reads + downstream comparison)
 
-**Status: DRAFT / NOT APPLIED** — written 2026-08-15 (Fable session) at Jon's request.
-Nothing in the production pipeline is changed by this document or by
-`config/prompts/structuring_stage2_independent.txt` (inert until explicitly
-selected via the existing `--structuring-prompt-template` flag).
+**Status: VALIDATED LIVE, NOT YET APPLIED TO PRODUCTION** — drafted and then
+tested same-day, 2026-08-15 (Fable session). The production pipeline is
+unchanged; `config/prompts/structuring_stage2_independent.txt` remains inert
+until explicitly selected via the existing `--structuring-prompt-file` flag.
+See "Live validation" at the bottom for the head-to-head result.
 
 ## The evidence this responds to
 
@@ -126,3 +127,45 @@ estimate review-queue volume before committing to anything.
 - Hint-parroting currently *hides* disagreement by collapsing stage 2 onto
   stage 1 — expect measured agreement rates to drop when the hint is removed.
   That is the metric becoming honest, not the pipeline getting worse.
+
+
+## Live validation (2026-08-15, same day)
+
+Both conditions were run through the REAL pipeline
+(`scripts/run_two_stage_extraction.py`, smolvlm2_2b Stage 1 with its
+deliberate empty prompt -> qwen3vl4b Stage 2), rows 1-6 of the
+1931_174-e011707164 page, identical crops/models/settings - the ONLY
+difference was the structuring template. Scored against the merged ground
+truth (the v3 Ground_truth transcript + ground_truth_log.jsonl; the two
+human-GT conflicts, Huzie/Hyzie and Wilson/Nelson, were accepted either way).
+Artifacts: `genealogy_workspace/research/experiments/hint_free_two_stage_20260815/`.
+
+| | Hint (production template) | Hint-free (this proposal) |
+|---|---:|---:|
+| Stage 2 accuracy | 18/30 (60%) | 21/30 (70%) |
+| Stage1<->2 containment-agreement | 11/30 | 9/30 |
+| Agreements that were WRONG | 2 | 0 |
+| Agreement precision as a trust signal | 82% | 100% |
+
+Findings:
+
+1. **Hint-free was +10 points more accurate on identical inputs.** Concrete
+   contamination in the hinted leg: Age "1" (anchored on Stage 1's garbled
+   "5,1"; hint-free correctly read "14"), Birthplace "Maniototo" (Manitoba
+   blended with hint noise; hint-free: clean "Manitoba"), Relationship "F"
+   (from hint "Langlahta"; hint-free: correct "Daughter").
+2. **The auto-accept-on-agreement requirement held: every hint-free agreement
+   was correct (9/9).** Hinted agreement is a contaminated signal (2/11 wrong
+   - the hint echoing back). This is the property the routing design depends
+   on, confirmed rather than assumed.
+3. **Comparator design lesson**: exact-string agreement is useless against
+   real Stage-1 output (0/30 both legs - Stage 1 emits noisy strings like
+   "3. Manitoba", "The answer is 18."). The agreement metric must be
+   normalized CONTAINMENT (one read contains the other's normalized value),
+   which is what the numbers above use. §2's sketch should be updated
+   accordingly when implemented.
+4. Caveats: n=30 fields, one page, one (legacy) model pair. The proposed
+   Qwen-7B/E2B split should raise both accuracy and agreement; quantify on
+   more pages before rollout. Review-queue volume at this quality level:
+   21/30 routed to review (12 of which were actually correct) - the queue is
+   real, and shrinks as the models improve.
