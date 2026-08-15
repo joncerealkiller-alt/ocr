@@ -137,6 +137,18 @@ class RowExtractionResult(BaseModel):
     schema_pass: bool
     schema_error: str | None = None
     stage1_raw_output: str | None = None
+    # Per-field stage1<->stage2 agreement (2026-08-15, hint-free
+    # two-stage design - docs/TWO_STAGE_HINT_FREE_PROPOSAL.md).
+    # Additive with a default, so every existing caller/consumer is
+    # unaffected. True = the two INDEPENDENT reads agree under
+    # fields_agree()'s rules (auto-accept candidate); False = route to
+    # review. Only populated by the two-stage path; empty for
+    # single-stage extraction. Meaningful ONLY when stage 2 ran without
+    # the OCR hint in its prompt (structuring_stage2_independent.txt) -
+    # under the hint template, "agreement" is contaminated by anchoring
+    # (measured live: 2/11 hinted agreements were wrong vs 0/9
+    # hint-free - see the proposal doc's Live validation section).
+    field_agreement: dict[str, bool] = {}
 
 
 def build_row_prompt(column_names: list[str]) -> str:
@@ -603,6 +615,123 @@ def _extract_region(
     )
 
 
+def _normalize_for_agreement(text: str | None) -> str:
+    """Normalization for the stage1<->stage2 comparator (2026-08-15,
+    hint-free two-stage design): strips a trailing |confidence suffix,
+    lowercases, collapses whitespace, drops trailing sentence
+    punctuation. Mirrors benchmark/scorers._normalize plus the
+    pipe-suffix handling this pipeline's own output format needs."""
+    import re
+    s = re.sub(r"\|(confirmed|partial|unclear)\s*$", "", str(text or "").strip())
+    return " ".join(s.strip().lower().rstrip(".!").split())
+
+
+def fields_agree(stage1_text: str | None, stage2_value: str | None) -> bool:
+    """
+    Whether two INDEPENDENT reads of the same field agree, per the
+    rules validated live on 2026-08-15 (docs/TWO_STAGE_HINT_FREE_
+    PROPOSAL.md + the census_pairing analysis):
+
+    - Either side empty or "?" -> NOT agreement. An abstention always
+      routes to review (abstention-is-a-feature discipline) - it must
+      never auto-accept, even if both sides abstain.
+    - Numeric/short values (stage 2's normalized value is all digits,
+      or <= 2 characters e.g. Sex "m"/"f") -> WHOLE-TOKEN membership:
+      stage 2's value must appear as a complete token in stage 1's
+      reading, never as a substring of a longer token. Plain substring
+      containment is provably wrong here: the pairing analysis scored
+      stage1 "27" vs stage2 "7" as agreement before this rule existed
+      (a real measured comparator bug, census_pairing_1921) - but
+      strict whole-string equality is wrong in the other direction,
+      rejecting stage 1's legitimate noisy-but-correct shapes ("The
+      answer is 18." vs "18", the form correct age reads actually took
+      in the live validation). Token membership handles both: "18" is
+      a token of "the answer is 18" (agree), "7" is NOT a token of
+      "27" (disagree), "m" is NOT a token of "m2" (disagree -> review,
+      the correct routing for the 1921 column-spill case).
+    - Everything else (names, places, relationships) -> normalized
+      CONTAINMENT either way, because stage 1's raw reading is a noisy
+      string that legitimately wraps the value ("3. Manitoba" vs
+      "Manitoba" is agreement; exact match scored 0/30 on real stage-1
+      output).
+    """
+    import re
+    v1 = _normalize_for_agreement(stage1_text)
+    v2 = _normalize_for_agreement(stage2_value)
+    if not v1 or not v2 or v1 == "?" or v2 == "?":
+        return False
+    if v2.isdigit() or len(v2) <= 2:
+        if v1 == v2:
+            return True
+        tokens = re.split(r"[^0-9a-z]+", v1)
+        return v2 in tokens
+    return v1 == v2 or v2 in v1 or v1 in v2
+
+
+class _RemoteVllmFieldLoader:
+    """
+    Adapts a runtime="vllm" model to the loader interface this module's
+    extraction loops actually use (_run_generate / release /
+    initialize_model_and_tokenizer / .config) - the same runtime
+    dispatch api/agent_main.py performs, applied here so the two-stage
+    pipeline can run vLLM-served models (2026-08-15: the validated
+    ensemble pair, gemma_12b_w4a16 + minicpm_v_gptq, are BOTH
+    vLLM-runtime models that the in-process transformers path cannot
+    load on Windows at all - the 12B checkpoint decompresses to ~25GB
+    and MiniCPM's gptqmodel stack is WSL-only; see their YAMLs).
+
+    Serving goes through ChatBackendAdapter(backend="remote") -> the
+    WSL backend -> core/vllm_runtime.py, which already owns sequential
+    GPU handoff (acquiring the second model tears down the first
+    server), preserving this module's "never two models resident"
+    guarantee across the stage1 -> stage2 swap.
+
+    Lazy import of model_console.adapter (core -> model_console is
+    backwards layering as a module-level import; contained here, used
+    only when a vllm-runtime profile is actually requested).
+    """
+
+    def __init__(self, model_name: str, config):
+        self.model_name = model_name
+        self.config = config
+        from model_console.adapter import ChatBackendAdapter
+        self._adapter = ChatBackendAdapter(backend="remote")
+
+    def initialize_model_and_tokenizer(self):
+        self._adapter.ensure_loaded(self.model_name, self.config)
+        return None, None, None
+
+    def apply_checkpoint(self, checkpoint_path: str) -> None:
+        raise RuntimeError(
+            f"{self.model_name!r} is served by the vLLM runtime - LoRA "
+            "checkpoints are a transformers-path feature and cannot be "
+            "applied here."
+        )
+
+    def _run_generate(self, raw_image, prompt: str) -> str:
+        raw_text, _meta = self._adapter.send_turn(prompt, raw_image, system_prompt="", history=None)
+        return raw_text
+
+    def release(self) -> None:
+        self._adapter.release()
+
+
+def _build_field_loader(model_profile_name: str, config):
+    """
+    The one loader-construction point for this module's extraction
+    paths: transformers-runtime profiles dispatch through
+    LOADER_REGISTRY exactly as before (byte-identical behavior);
+    runtime="vllm" profiles get a _RemoteVllmFieldLoader instead of the
+    previous hard failure ("No loader registered for 'vllm'").
+    """
+    if getattr(config, "runtime", "transformers") == "vllm":
+        return _RemoteVllmFieldLoader(model_profile_name, config)
+    loader_cls = LOADER_REGISTRY.get(config.loader_class)
+    if loader_cls is None:
+        raise ValueError(f"No loader registered for {config.loader_class!r}")
+    return loader_cls(config)
+
+
 def _release_model(loader) -> None:
     """
     Same VRAM-release discipline as model_assessment.py's
@@ -1009,10 +1138,7 @@ def run_two_stage_extraction(
     # loader instance, released before stage 2 loads (see docstring -
     # avoid two models resident in VRAM at once).
     ocr_config = load_model_config(ocr_model_profile_name)
-    ocr_loader_cls = LOADER_REGISTRY.get(ocr_config.loader_class)
-    if ocr_loader_cls is None:
-        raise ValueError(f"No loader registered for {ocr_config.loader_class!r}")
-    ocr_loader = ocr_loader_cls(ocr_config)
+    ocr_loader = _build_field_loader(ocr_model_profile_name, ocr_config)
 
     # row_index -> {column_name: raw_reading}
     raw_readings: dict[int, dict[str, str]] = {}
@@ -1101,10 +1227,7 @@ def run_two_stage_extraction(
     # 1's "row_NNNN/column_NN_stage1" naming exactly - stage 2 is
     # field-level evidence on disk now too, not row-level.
     struct_config = load_model_config(structuring_model_profile_name)
-    struct_loader_cls = LOADER_REGISTRY.get(struct_config.loader_class)
-    if struct_loader_cls is None:
-        raise ValueError(f"No loader registered for {struct_config.loader_class!r}")
-    struct_loader = struct_loader_cls(struct_config)
+    struct_loader = _build_field_loader(structuring_model_profile_name, struct_config)
 
     results: list[RowExtractionResult] = []
     try:
@@ -1115,6 +1238,7 @@ def run_two_stage_extraction(
             start = time.time()
             fields: dict[str, RowFieldValue] = {}
             per_field_raw_output: dict[str, str] = {}
+            field_agreement: dict[str, bool] = {}
             for column_name in column_names:
                 _row_masks_unused, _mask_active, tight_crop_ranges = column_field_masks[column_name]
                 col_idx = column_index_map[column_name]
@@ -1173,9 +1297,27 @@ def run_two_stage_extraction(
                     parsed = parse_row_output(raw_output, [column_name])
                     fields.update(parsed)
                     per_field_raw_output[column_name] = raw_output
+                    # Stage1<->stage2 agreement (2026-08-15, hint-free
+                    # two-stage design): both strings are in hand right
+                    # here - field_reading is stage 1's independent raw
+                    # read, parsed[column_name] is stage 2's. Rules and
+                    # the live evidence behind them: fields_agree()'s
+                    # own docstring + docs/TWO_STAGE_HINT_FREE_PROPOSAL.md.
+                    # Recorded regardless of which structuring template
+                    # ran (the value is only TRUSTWORTHY under the
+                    # hint-free template - see RowExtractionResult.
+                    # field_agreement's docstring), and never used to
+                    # overwrite the stage-2 value: disagreement is
+                    # review-routing metadata, not a correction.
+                    parsed_value = parsed.get(column_name)
+                    field_agreement[column_name] = fields_agree(
+                        field_reading,
+                        parsed_value.value if parsed_value is not None else None,
+                    )
                     debug_item.finalize(raw_output=raw_output)
                 except Exception as e:
                     per_field_raw_output[column_name] = f"[STAGE 2 ERROR: {e}]"
+                    field_agreement[column_name] = False
                     debug_item.finalize(raw_output=None, error=e)
                 print(f"Stage 2 (structure) row {row['index']} [{column_name}]: "
                       f"{fields.get(column_name)!r}")
@@ -1200,6 +1342,7 @@ def run_two_stage_extraction(
                 runtime_seconds=time.time() - start,
                 schema_pass=schema_pass, schema_error=schema_error,
                 stage1_raw_output=combined_reading,
+                field_agreement=field_agreement,
             ))
             print(f"Stage 2 (structure) row {row['index']}: "
                   f"{'OK' if schema_pass else 'INCOMPLETE'} "

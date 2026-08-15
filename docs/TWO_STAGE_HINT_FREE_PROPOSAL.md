@@ -1,6 +1,6 @@
 # Proposal: Hint-Free Two-Stage Extraction (independent reads + downstream comparison)
 
-**Status: VALIDATED LIVE, NOT YET APPLIED TO PRODUCTION** — drafted and then
+**Status: IMPLEMENTED (2026-08-15) - comparator + field_agreement landed in core/row_extraction.py; validated end-to-end with the 12B+MiniCPM pair** — drafted and then
 tested same-day, 2026-08-15 (Fable session). The production pipeline is
 unchanged; `config/prompts/structuring_stage2_independent.txt` remains inert
 until explicitly selected via the existing `--structuring-prompt-file` flag.
@@ -169,3 +169,43 @@ Findings:
    more pages before rollout. Review-queue volume at this quality level:
    21/30 routed to review (12 of which were actually correct) - the queue is
    real, and shrinks as the models improve.
+
+
+## Implementation record (2026-08-15, same session)
+
+Landed in `core/row_extraction.py`:
+- `fields_agree()` / `_normalize_for_agreement()` - the comparator, with the
+  live-validated rules: containment for text fields, WHOLE-TOKEN membership
+  for numeric/short values (fixes both measured failure directions: "27" vs
+  "7" substring false-agree AND "The answer is 18." vs "18" false-disagree),
+  abstention on either side always routes to review. 21 unit cases in
+  `tests/test_field_agreement.py`, every one a real observed shape.
+- `RowExtractionResult.field_agreement: dict[str, bool]` (additive default).
+- `_build_field_loader()` runtime dispatch + `_RemoteVllmFieldLoader`: the
+  two-stage pipeline can now run vLLM-served models via the WSL backend
+  (ChatBackendAdapter remote -> core/vllm_runtime.py, which already owns the
+  sequential stage1->stage2 GPU handoff). Transformers profiles dispatch
+  byte-identically to before.
+
+End-to-end validation (12B stage 2 authoritative + MiniCPM stage 1, hint-free
+template, rows 1-6 of the 1931 page - artifacts in
+`genealogy_workspace/research/experiments/hint_free_two_stage_20260815/pair_12b_minicpm/`):
+
+| | legacy pair hinted | legacy pair hint-free | **12B+MiniCPM hint-free** |
+|---|---:|---:|---:|
+| Stage 2 accuracy | 18/30 | 21/30 | **26/30** |
+| Auto-accept right/WRONG | (n/a: contaminated) | 9 / 0 | **15 / 0** |
+| Review queue (recoverable) | - | 21 (12) | 15 (11) |
+
+field_agreement persisted correctly through the pipeline's own JSON output;
+wrong stage-2 names ("Henzie", "Robert Brinston") and both "?" abstentions
+all routed to review, none auto-accepted.
+
+**Known refinement (open):** MiniCPM's stage-1 readings under the empty
+prompt are chain-of-thought dumps (leading `<think>` blocks) rather than
+clean values - agreement still worked (the CoT contains its conclusion, and
+whole-token matching guards numerics), producing 15/0 auto-accepts, but a
+MiniCPM-specific stage-1 prompt that suppresses thinking mode (or post-
+`</think>` extraction) would make stage 1's reading cleaner and likely raise
+the auto-accept rate. The "empty prompt is best for stage 1" finding was
+established on smolvlm2 and does not transfer to MiniCPM unmodified.
