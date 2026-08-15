@@ -58,6 +58,7 @@ from PIL import Image, ImageDraw, ImageTk
 
 from core.row_segmentation import load_sidecar, crop_region_from_source, compute_exclude_ranges
 from core.csv_hint_source import load_csv_rows, rows_for_image, get_hint as csv_get_hint
+from core import extraction_hint_source
 
 LOG_PATH = PROJECT_ROOT / "data" / "outputs" / "ground_truth_log.jsonl"
 PREVIEW_SIZE = (900, 300)
@@ -124,11 +125,21 @@ class HintValidationApp:
         self.csv_all_rows: list[dict[str, str]] = []
         self.csv_page_rows: dict[int, dict[str, str]] = {}
 
-        # Phase 1 queue: (row_index, column, hint) for fields with a hint
-        # to confirm. Phase 2 queue: (row_index, column) for fields that
+        # Two-stage extraction results as a hint source (2026-08-15,
+        # field_agreement wiring - core/extraction_hint_source.py).
+        # When loaded, takes precedence over the CSV as the Phase 1
+        # hint source; disagreed fields queue FIRST and display stage
+        # 1's independent reading alongside stage 2's value.
+        self.extraction_path: str | None = None
+        self.extraction_rows: dict[int, dict] = {}
+
+        # Phase 1 queue: (row_index, column, hint, source, agreement,
+        # stage1_reading) for fields with a hint to confirm - source is
+        # "extraction" or "csv"; agreement/stage1_reading are None for
+        # csv-sourced hints. Phase 2 queue: (row_index, column) for fields that
         # were rejected in Phase 1 or never had a hint - built up as
         # Phase 1 runs, then walked once Phase 1 is empty.
-        self.review_queue: list[tuple[int, str, str]] = []
+        self.review_queue: list[tuple[int, str, str, str, object, object]] = []
         self.review_pos = 0
         self.manual_queue: list[tuple[int, str]] = []
         self.manual_pos = 0
@@ -148,10 +159,14 @@ class HintValidationApp:
             side="left", padx=(6, 0))
         Button(load_row, text="Load reference CSV...", command=self.load_csv_file).pack(
             side="left", padx=(6, 0))
+        Button(load_row, text="Load extraction JSON...", command=self.load_extraction_file).pack(
+            side="left", padx=(6, 0))
         self.sidecar_label = Label(load_row, text="(no sidecar loaded)", fg="#666")
         self.sidecar_label.pack(side="left", padx=10)
         self.csv_label = Label(load_row, text="(no reference CSV loaded)", fg="#666")
         self.csv_label.pack(side="left", padx=10)
+        self.extraction_label = Label(load_row, text="(no extraction JSON loaded)", fg="#666")
+        self.extraction_label.pack(side="left", padx=10)
 
         self.phase_label = Label(top, text="", font=("Segoe UI", 10, "bold"), fg="#225")
         self.phase_label.pack(anchor="w", pady=(4, 0))
@@ -187,7 +202,16 @@ class HintValidationApp:
               font=("Segoe UI", 9, "bold")).pack(anchor="w")
         self.hint_label = Label(self.review_frame, text="", font=("Consolas", 16, "bold"),
                                  fg="#003", bg="#eef", anchor="w", padx=10, pady=6)
-        self.hint_label.pack(fill="x", pady=(2, 8))
+        self.hint_label.pack(fill="x", pady=(2, 2))
+        # field_agreement banner (2026-08-15): green = both independent
+        # model reads agreed (fast Yes - measured zero false agreements
+        # across every hint-free validation run); red = they disagreed,
+        # with stage 1's own reading shown because review is exactly
+        # where a correct stage-1/wrong-stage-2 case gets recovered.
+        # Empty/hidden for CSV-sourced hints.
+        self.agreement_label = Label(self.review_frame, text="", font=("Segoe UI", 10, "bold"),
+                                      anchor="w", padx=10, pady=4)
+        self.agreement_label.pack(fill="x", pady=(0, 8))
 
         yn_row = Frame(self.review_frame)
         yn_row.pack(fill="x")
@@ -332,6 +356,35 @@ class HintValidationApp:
         self.csv_page_rows = rows_for_image(
             self.csv_all_rows, self.sidecar["source_image_path"])
 
+    def load_extraction_file(self):
+        """Loads a two-stage extraction output JSON (scripts/
+        run_two_stage_extraction.py --out) as the Phase 1 hint source -
+        core/extraction_hint_source.py. Sanity-checks row bboxes
+        against the loaded sidecar so a mispaired file fails loudly."""
+        path = filedialog.askopenfilename(
+            title="Select two-stage extraction output JSON",
+            filetypes=[("JSON", "*.json")],
+        )
+        if not path:
+            return
+        try:
+            rows = extraction_hint_source.load_extraction_results(path)
+        except Exception as e:
+            messagebox.showerror("Could not load extraction JSON", str(e))
+            return
+        if self.sidecar is not None:
+            warning = extraction_hint_source.match_check(rows, self.sidecar)
+            if warning:
+                if not messagebox.askyesno(
+                        "Possible mismatch",
+                        warning + "\n\nLoad it anyway?"):
+                    return
+        self.extraction_path = path
+        self.extraction_rows = rows
+        self.extraction_label.config(text=Path(path).name, fg="black")
+        if self.sidecar is not None and self.column_names:
+            self._build_queues()
+
     def load_columns_file(self):
         columns_dir = PROJECT_ROOT / "config" / "columns"
         path = filedialog.askopenfilename(
@@ -371,31 +424,52 @@ class HintValidationApp:
 
         self.review_queue = []
         self.manual_queue = []
+        disagreed: list[tuple] = []
+        agreed: list[tuple] = []
+        csv_hinted: list[tuple] = []
         for row in self.sidecar["rows"]:
             # Row matching is a direct row_index == line_num join (Jon,
             # 2026-07-29) - the sidecar's row index is assigned by
             # walking the table the same way the CSV's line_num was
-            # transcribed, so no fuzzy matching is needed here.
+            # transcribed, so no fuzzy matching is needed here. The
+            # extraction JSON shares the same row_index space by
+            # construction (it was produced FROM a sidecar).
             csv_row = self.csv_page_rows.get(row["index"])
+            ext_row = self.extraction_rows.get(row["index"])
             for col in self.column_names:
                 key = (self.sidecar_path, row["index"], col)
                 if key in self.existing_keys:
                     continue
+                # Extraction hints take precedence over CSV when both
+                # are loaded - reviewing a fresh extraction is the live
+                # use-case; the CSV remains the fallback source.
+                ext_hint = extraction_hint_source.get_hint(ext_row, col)
+                if ext_hint is not None:
+                    agree = extraction_hint_source.agreement(ext_row, col)
+                    s1 = extraction_hint_source.stage1_reading(ext_row, col)
+                    entry = (row["index"], col, ext_hint, "extraction", agree, s1)
+                    (agreed if agree else disagreed).append(entry)
+                    continue
                 hint = csv_get_hint(csv_row, col) if csv_row is not None else None
                 if hint is not None:
-                    self.review_queue.append((row["index"], col, hint))
+                    csv_hinted.append((row["index"], col, hint, "csv", None, None))
                 else:
                     self.manual_queue.append((row["index"], col))
+        # Disagreements FIRST (the fields the review queue exists for),
+        # then agreed fast-confirms, then CSV-sourced hints.
+        self.review_queue = disagreed + agreed + csv_hinted
         self.review_pos = 0
         self.manual_pos = 0
 
         total_possible = len(self.sidecar["rows"]) * len(self.column_names)
         already_done = total_possible - len(self.review_queue) - len(self.manual_queue)
         csv_note = "" if self.csv_page_rows else " (no matching CSV page found for this sidecar's image)"
+        n_disagreed = sum(1 for e in self.review_queue if e[3] == "extraction" and not e[4])
+        disagree_note = f" ({n_disagreed} model DISAGREEMENTS queued first)" if n_disagreed else ""
         self.status_label.config(
             text=f"{already_done}/{total_possible} already labeled. "
-                 f"{len(self.review_queue)} to confirm, {len(self.manual_queue)} need manual entry "
-                 f"(no CSV hint available){csv_note}.")
+                 f"{len(self.review_queue)} to confirm{disagree_note}, "
+                 f"{len(self.manual_queue)} need manual entry (no hint available){csv_note}.")
 
         if not self.review_queue and not self.manual_queue:
             messagebox.showinfo("Nothing to do",
@@ -530,19 +604,36 @@ class HintValidationApp:
             self._show_current()
             return
 
-        row_index, column, hint = self.review_queue[self.review_pos]
+        row_index, column, hint, source, agree, s1 = self.review_queue[self.review_pos]
         self.phase_label.config(text="Phase 1 of 2 — Confirm auto-extracted hints against the image")
         self.progress_label.config(
             text=f"Field {self.review_pos + 1} of {len(self.review_queue)} to confirm "
                  f"({len(self.manual_queue)} queued for manual entry so far)")
         self.field_label.config(text=f"{column}  —  Row {row_index}")
         self.hint_label.config(text=hint if hint else "(empty value)")
+        if source == "extraction":
+            if agree:
+                self.agreement_label.config(
+                    text="✓ both independent model reads AGREE",
+                    fg="#0a5c1f", bg="#e4f5e7")
+            else:
+                s1_display = s1 if (s1 or "").strip() else "(no stage-1 reading)"
+                self.agreement_label.config(
+                    text=f"✗ MODELS DISAGREE — stage 1 independently read: {s1_display}",
+                    fg="#8a1621", bg="#fbe6e8")
+        else:
+            self.agreement_label.config(text="(reference CSV hint)", fg="#666", bg=self.review_frame.cget("bg"))
         self._render_field(row_index, column)
 
     def confirm_hint(self):
         if self.phase != "review" or self.review_pos >= len(self.review_queue):
             return
-        row_index, column, hint = self.review_queue[self.review_pos]
+        row_index, column, hint, source, agree, _s1 = self.review_queue[self.review_pos]
+        if source == "extraction":
+            note = ("confirmed_from_extraction_agreed" if agree
+                    else "confirmed_from_extraction_disagreed")
+        else:
+            note = "confirmed_from_reference_csv"
         record = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "sidecar_path": self.sidecar_path,
@@ -551,7 +642,7 @@ class HintValidationApp:
             "column": column,
             "status": "readable",
             "value": hint,
-            "notes": "confirmed_from_reference_csv",
+            "notes": note,
         }
         with open(LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -562,7 +653,7 @@ class HintValidationApp:
     def reject_hint(self):
         if self.phase != "review" or self.review_pos >= len(self.review_queue):
             return
-        row_index, column, _hint = self.review_queue[self.review_pos]
+        row_index, column, _hint, _source, _agree, _s1 = self.review_queue[self.review_pos]
         self.manual_queue.append((row_index, column))
         self.review_pos += 1
         self._show_review_current()

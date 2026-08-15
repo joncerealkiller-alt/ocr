@@ -209,3 +209,29 @@ MiniCPM-specific stage-1 prompt that suppresses thinking mode (or post-
 `</think>` extraction) would make stage 1's reading cleaner and likely raise
 the auto-accept rate. The "empty prompt is best for stage 1" finding was
 established on smolvlm2 and does not transfer to MiniCPM unmodified.
+
+
+## Review-queue wiring (2026-08-15, same session)
+
+field_agreement is now consumed by `ui/hint_validation_ui.py` (extended -
+per Jon's pointer, it was already the multi-use review tool with a pluggable
+hint interface, so no new UI was built):
+
+- `core/extraction_hint_source.py`: a second Phase-1 hint source alongside
+  the reference-CSV one - loads a two-stage extraction output JSON, exposes
+  stage-2 values as hints, plus per-field agreement and stage-1 readings.
+  Includes a bbox sanity check so a mispaired extraction/sidecar fails loudly.
+- Queue ordering: model DISAGREEMENTS first (the fields review exists for),
+  then agreed fast-confirms, then CSV-sourced hints, then manual entry.
+  Stage-2 "?" abstentions skip Phase 1 entirely and go straight to manual.
+- Display: a per-field banner - green "both independent model reads AGREE"
+  for fast Yes-confirmation, red "MODELS DISAGREE - stage 1 independently
+  read: <reading>" so the reviewer sees both candidates (the evidence shows
+  stage 1 is sometimes the correct one).
+- Ground-truth log notes distinguish confirmed_from_extraction_agreed /
+  _disagreed / _from_reference_csv, so future analysis can measure human
+  agreement with the auto-accept signal from the log alone.
+
+Verified headless against the real 12B+MiniCPM run: 28 hints queued (13
+disagreements first), resume keys honored, both banners render, mismatch
+check passes on the correct pairing.
