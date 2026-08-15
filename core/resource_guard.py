@@ -42,15 +42,25 @@ class ResourceExhaustedError(RuntimeError):
 def available_ram_mb() -> float | None:
     """Linux MemAvailable (not MemFree - MemAvailable already accounts
     for reclaimable page cache/buffers, the correct "can I actually
-    allocate this much" number). Returns None (not 0) on a platform
-    without /proc/meminfo (e.g. native Windows) - caller must treat
-    None as "unknown," never as "exhausted.\""""
+    allocate this much" number), falling back to psutil on a platform
+    without /proc/meminfo (e.g. native Windows - see
+    core/model_residency.py's _trim_host_memory() docstring for why the
+    Windows/local model_console path needed this guard as much as the
+    WSL backend did, confirmed live 2026-08-16: a real local model load
+    produced a ~10GB transient RSS peak this function couldn't see until
+    now). Returns None (not 0) only when NEITHER reader works - caller
+    must treat None as "unknown," never as "exhausted.\""""
     try:
         with open("/proc/meminfo") as f:
             for line in f:
                 if line.startswith("MemAvailable:"):
                     return int(line.split()[1]) / 1024
     except (FileNotFoundError, OSError, ValueError, IndexError):
+        pass
+    try:
+        import psutil
+        return psutil.virtual_memory().available / (1024 * 1024)
+    except Exception:
         pass
     return None
 

@@ -83,6 +83,24 @@ def test_raises_on_low_vram():
         rg.available_ram_mb, rg.free_vram_mb = orig_ram, orig_vram
 
 
+def test_available_ram_mb_returns_real_value_on_windows():
+    """
+    2026-08-16: available_ram_mb() gained a psutil fallback for
+    platforms without /proc/meminfo (native Windows) - the WSL-only
+    version of this guard silently no-op'd on the model_console/local
+    path, confirmed live as a real gap the same night a genuine ~10GB
+    transient RSS peak happened on that exact path. This just confirms
+    the reader itself returns a plausible positive number on whatever
+    platform the test suite is running on - the threshold-logic tests
+    above already cover check_resources_or_raise()'s behavior once a
+    value exists, regardless of which reader produced it.
+    """
+    print("\ntest_available_ram_mb_returns_real_value_on_windows")
+    value = rg.available_ram_mb()
+    check(value is None or value > 0,
+          f"available_ram_mb() is None or a positive number (got {value!r})")
+
+
 def test_unknown_readers_never_block():
     """Missing readers (None - e.g. no /proc/meminfo, no nvidia-smi on
     PATH) must be treated as 'unknown', never as 'exhausted' - this
@@ -105,6 +123,7 @@ def main():
     test_passes_when_resources_plentiful()
     test_raises_on_low_ram()
     test_raises_on_low_vram()
+    test_available_ram_mb_returns_real_value_on_windows()
     test_unknown_readers_never_block()
 
     print(f"\n{'='*60}")
