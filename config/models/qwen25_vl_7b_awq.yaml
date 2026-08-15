@@ -46,4 +46,28 @@ max_new_tokens: 400
 
 text_only_supported: true    # confirmed live - the PONG spike turn was text-only
 image_input_supported: true  # full VLM (vision tower intact, modules_to_not_convert: ["visual"])
+# RE-VALIDATED 2026-08-15 at max_num_seqs 4: vision_baseline_v4 4/5
+# pass (unchanged pattern), 41.1 tok/s (vs 39.4 prior - unchanged),
+# net-of-baseline VRAM 13028MB vs 13715MB prior (-687MB), engine init
+# 144s. PRIOR RESULTS at default 256 for the record: Phase 1 spike +
+# live chat/agent turns + vision spot-check PASSED (2026-08-13) + full
+# vision_baseline_v4 (4/5, 39.4 tok/s, 14823MB raw).
+# RE-VALIDATED 2026-08-15 with mm-limit flag: 4/5 (unchanged), 40.0
+# tok/s (unchanged), init 117s (was 144s). NOTE net VRAM read ~1GB
+# HIGHER than the seqs-4 run (14.0GB vs 13.0GB) - interpreted (not
+# proven; the prior run's log was overwritten) as vLLM re-investing
+# freed provisioning into KV cache toward the fixed utilization
+# target, which this config's 16384 context has appetite for. Same
+# budget target either way; quality/throughput unaffected.
+vision_validation_status: validated
+# Adopted 2026-08-15 from the E2B family's confirmed win (256->4, see
+# gemma_extract_vllm_w4a16_lowseqs.yaml). Extra motivation here: this
+# config's 16384 context makes the default-256 KV plan the largest of
+# any vLLM config in the registry.
+vllm_max_num_seqs: 4
+# Adopted 2026-08-15 from the mmlimit experiment (gemma_extract_vllm_
+# w4a16_mmlimit.yaml: same quality, ~30s faster init, 0.6GiB of
+# unused-modality provisioning freed - vLLM defaults unspecified
+# modalities to 999 items/prompt; this workload is exactly 1 image).
+vllm_limit_mm_per_prompt: '{"image": 1, "video": 0}'
 role: vision_candidate

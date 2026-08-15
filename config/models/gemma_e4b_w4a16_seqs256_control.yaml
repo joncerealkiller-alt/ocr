@@ -1,0 +1,47 @@
+model_name: gemma_e4b_w4a16_seqs256_control
+repo_id: google/gemma-4-E4B-it-qat-w4a16-ct
+# Sentinel - see qwen25_vl_7b_awq.yaml's comment; runtime "vllm" models
+# never instantiate a loader class.
+loader_class: vllm
+
+# 2026-08-13, multi-runtime integration (plan addendum). compressed-
+# tensors w4a16 checkpoint, confirmed live under vLLM 0.27.1 in
+# ~/venv_vllm: 9.93GiB resident / 1.18s generation. THE checkpoint the
+# whole runtime investigation started from: Benchmark 2.3's "E4B is
+# 4.8x slower than E2B" finding was an artifact of the mobile-QAT
+# checkpoint under plain transformers, not a real E4B capability
+# result - under its intended format (w4a16-ct) and runtime (vLLM),
+# E4B is in the same performance neighborhood as E2B. NOTE: this is a
+# DIFFERENT checkpoint from config/models/gemma_e4b.yaml (the
+# mobile-transformers QAT one) - same underlying model, different
+# quantization format, different runtime.
+runtime: vllm
+
+vram_headroom_gb: 2.4
+context_length: 4096
+
+do_sample: false
+temperature: 0.1
+max_new_tokens: 400
+
+text_only_supported: true    # confirmed live - the PONG test turn was text-only
+image_input_supported: true  # full multimodal E4B checkpoint
+# RESET TO UNTESTED 2026-08-15: vllm_max_num_seqs below changes the
+# launch command. PRIOR RESULTS for the record (default max_num_seqs
+# 256): PONG smoke test + resident-size/generation-time measurement +
+# vision spot-check PASSED (2026-08-13).
+# CONTROL RESULT 2026-08-15 (evidence-only config, not for production -
+# default 256 seqs wastes ~790MB vs gemma_e4b_w4a16's seqs-4): 3/5 pass
+# with BYTE-IDENTICAL failing outputs to the seqs-4 run ("John Test"/
+# "Jane Placeholder" truncation), 47.6 tok/s, net VRAM ~14.6GB, 204s
+# init. Proves E4B's 3/5 is inherent model behavior, not a
+# max_num_seqs artifact.
+vision_validation_status: validated
+role: vision_candidate
+
+# CONTROL CONFIG (2026-08-15): identical to gemma_e4b_w4a16 EXCEPT no
+# vllm_max_num_seqs (vLLM default 256) - exists solely to test whether
+# E4B's surprising field_extraction fail at seqs4 (truncated surnames)
+# reproduces at the previously-validated default launch. If raw outputs
+# match, the miss is inherent E4B behavior; if not, seqs4 changed
+# generation on this checkpoint (would be a major finding).

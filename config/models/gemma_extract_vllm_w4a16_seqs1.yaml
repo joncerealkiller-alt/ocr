@@ -1,0 +1,63 @@
+model_name: gemma_extract_vllm_w4a16_seqs1
+repo_id: google/gemma-4-E2B-it-qat-w4a16-ct
+# max-num-seqs sweep experiment (2026-08-15, Fable audit session):
+# identical to gemma_extract_vllm_w4a16.yaml (the current best operating
+# point: graphs ON, normal KV, ctx4096, --max-num-seqs 4 -> 14758MB /
+# 76.0 tok/s / 4-5 pass) EXCEPT vllm_max_num_seqs: 1. The pipeline
+# supplies its own batching and never runs >1 concurrent sequence, so
+# this tests whether 1 recovers further VRAM beyond the 4-seqs win.
+# HYPOTHESIS (stated before running): small additional savings - at 4,
+# the real log shows cudagraph_capture_sizes [1,2,4,8] with only 0.11
+# GiB tracked graph memory + 0.21 GiB activation left to shrink; but
+# the original 256->4 result over-delivered vs tracked categories
+# (untracked memory scaled too), so this is measured, not assumed.
+loader_class: vllm
+runtime: vllm
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5   # inert under vLLM - see gemma_extract_vllm.yaml.
+max_new_tokens: 512
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+text_only_supported: true
+image_input_supported: true
+# MEASURED 2026-08-15 (live, vision_baseline_v4): 4/5 pass (unchanged
+# pattern), 76.7 tok/s, net-of-baseline VRAM 13702MB vs seqs4's 13809MB
+# (-107MB - barely above the ~61MB identical-config rerun spread; at
+# most ~100MB real, nothing like the 1.2GB from 256->4). Tracked log:
+# CUDAGraph memory 0.11 -> 0.05 GiB, activation unchanged. NEAR-NULL
+# RESULT: 4 remains the recommended production value (keeps headroom
+# for occasional parallel calls at ~zero cost). Kept as historical
+# evidence so this sweep isn't re-run later.
+vision_validation_status: validated
+
+restrict_output_charset: true   # inert under vLLM - see gemma_extract_vllm.yaml.
+
+prompt_version: v1
+prompt_text: ""
+
+extra:
+  image_token_budget: 560   # inert under vLLM - see gemma_extract_vllm.yaml.
+  system_prompt: |
+    You are an OCR transcription model.
+
+    Transcribe exactly what appears in the image.
+    If unreadable, output only "?".
+    Do not describe the image.
+    Do not explain your reasoning.
+  # THE ONE FUNCTIONAL DIFFERENCE from gemma_extract_vllm_w4a16.yaml.
+  vllm_max_num_seqs: 1
+
+vram_headroom_gb: 2.5
+context_length: 4096
+
+role: extraction_candidate_vllm_quantized_seqs1   # descriptive only.

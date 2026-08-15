@@ -1,0 +1,189 @@
+model_name: gemma_extract_vllm
+repo_id: google/gemma-4-E2B-it   # EXACT same repo_id as gemma_extract.yaml -
+                                   # this is the one deliberate "same weights,
+                                   # both engines" pair beyond gemma_12b_unified/
+                                   # gemma_12b_w4a16 (which is the DIFFERENT
+                                   # Gemma4Unified/12B architecture - do not
+                                   # confuse the two). Confirmed 2026-08-16:
+                                   # google/gemma-4-E2B-it is vLLM's own cited
+                                   # example repo for `Gemma4ForConditionalGeneration`
+                                   # (T+I+V+A) in docs/models/supported_models.md.
+# Sentinel - see qwen25_vl_7b_awq.yaml's comment; runtime "vllm" models
+# never instantiate a loader class (core/vllm_runtime.py serves this
+# instead - api/agent_main.py branches on `runtime` before any
+# loader_class lookup).
+loader_class: vllm
+runtime: vllm
+
+# Every field below is a deliberate MATCH to gemma_extract.yaml's
+# transformers-side settings (task: "match as best as you can to the
+# transformers config, using the relevant settings in vllm") - NOT
+# copied from gemma_12b_w4a16.yaml, which is a different architecture
+# (Gemma4Unified, no vision tower, dense-projection encoder-free
+# design - see its own YAML comment) with its own independently-tuned
+# settings that have no bearing on this config. Where a transformers-
+# side field has no vLLM equivalent at all, it's called out explicitly
+# below rather than silently dropped - see core/vllm_runtime.py's
+# chat_completion() docstring for the general translation rules this
+# config relies on.
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9            # sent as a native OpenAI-schema field - direct match.
+top_k: 20             # sent as a vLLM server-extension field - direct match.
+repetition_penalty: 1.15   # sent as a vLLM server-extension field - direct match.
+# NO vLLM sampler equivalent exists for this AT ALL (confirmed live,
+# see core/vllm_runtime.py's chat_completion() docstring) - kept here
+# anyway, matching gemma_extract.yaml exactly, so generation_settings/
+# generation_config_snapshot faithfully record what was REQUESTED；
+# benchmark/console_runner.py's settings_translation_notes records,
+# per run, that this field was NOT actually applied under this engine.
+no_repeat_ngram_size: 5
+max_new_tokens: 512   # exact match - row/OCR extraction needs the same
+                        # multi-line budget under either engine.
+
+min_pixels: null   # exact match - Gemma doesn't use Qwen-style dynamic-
+max_pixels: null   #  resolution pixel budgets; image_token_budget below
+                     #  is Gemma's own resolution knob (see caveat).
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+# Confirmed via base_loader.py's text_only_supported/image_input_supported
+# docstrings' same-repo-id precedent, already established for
+# gemma_extract.yaml itself - carried over unchanged since this is the
+# identical checkpoint.
+text_only_supported: true
+image_input_supported: true
+# PRIOR RESULT (kept for the record, at --max-num-seqs 256 default,
+# via the Benchmark tab's "Run Backend Comparison"): 4/5 pass (80%),
+# IDENTICAL per-case pattern to gemma_extract (transformers) - the
+# strongest evidence in the registry that an engine swap alone doesn't
+# regress this checkpoint's output. Cold load 291.1s, 41.8 tok/s,
+# 16011MB (nvidia-smi snapshot).
+#
+# RE-VALIDATED 2026-08-16 at --max-num-seqs 4: 4/5 pass (unchanged
+# pattern), VRAM 16011MB -> 14811MB (-1200MB), tok/s 41.8 -> 46.3 (no
+# regression). Confirms the win found on the quantized sibling
+# (gemma_extract_vllm_w4a16_lowseqs.yaml) generalizes to these
+# UNQUANTIZED weights too - --max-num-seqs reaches memory this
+# checkpoint family's weight quantization state doesn't affect.
+# RE-VALIDATED 2026-08-15 with mm-limit flag: 4/5 (unchanged pattern),
+# 48.9 tok/s (was 46.3 - unchanged), net VRAM ~13.9GB (unchanged),
+# init 183s.
+vision_validation_status: validated
+
+# NOT honored under this engine - restrict_output_charset relies on a
+# transformers generate()-time logits_processor hook
+# (core/loaders/constrained_decoding.py's AllowedCharsLogitsProcessor);
+# vLLM's OpenAI-compatible chat-completions path has no equivalent
+# wired through today. Left true anyway (matches gemma_extract.yaml,
+# same "record what was requested" discipline as no_repeat_ngram_size
+# above) - do not read this as "vLLM output is charset-restricted."
+restrict_output_charset: true
+
+prompt_version: v1
+prompt_text: ""
+
+extra:
+  # NOT read by the vLLM path AT ALL (real gap, found while writing
+  # this config - core/vllm_runtime.py's acquire() only reads
+  # extra.vllm_trust_remote_code and top-level min_pixels/max_pixels for
+  # --mm-processor-kwargs; it never touches image_token_budget). Under
+  # transformers, this is Gemma's actual resolution-detail knob (raised
+  # from classification's 140 to 560 for extraction, see
+  # gemma_extract.yaml's own comment) - under vLLM, image resolution for
+  # this checkpoint is currently whatever vLLM's own Gemma4 processor
+  # defaults to, uncapped/unconfigured by this project. Kept here for
+  # parity/documentation, not because it does anything yet.
+  image_token_budget: 560
+  # ALSO not read by the vLLM path - api/agent_main.py's
+  # _make_vllm_send_turn_fn() builds its system message purely from the
+  # caller-supplied `system_prompt` argument (chat_tab's system-prompt
+  # box, or a benchmark suite's own value - usually ""), never falling
+  # back to config.extra["system_prompt"] the way the transformers path
+  # effectively does (adapter.py overwrites loader.config.extra
+  # ["system_prompt"] with the caller's value before every call, but
+  # that's still SOMETHING a caller can rely on as this config's stated
+  # intent when reading the YAML). Kept here as documentation of this
+  # checkpoint's intended role (OCR transcription, not free chat) - a
+  # caller running this model in either engine should pass this same
+  # system prompt explicitly if they want the OCR behavior, since only
+  # the transformers side has any chance of picking it up implicitly.
+  system_prompt: |
+    You are an OCR transcription model.
+
+    Transcribe exactly what appears in the image.
+    If unreadable, output only "?".
+    Do not describe the image.
+    Do not explain your reasoning.
+  # Adopted 2026-08-16 - see this file's own vram_headroom_gb note and
+  # gemma_extract_vllm_w4a16_lowseqs.yaml's comment for the source of
+  # this value.
+  vllm_max_num_seqs: 4
+  # Adopted 2026-08-15 from the mmlimit experiment (gemma_extract_vllm_
+  # w4a16_mmlimit.yaml: same quality, ~30s faster init, 0.6GiB of
+  # unused-modality provisioning freed - vLLM defaults unspecified
+  # modalities to 999 items/prompt; this workload is exactly 1 image).
+  vllm_limit_mm_per_prompt: '{"image": 1, "video": 0, "audio": 0}'
+
+# TWICE-CORRECTED 2026-08-16 - two real, live, contradictory data
+# points, both worth keeping on record since they bound the real
+# answer:
+#   1.5  (original, copied from gemma_extract.yaml): WORKED. pool
+#        ~14.4GB (--gpu-memory-utilization 0.91). Total reported usage
+#        16011MB - flagged as "too much for a small model", see below.
+#   10.0 (first correction, based ONLY on "E2B is small" intuition,
+#        NOT verified before being written down - a mistake, corrected
+#        here): FAILED TO LOAD. pool ~5.9GB (utilization 0.37). Real
+#        vLLM log: "Available KV cache memory: -4.58 GiB" - the
+#        model's own weights + CUDA-graph-capture overhead alone need
+#        more than that 5.9GB pool, before any KV cache at all.
+# Together these bound the checkpoint's real floor at roughly 10.5GB
+# (5.9 + 4.58) just for weights/overhead, with NO KV cache margin left
+# at that floor. 2.5 targets a ~13.4GB pool - comfortably above that
+# floor with a real ~2.9GB KV-cache margin for this suite's modest
+# 4096-token context, without reproducing 1.5's near-entire-card claim.
+# RE-VERIFIED LIVE at 2.5: loaded successfully, 4/5 pass (same pattern
+# as the original 1.5 run), 51.0 tok/s. BUT total reported VRAM barely
+# moved - 15929MB, vs. 16011MB at headroom 1.5.
+#
+# MECHANISM CORRECTED 2026-08-16 (after a user double-check prompted
+# re-deriving this from the actual numbers rather than trusting the
+# first plausible-sounding explanation): --gpu-memory-utilization is
+# NOT a ceiling on this process's total VRAM - it's the input to vLLM's
+# KV-cache-BLOCK-COUNT calculation only (available_kv_cache = total *
+# utilization - weights - profiled_activation_memory). The nominal
+# "target" it computes and this process's ACTUAL observed total diverge
+# by 1.2-2.2GB across every config tried in this checkpoint family -
+# and that gap gets BIGGER as the requested utilization/target gets
+# SMALLER (headroom 1.5 -> target 14775MB, observed 16011MB, gap
+# +1236MB; headroom 2.5 -> target 13751MB, observed ~15920-15940MB
+# across four different sibling configs, gap +2171 to +2188MB). A
+# simple "target + fixed overhead" model would predict a roughly
+# CONSTANT gap, not a growing one - it isn't fully explained. --enforce-
+# eager (gemma_extract_vllm_w4a16_eager.yaml) only recovered 216MB of
+# that gap, ruling out CUDA-graph capture as the primary explanation
+# too. Two further levers (--max-model-len down to 1024, --kv-cache-
+# dtype fp8) ALSO moved nothing - see gemma_extract_vllm_w4a16_
+# ctx1024.yaml and gemma_extract_vllm_w4a16_fp8kv.yaml. Best remaining
+# explanation, NOT independently confirmed: the separate EngineCore
+# worker process's own CUDA context + PyTorch allocator fragmentation,
+# neither of which --gpu-memory-utilization accounts for. Total
+# observed usage across FOUR independent levers and TWO checkpoints
+# (this file's unquantized weights and w4a16_*'s quantized ones) has
+# consistently landed in a narrow 15.7-16.0GB band regardless of what
+# any of them requested - treat that band as this checkpoint/vLLM-
+# version/GPU combination's real floor, not something vram_headroom_gb
+# controls in the way its name suggests. Kept at 2.5 anyway - it's
+# still the value confirmed NOT to under-allocate (unlike 10.0), even
+# though it doesn't deliver the VRAM reduction its target number
+# implies.
+vram_headroom_gb: 2.5
+context_length: 4096   # prompt + 560 image tokens + 512 max_new_tokens
+                         # comfortably fits; matches vLLM's own fallback
+                         # default (config.context_length or 4096) made
+                         # explicit rather than left implicit.
+
+role: extraction_candidate_vllm   # descriptive only (see GenerationConfig.role's
+                                    # docstring) - not read by any loader mechanics.

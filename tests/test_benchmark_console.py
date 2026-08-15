@@ -28,6 +28,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from benchmark.run_result import BenchmarkRunResult, CaseResult
 from benchmark.scorers import score_case
 from benchmark.suite_schema import list_suites, load_suite
+from benchmark.console_runner import (
+    find_cross_engine_pairs, inference_engine_for_model, required_backend_transport,
+)
+from core.loader_registry import is_vllm_model, validate_model_assignment
+from core.loaders.base_loader import load_model_config
 
 _PASS = 0
 _FAIL = 0
@@ -218,11 +223,117 @@ def test_suite_version_isolation():
     check(suite.qualified_id.endswith(f"_v{suite.version}"), "qualified_id encodes the version explicitly")
 
 
+def test_vllm_registry_metadata():
+    print("test_vllm_registry_metadata (backend comparison, 2026-08-16)")
+    vllm_cfg = load_model_config("qwen25_vl_7b_awq")
+    check(is_vllm_model(vllm_cfg), "qwen25_vl_7b_awq is correctly identified as a vLLM-runtime config")
+    transformers_cfg = load_model_config("gemma_extract")
+    check(not is_vllm_model(transformers_cfg), "gemma_extract is correctly identified as NOT a vLLM-runtime config")
+
+    # This was a REAL bug found this session: loader_class="vllm" is a
+    # documented sentinel never looked up in LOADER_REGISTRY, so every
+    # vLLM config failed validate_model_assignment() before is_vllm_model()
+    # was added to special-case it.
+    cfg = validate_model_assignment("qwen25_vl_7b_awq")
+    check(cfg is not None, "validate_model_assignment() no longer rejects a valid vllm-runtime config")
+
+    check(inference_engine_for_model("qwen25_vl_7b_awq") == "vllm", "inference_engine_for_model reads config.runtime for a vllm config")
+    check(inference_engine_for_model("gemma_extract") == "transformers", "inference_engine_for_model defaults to transformers")
+    check(required_backend_transport("qwen25_vl_7b_awq") == "remote", "a vllm-runtime model requires backend=remote")
+    check(required_backend_transport("gemma_extract") == "local", "a plain transformers model can run backend=local")
+
+
+def test_cross_engine_pairing():
+    print("test_cross_engine_pairing")
+    pairs = find_cross_engine_pairs()
+    check(("gemma_12b_unified", "gemma_12b_w4a16") in pairs,
+          "gemma_12b_unified/gemma_12b_w4a16 (same repo_id, different runtime) is detected as a cross-engine pair")
+    pair_repo_ids = {load_model_config(a).repo_id for a, b in pairs} | {load_model_config(b).repo_id for a, b in pairs}
+    for a, b in pairs:
+        check(load_model_config(a).repo_id == load_model_config(b).repo_id,
+              f"paired models {a!r}/{b!r} genuinely share repo_id (weight-identical, not just same family)")
+    check(("qwen25_vl_7b", "qwen25_vl_7b_awq") not in pairs,
+          "qwen25_vl_7b/qwen25_vl_7b_awq is NOT treated as a pair - AWQ quantization means different repo_id/weights")
+
+
+def test_backend_comparison_result_fields():
+    print("test_backend_comparison_result_fields")
+    from model_console import benchmark_store
+
+    vllm_case = CaseResult(
+        case_id="c1", category="cat", prompt="p", image_path=None, expected_display="x",
+        raw_output="PONG", status="pass", score=1.0, explanation="matched",
+        runtime_seconds=0.5, telemetry={"generate": {"tokens_per_sec": 40.0, "vram_used_mb": 7000.0}},
+    )
+    vllm_run = BenchmarkRunResult(
+        run_id="test_run_vllm_fields_unit", model_name="fake_vllm_model",
+        suite_id="text_baseline", suite_version="1", suite_qualified_id="text_baseline_v1",
+        backend="remote", inference_engine="vllm", repo_id="fake/repo-AWQ",
+        generation_settings={"do_sample": False},
+        generation_config_snapshot={"do_sample": False, "temperature": 0.1, "runtime": "vllm"},
+        settings_translation_notes=["no_repeat_ngram_size has NO vLLM sampler equivalent - NOT applied."],
+        was_resident_before_run=False, load_telemetry={"load_time_s": 180.0},
+        started_at="2026-08-16T00:00:00Z", finished_at="2026-08-16T00:00:01Z",
+        total_runtime_seconds=1.0, status="completed", abort_reason=None,
+        case_results=[vllm_case],
+    )
+    try:
+        check(vllm_run.inference_engine == "vllm", "inference_engine field is distinct from backend (transport)")
+        check(vllm_run.peak_vram_mb is None, "peak_vram_mb is honestly None for a vllm run (no true peak counter available)")
+        check(vllm_run.resident_vram_mb == 7000.0, "resident_vram_mb falls back to vram_used_mb for a vllm run")
+        check(len(vllm_run.settings_translation_notes) == 1, "settings_translation_notes is persisted on the run")
+
+        benchmark_store.save_run(vllm_run)
+        loaded = benchmark_store.load_run("test_run_vllm_fields_unit")
+        check(loaded.inference_engine == "vllm", "inference_engine round-trips through persistence")
+        check(loaded.repo_id == "fake/repo-AWQ", "repo_id round-trips through persistence")
+        check(loaded.settings_translation_notes == vllm_run.settings_translation_notes,
+              "settings_translation_notes round-trips through persistence")
+
+        # Backward compatibility: a run saved BEFORE these fields existed
+        # (no inference_engine/repo_id/settings_translation_notes keys in
+        # its JSON at all) must still load, defaulting sensibly.
+        import json
+        old_style_path = benchmark_store.run_dir("test_run_vllm_fields_unit") / "run.json"
+        with open(old_style_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for key in ("inference_engine", "repo_id", "settings_translation_notes"):
+            data.pop(key, None)
+        with open(old_style_path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        old_loaded = benchmark_store.load_run("test_run_vllm_fields_unit")
+        check(old_loaded.inference_engine == "transformers",
+              "a pre-2026-08-16 run missing inference_engine loads and defaults to 'transformers'")
+        check(old_loaded.repo_id is None, "a pre-2026-08-16 run missing repo_id loads with repo_id=None")
+    finally:
+        shutil.rmtree(benchmark_store.run_dir("test_run_vllm_fields_unit"), ignore_errors=True)
+        benchmark_store._refresh_index()
+
+
+def test_comparison_mismatch_detection():
+    print("test_comparison_mismatch_detection")
+    from model_console.benchmark_tab import _diff_material_settings
+
+    same = {"do_sample": False, "temperature": 0.1, "runtime": "transformers"}
+    check(_diff_material_settings(same, dict(same)) == [], "identical settings produce no diffs")
+
+    a = {"do_sample": False, "temperature": 0.1, "top_k": 20, "runtime": "transformers"}
+    b = {"do_sample": False, "temperature": 0.1, "top_k": None, "runtime": "vllm"}
+    diffs = _diff_material_settings(a, b)
+    check(any("runtime" in d for d in diffs), "a runtime difference is flagged")
+    check(any("top_k" in d for d in diffs), "a top_k difference (e.g. vllm not receiving it) is flagged")
+    check(_diff_material_settings(None, b) == [], "a missing snapshot produces no diffs (nothing to compare), not a false positive")
+
+
 if __name__ == "__main__":
     test_suite_loading()
     test_eligibility_capability_gating()
     test_scorers()
     test_persistence_roundtrip()
     test_suite_version_isolation()
+    test_vllm_registry_metadata()
+    test_cross_engine_pairing()
+    test_backend_comparison_result_fields()
+    test_comparison_mismatch_detection()
     print(f"\n{_PASS} passed, {_FAIL} failed")
     sys.exit(1 if _FAIL else 0)

@@ -1,0 +1,108 @@
+model_name: gemma_extract_vllm_w4a16_eager
+repo_id: google/gemma-4-E2B-it-qat-w4a16-ct
+# SAME checkpoint as gemma_extract_vllm_w4a16.yaml - literally every
+# field below is identical to that config EXCEPT extra.vllm_enforce_
+# eager (new) and this model_name/role. This is the cleanest A/B test
+# in this project's registry so far: same engine, same quantized
+# weights, same suite - ONE runtime knob (CUDA graph capture on vs
+# off).
+#
+# WHY THIS EXISTS (2026-08-16): gemma_extract_vllm.yaml's
+# vram_headroom_gb tuning found that --gpu-memory-utilization mostly
+# controls KV-cache block count, not this process's total VRAM
+# footprint - total usage stayed ~15.9-16.0GB across headroom 1.5, 2.5,
+# and even across UNQUANTIZED vs w4a16-QUANTIZED checkpoints (see
+# gemma_extract_vllm_w4a16.yaml's own validation note). The one
+# remaining suspect for that ~15-16GB floor is vLLM's CUDA-graph
+# capture, which this launch's own startup log showed spans batch
+# sizes 1 through 512 by default - a large, mostly-fixed buffer
+# allocation independent of checkpoint size. --enforce-eager skips that
+# capture entirely (falls back to eager/uncompiled execution per
+# forward pass) - this config exists to test that specific hypothesis
+# directly, not just work around the symptom again.
+#
+# THE QUESTION THIS ANSWERS: is CUDA graph capture worth consuming
+# almost the entire 16GB card for this workload? A ~10-20% throughput
+# cost for a real VRAM reduction would be a much nicer production
+# operating point than what gemma_extract_vllm_w4a16.yaml measured; a
+# drop toward 25-30 tok/s (from that config's 69.9) would mean the
+# graphs are doing real work and probably deserve the memory.
+#
+# UNTESTED until a real run completes - see vision_validation_status
+# below. Do NOT assume gemma_extract_vllm_w4a16.yaml's validated status
+# transfers here; --enforce-eager is a real behavioral/performance
+# change, not a config-value tweak.
+loader_class: vllm   # sentinel - see qwen25_vl_7b_awq.yaml's comment.
+runtime: vllm
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5   # inert under vLLM - see gemma_extract_vllm.yaml's identical note.
+max_new_tokens: 512
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+text_only_supported: true
+image_input_supported: true
+# PRIOR RESULT (kept for the record, at --max-num-seqs 256 default):
+# 4/5 pass, tokens/sec 69.9->16.6 (-76%), VRAM 15922->15706MB (-216MB),
+# cold load ~unchanged. Conclusion held: --enforce-eager was NOT a good
+# tradeoff here - big throughput loss for negligible memory back.
+#
+# RE-VALIDATED 2026-08-16 at --max-num-seqs 4 (compounded with eager):
+# 4/5 pass (unchanged pattern), VRAM 15706MB -> 15132MB (-574MB - a
+# smaller recovery than lowseqs's -1164MB on the graphs-ON sibling,
+# since eager mode already captures zero graphs so there's less for
+# max-num-seqs's graph-shape-count reduction to act on), tok/s
+# 16.6 -> 18.5 (still far below the graphs-ON+lowseqs combo's 76.0).
+# CONCLUSION UNCHANGED, now on stronger evidence: keep graphs ON -
+# gemma_extract_vllm_w4a16.yaml (now ALSO with --max-num-seqs 4) is
+# strictly better than this config on every axis (14758MB < 15132MB
+# VRAM, AND 76.0 >> 18.5 tok/s) - eager mode is not rescued by adding
+# max-num-seqs.
+vision_validation_status: validated
+
+restrict_output_charset: true   # inert under vLLM - see gemma_extract_vllm.yaml's identical note.
+
+prompt_version: v1
+prompt_text: ""
+
+extra:
+  image_token_budget: 560   # NOT read by the vLLM path - see gemma_extract_vllm.yaml's identical note.
+  system_prompt: |
+    You are an OCR transcription model.
+
+    Transcribe exactly what appears in the image.
+    If unreadable, output only "?".
+    Do not describe the image.
+    Do not explain your reasoning.
+  # THE ONE FUNCTIONAL DIFFERENCE from gemma_extract_vllm_w4a16.yaml -
+  # everything else in this file is a deliberate byte-for-byte match.
+  # Read by core/vllm_runtime.py's acquire(), which appends
+  # --enforce-eager to the vllm serve launch command only when this is
+  # true (added 2026-08-16 specifically for this experiment - see that
+  # module's own comment on the flag).
+  vllm_enforce_eager: true
+  # Adopted 2026-08-16 alongside vllm_enforce_eager above - see
+  # gemma_extract_vllm_w4a16.yaml's identical note for the source of
+  # this value.
+  vllm_max_num_seqs: 4
+
+# Unchanged from gemma_extract_vllm_w4a16.yaml's own hard-won value -
+# NOT re-guessed downward for eager mode even though eager mode should
+# need less peak allocation (no graph-capture buffers) - same
+# discipline as that file's own note: verify live, then adjust down
+# if warranted, don't guess first. 2.5 is a safe upper bound already
+# proven not to under-allocate for this checkpoint family.
+vram_headroom_gb: 2.5
+context_length: 4096
+
+role: extraction_candidate_vllm_quantized_eager   # descriptive only - distinguishes
+                                                     # this from the graphs-enabled sibling.

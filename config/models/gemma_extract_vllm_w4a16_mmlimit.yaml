@@ -1,0 +1,73 @@
+model_name: gemma_extract_vllm_w4a16_mmlimit
+repo_id: google/gemma-4-E2B-it-qat-w4a16-ct
+# limit-mm-per-prompt experiment (2026-08-15, Fable audit session):
+# identical to gemma_extract_vllm_w4a16.yaml (graphs ON, normal KV,
+# ctx4096, max-num-seqs 4) EXCEPT extra.vllm_limit_mm_per_prompt -
+# see that key's own comment below for the verified evidence and
+# hypothesis. UNTESTED until a live run completes.
+loader_class: vllm
+runtime: vllm
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5   # inert under vLLM - see gemma_extract_vllm.yaml.
+max_new_tokens: 512
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+text_only_supported: true
+image_input_supported: true
+# VALIDATED 2026-08-15 (live, vision_baseline_v4): 4/5 pass (unchanged
+# pattern), 77.9 tok/s (baseline 76.0 - unchanged), net-of-baseline
+# VRAM 13648MB vs baseline's 13809MB (-161MB), engine init 147s vs
+# 174-183s (~30s faster - skips video/audio processor provisioning).
+# MECHANISM (from this run's own gpu_worker.py:789 line): "weights +
+# non-torch" dropped 7.4 -> 6.8 GiB - the unused-modality provisioning
+# was hiding in the non-torch bucket. vLLM re-invested most of the
+# freed 0.6GiB into KV cache (5.77 -> 6.37 GiB available) because the
+# utilization target stayed fixed - so the net process-VRAM saving is
+# small, but the freed budget is REAL. FOLLOW-UP CANDIDATE (not run):
+# pair this flag with vram_headroom_gb ~3.1 to convert the 0.6GiB into
+# actually-free card memory at the same KV capacity as today's
+# baseline. RECOMMENDATION: fold vllm_limit_mm_per_prompt into the
+# production config - strictly positive (faster init, same quality,
+# hardens against accidental multi-image/video requests).
+vision_validation_status: validated
+
+restrict_output_charset: true   # inert under vLLM - see gemma_extract_vllm.yaml.
+
+prompt_version: v1
+prompt_text: ""
+
+extra:
+  image_token_budget: 560   # inert under vLLM - see gemma_extract_vllm.yaml.
+  system_prompt: |
+    You are an OCR transcription model.
+
+    Transcribe exactly what appears in the image.
+    If unreadable, output only "?".
+    Do not describe the image.
+    Do not explain your reasoning.
+  # THE ONE FUNCTIONAL DIFFERENCE from gemma_extract_vllm_w4a16.yaml.
+  vllm_max_num_seqs: 4
+  # THE variable under test (2026-08-15): real workload is exactly one
+  # image per prompt, never video/audio - but vLLM 0.27.1 defaults any
+  # UNSPECIFIED modality to 999 items/prompt (verified in installed
+  # source, config/multimodal.py get_limit_per_prompt), and Gemma4
+  # declares video+audio support, which measurably costs provisioning
+  # (12B log: max_num_batched_tokens force-raised 2048->2496 "to
+  # accommodate video input"). HYPOTHESIS: modest VRAM/profiling
+  # reduction, no quality change (no video/audio ever sent).
+  vllm_limit_mm_per_prompt: '{"image": 1, "video": 0, "audio": 0}'
+
+vram_headroom_gb: 2.5
+context_length: 4096
+
+role: extraction_candidate_vllm_quantized_mmlimit   # descriptive only.

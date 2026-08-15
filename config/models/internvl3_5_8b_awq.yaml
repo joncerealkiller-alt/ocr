@@ -24,6 +24,28 @@ max_new_tokens: 400
 
 text_only_supported: true    # confirmed live - the PONG smoke test was text-only
 image_input_supported: true  # full InternVL3.5 VLM
+# VALIDATED 2026-08-15 at max_num_seqs 4 - first FULL vision_baseline_
+# v4 run for this config: 4/5 pass, SAME case pattern as E2B (only
+# table_form_interpretation fails - its output misread "Alfred" as
+# "Elfred" there but got child_name fully). The 2026-08-13 spot-check
+# fabrication concern did NOT reproduce: abstention case PASSED
+# cleanly. Notably SLOW though: 15.5 tok/s (vs E2B-w4a16's 76, qwen-
+# awq's 41) - quality-competitive but the slowest vLLM VLM measured on
+# this suite. Net-of-baseline VRAM ~14.1GB, engine init 117s (fastest
+# of the fleet). PRIOR RESULTS at default 256: PONG PASSED; spot-check
+# PARTIAL FAIL (fabricated "Nova", one sample, 2026-08-13).
+# RE-VALIDATED 2026-08-15 with mm-limit flag: 4/5 (unchanged), 15.6
+# tok/s (unchanged - still the fleet's slowest), net VRAM ~14.2GB
+# (unchanged), init 87s (was 117s, -30s - still the fleet's fastest
+# init).
+vision_validation_status: validated
+# Adopted 2026-08-15 from the E2B family's confirmed win (256->4).
+vllm_max_num_seqs: 4
+# Adopted 2026-08-15 from the mmlimit experiment (gemma_extract_vllm_
+# w4a16_mmlimit.yaml: same quality, ~30s faster init, 0.6GiB of
+# unused-modality provisioning freed - vLLM defaults unspecified
+# modalities to 999 items/prompt; this workload is exactly 1 image).
+vllm_limit_mm_per_prompt: '{"image": 1, "video": 0}'
 role: vision_candidate
 
 # InternVL's processor/config need trust_remote_code under vLLM (the

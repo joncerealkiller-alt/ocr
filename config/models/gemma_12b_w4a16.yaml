@@ -25,4 +25,29 @@ max_new_tokens: 400
 
 text_only_supported: true    # confirmed live - the PONG test turn was text-only
 image_input_supported: true  # full multimodal Gemma4Unified checkpoint
+# VALIDATED 2026-08-15 at max_num_seqs 4 - first FULL vision_baseline_
+# v4 run for this config: 4/5 pass (same pattern), 23.6 tok/s, net-of-
+# baseline VRAM ~13.9GB, 225s init. QUALITY STANDOUT: best table_form_
+# interpretation raw output of the whole fleet - the ONLY model to
+# extract father_name "Alfred Edmund" correctly; its two misses were a
+# genuine handwriting K/L misread ("Late Martha") and the Tregue line
+# (6/8 fields vs E2B's typical 5/8). Slow-ish (23.6 tok/s vs E2B's 76)
+# but the strongest extraction accuracy measured - a real candidate if
+# quality ever outranks speed for a hard-document escalation tier.
+# PRIOR RESULTS at default 256: PONG PASSED, 8.28GiB resident, ~174s
+# init (2026-08-13); vision spot-check PASSED.
+# RE-VALIDATED 2026-08-15 with mm-limit flag: 4/5 (unchanged pattern,
+# still the fleet's best table_form raw output), 26.0 tok/s (was 23.6),
+# net VRAM 13227MB (was 13895, -668MB), init 147s (was 225s, -78s -
+# biggest mm-limit gain in the fleet; video/audio profiling was
+# costliest on the largest checkpoint).
+vision_validation_status: validated
 role: vision_candidate
+
+# Adopted 2026-08-15 from the E2B family's confirmed win (256->4).
+vllm_max_num_seqs: 4
+# Adopted 2026-08-15 from the mmlimit experiment (gemma_extract_vllm_
+# w4a16_mmlimit.yaml: same quality, ~30s faster init, 0.6GiB of
+# unused-modality provisioning freed - vLLM defaults unspecified
+# modalities to 999 items/prompt; this workload is exactly 1 image).
+vllm_limit_mm_per_prompt: '{"image": 1, "video": 0, "audio": 0}'

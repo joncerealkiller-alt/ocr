@@ -228,8 +228,102 @@ console:
     - smolvlm2_2b
     - gemma_e4b_research
     - qwen_research_text
+    # qwen25_vl_7b (transformers) / qwen25_vl_7b_awq (vllm) - added
+    # together 2026-08-16 for the Benchmark tab's backend-comparison
+    # work (same base architecture/family, though AWQ quantization
+    # means these are NOT byte-identical weights - see benchmark/
+    # console_runner.py's find_cross_engine_pairs() docstring). Neither
+    # was in this list before; qwen25_vl_7b existed as a config but was
+    # never console-selectable.
+    - qwen25_vl_7b
     - qwen25_vl_7b_awq
+    # gemma_12b_unified (transformers) / gemma_12b_w4a16 (vllm) - the
+    # ONE pair in this registry that IS the same literal checkpoint
+    # (repo_id "google/gemma-4-12B-it-qat-w4a16-ct") under both engines
+    # - added 2026-08-16 for the same reason as the qwen pair above.
+    # gemma_12b_unified's own YAML documents that this checkpoint
+    # decompresses to ~25GB under plain transformers on this project's
+    # 16GB card ("catastrophic throughput", confirmed prior session) -
+    # listed for completeness/future use, NOT recommended for a live
+    # transformers-side run on this hardware without expecting a very
+    # slow, heavily CPU-offloaded load. See the benchmark completion
+    # report's Equivalence caveats for why this pair wasn't run live.
+    - gemma_12b_unified
     - gemma_12b_w4a16
+    # gemma_extract_vllm - added 2026-08-16, paired with gemma_extract/
+    # gemma above: the ONE dual-engine pair sharing the E2B checkpoint
+    # (repo_id "google/gemma-4-E2B-it"). CONFIRMED LIVE the same day via
+    # the Benchmark tab's "Run Backend Comparison": vision_baseline_v4,
+    # 80% scored pass rate on BOTH engines with an identical per-case
+    # pass/fail pattern - real evidence an engine swap alone doesn't
+    # regress this checkpoint's output. Real numbers: transformers 11.4s
+    # cold load / 11.3 tok/s vs vllm 291.1s cold load (subprocess+CUDA
+    # graph capture) / 41.8 tok/s - vLLM is far slower to cold-start but
+    # ~3.7x faster generating, on the literal same weights. See
+    # gemma_extract_vllm.yaml's own vision_validation_status comment for
+    # the full readout, including a real vram_headroom_gb correction
+    # this run's VRAM figure (16011MB) surfaced.
+    - gemma_extract_vllm
+    # gemma_extract_vllm_w4a16 - added 2026-08-16, the quantization
+    # counterpart to gemma_extract_vllm above (OFFICIAL Google QAT
+    # checkpoint, repo_id "google/gemma-4-E2B-it-qat-w4a16-ct" - NOT the
+    # same weights as gemma_extract_vllm, see that repo_id difference).
+    # CONFIRMED LIVE: vision_baseline_v4, 80% pass rate, IDENTICAL
+    # per-case pattern to both the transformers and unquantized-vllm
+    # runs. Quantization preserved quality here and meaningfully
+    # improved throughput (69.9 tok/s vs unquantized vllm's 51.0, vs
+    # transformers' 11.3) - but did NOT meaningfully reduce total
+    # reported VRAM (15922MB vs unquantized vllm's 15929MB) on this
+    # hardware/vLLM version, contrary to the ~26% weight-size reduction
+    # the official vLLM recipe reports (that figure is about resident
+    # WEIGHT size, not this project's measured total footprint, which
+    # CUDA-graph-capture overhead dominates - see gemma_extract_vllm.
+    # yaml's own vram_headroom_gb note for the first half of this
+    # finding). See gemma_extract_vllm_w4a16.yaml's own comments for
+    # the full readout.
+    - gemma_extract_vllm_w4a16
+    # gemma_extract_vllm_w4a16_eager - added 2026-08-16, same quantized
+    # checkpoint as gemma_extract_vllm_w4a16 with exactly one runtime
+    # knob flipped (--enforce-eager, skips CUDA-graph capture). CONFIRMED
+    # LIVE: 80% pass rate (quality unchanged), but 69.9 -> 16.6 tok/s
+    # (-76%) for only ~216MB VRAM back (~1.4% of the card) and ~no
+    # cold-load change - CUDA graph capture is clearly worth it for this
+    # checkpoint/hardware, this is NOT a good production tradeoff. Kept
+    # registered as the documented negative result - see that config's
+    # own vision_validation_status comment for the full numbers.
+    - gemma_extract_vllm_w4a16_eager
+    # gemma_extract_vllm_w4a16_ctx1024 - added 2026-08-16, same
+    # quantized checkpoint/graphs-on config as gemma_extract_vllm_w4a16
+    # with context_length (--max-model-len) dropped from 4096 to 1024.
+    # CONFIRMED LIVE: 80% pass rate (unchanged), but VRAM did NOT drop
+    # (15939MB vs 15922MB) and tok/s was within normal run-to-run noise
+    # (63.2 vs 69.9). Third independent lever tested this session
+    # (after --gpu-memory-utilization and --enforce-eager) that failed
+    # to move the ~15.7-15.9GB floor - see that config's own
+    # vision_validation_status comment for the full readout.
+    - gemma_extract_vllm_w4a16_ctx1024
+    # gemma_extract_vllm_w4a16_fp8kv - added 2026-08-16, same quantized
+    # checkpoint/graphs-on/ctx4096 config as gemma_extract_vllm_w4a16
+    # with --kv-cache-dtype fp8 added - the fourth VRAM lever, after
+    # three straight negative results (utilization, eager, context
+    # length). Mechanistically different: shrinks per-token KV-cache
+    # entry size directly. UNTESTED pending a live run - also the first
+    # of these levers with a documented real accuracy risk (sliding-
+    # window attention sensitivity), so watch the pass/fail pattern
+    # here more carefully than the purely-performance levers before it.
+    - gemma_extract_vllm_w4a16_fp8kv
+    # gemma_extract_vllm_w4a16_lowseqs - added 2026-08-16, same
+    # quantized checkpoint/graphs-on/ctx4096/default-kv-dtype config as
+    # gemma_extract_vllm_w4a16 with --max-num-seqs 4 (default 256).
+    # CONFIRMED LIVE and the BEST result of the five-lever VRAM sweep:
+    # -1190MB VRAM (15922->14732MB) with NO throughput cost (69.9->72.6
+    # tok/s) - exceeded the pre-run prediction (~0.71GiB ceiling from
+    # vLLM's own log categories), meaning this lever reaches memory
+    # beyond what vLLM's accounting tracks. Worth preferring over
+    # gemma_extract_vllm_w4a16 as the default if >4 concurrent
+    # sequences is never actually needed - see that config's own
+    # vision_validation_status comment for the full numbers.
+    - gemma_extract_vllm_w4a16_lowseqs
     - gemma_e4b_w4a16
     - internvl3_5_8b_awq
     - minicpm_v_gptq

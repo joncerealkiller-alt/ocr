@@ -1,0 +1,99 @@
+# 12B vs E2B head-to-head on REAL census rows (2026-08-15, Fable
+# session). Assets are row crops from a real 1931 census page
+# (1931_174-e011707164, dewarped), cropped from the row-segmentation
+# sidecar's own bboxes (+8px vertical pad) - the same shape of input
+# the dense_tabular_rows pipeline actually feeds models. Ground truth
+# comes from data/outputs/ground_truth_log.jsonl (750 human-labeled
+# row/column entries via ui/ground_truth_labeling_ui.py) - status
+# "readable" entries only, latest label per cell wins.
+#
+# SCORING NOTES (read before editing):
+# - Sex is asked in the prompt but deliberately NOT scored:
+#   json_field_match is normalized-substring-based and "m" is a
+#   substring of "female" (and "male" of "female") - any expected value
+#   would auto-pass wrong answers. Compare sex in raw outputs manually.
+# - Name is scored on the DISTINCTIVE surname/given-name token only
+#   (e.g. "knott", "roberts") - GT records column order ("Knott Alfred
+#   William"), models may emit natural order ("Alfred William Knott"),
+#   and "Mc Roberts" spacing varies; full GT strings are preserved in
+#   expected_display for the raw-output comparison that is the real
+#   point of this suite.
+# - Row 4 is a deliberate hard case: its surname is a ditto mark in the
+#   original, so only the given name "Dorothy" is scoreable.
+suite_id: census_headtohead
+version: "1"
+display_name: "Census Head-to-Head v1 (real 1931 rows)"
+description: >
+  Four real 1931 census row crops with human-labeled ground truth,
+  for model-vs-model extraction quality comparison (built for the
+  gemma_12b_w4a16 vs gemma_extract_vllm_w4a16 head-to-head). Vision
+  capability required.
+required_capability: vision
+
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.15
+  max_new_tokens: 300
+
+cases:
+  - case_id: row9_knott_household_head
+    category: census_row_extraction
+    image_path: "data/_test_fixtures/census_1931_row9.png"
+    prompt: &rowprompt >
+      This is one row cropped from a 1931 Canadian census page
+      (fragments of adjacent rows may be visible at the top/bottom
+      edges - read only the complete central row). Extract from this
+      row: the person's name, relationship to head of household, sex,
+      age, and birthplace. Reply with only a JSON object with exactly
+      these keys: "name", "relationship_to_head", "sex", "age",
+      "birthplace". If a value is unreadable, use "?".
+    scorer: json_field_match
+    scorer_args:
+      expected:
+        name: "Knott"
+        relationship_to_head: "Head"
+        age: "37"
+        birthplace: "England"
+    expected_display: 'GT: Knott Alfred William / Head / M / 37 / England'
+
+  - case_id: row6_mcroberts_household_head
+    category: census_row_extraction
+    image_path: "data/_test_fixtures/census_1931_row6.png"
+    prompt: *rowprompt
+    scorer: json_field_match
+    scorer_args:
+      expected:
+        name: "Roberts"
+        relationship_to_head: "Head"
+        age: "44"
+        birthplace: "Manitoba"
+    expected_display: 'GT: Mc Roberts Burton C / Head / M / 44 / Manitoba'
+
+  - case_id: row5_hyzie_domestic
+    category: census_row_extraction
+    image_path: "data/_test_fixtures/census_1931_row5.png"
+    prompt: *rowprompt
+    scorer: json_field_match
+    scorer_args:
+      expected:
+        name: "Hyzie"
+        relationship_to_head: "Domestic"
+        age: "18"
+        birthplace: "Manitoba"
+    expected_display: 'GT: Hyzie Bertha / Domestic / F / 18 / Manitoba'
+
+  - case_id: row4_dorothy_ditto_surname
+    category: census_row_extraction
+    image_path: "data/_test_fixtures/census_1931_row4.png"
+    prompt: *rowprompt
+    scorer: json_field_match
+    scorer_args:
+      expected:
+        name: "Dorothy"
+        relationship_to_head: "Daughter"
+        age: "12"
+        birthplace: "Manitoba"
+    expected_display: 'GT: " Dorothy (ditto surname) / Daughter / F / 12 / Manitoba - hard case'

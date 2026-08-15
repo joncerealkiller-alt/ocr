@@ -179,6 +179,34 @@ class ChatBackendAdapter:
     def resident_model_name(self) -> Optional[str]:
         return self._model_name
 
+    def server_resident_model_name(self) -> Optional[str]:
+        """
+        The REAL current residency truth, independent of this adapter
+        instance's own bookkeeping (resident_model_name above only
+        reflects what THIS instance last asked to load, which is wrong
+        for "was something already resident before I called
+        ensure_loaded" - a fresh adapter's self._model_name always
+        starts None even if another client left a model resident).
+        backend="local" reads core.model_residency.residency directly
+        (the same global singleton _get_loader() already uses).
+        backend="remote" asks the server's real state via GET
+        /model/status, which itself already reports EITHER a
+        transformers-resident model OR a vllm-runtime-resident one (see
+        api/agent_main.py's status endpoint: `residency.resident_model_
+        name or vllm_runtime.running_model_name`) - so this one call
+        covers both engines uniformly. Added for benchmark/
+        console_runner.py's was_resident_before_run (2026-08-16,
+        backend-comparison work) - no other caller needed this before.
+        """
+        if self._backend == "remote":
+            try:
+                resp = requests.get(f"{self._base_url}/model/status", timeout=self._timeout_seconds)
+                resp.raise_for_status()
+                return resp.json().get("resident_model_name")
+            except requests.RequestException:
+                return None
+        return residency.resident_model_name
+
     def _get_loader(self) -> Optional[BaseLoader]:
         """
         Always re-acquires through the shared residency manager rather

@@ -34,8 +34,40 @@ max_new_tokens: 400
 
 text_only_supported: true    # confirmed live - the PONG test was text-only
 image_input_supported: true  # full MiniCPM-V-4.5 VLM
+# VALIDATED 2026-08-15 - first FULL vision_baseline_v4 run for this
+# config (prior status rested on a PONG smoke test + one spot-check):
+# 4/5 pass, SAME case pattern as the Gemma family (table_form_
+# interpretation the only fail - and its raw output there was actually
+# closer than Gemma's, getting child_name fully). 41.9 tok/s, 180s
+# engine init, net-of-baseline VRAM ~13.8GB. THE TIGHT FIT IS RELIEVED:
+# at max_num_seqs 4, peak activation profiled 6.7GiB -> 1.68GiB and KV
+# cache went 0.66GiB -> 5.88GiB (~9x) - the runtime note above's
+# "if KV space proves too small" fallback concern is now moot. Follow-
+# up candidates (NOT done, one change at a time): raise context_length
+# above 2048 and/or lower the 0.92 utilization now that activation no
+# longer crowds the card.
+# RE-VALIDATED 2026-08-15 with mm-limit flag: 4/5 (unchanged), 40.8
+# tok/s (unchanged), net VRAM ~13.8GB (unchanged), init 114s (was
+# 180s, -66s).
+vision_validation_status: validated
 role: vision_candidate
 
 # MiniCPM-V's model/processor code is trust_remote_code (its whole chat
 # interface ships in the checkpoint). Read by core/vllm_runtime.py.
+# (NOTE: top-level rather than under extra: - GenerationConfig.from_yaml
+# sweeps unknown top-level keys into extra, so both spellings reach the
+# runtime; verified in the 2026-08-15 audit.)
 vllm_trust_remote_code: true
+# Adopted 2026-08-15 from the E2B family's confirmed win (256->4 saved
+# ~1.2GB there with no cost; see gemma_extract_vllm_w4a16_lowseqs.yaml).
+# EXTRA motivation for THIS config: the 6.7GiB peak-activation figure
+# in the runtime note above was profiled at the DEFAULT max_num_seqs
+# 256 - the heavy multimodal encoder's worst-case batch profile should
+# shrink substantially at 4, which may relieve the documented ~0.66GiB
+# KV-cache tight fit.
+vllm_max_num_seqs: 4
+# Adopted 2026-08-15 from the mmlimit experiment (gemma_extract_vllm_
+# w4a16_mmlimit.yaml: same quality, ~30s faster init, 0.6GiB of
+# unused-modality provisioning freed - vLLM defaults unspecified
+# modalities to 999 items/prompt; this workload is exactly 1 image).
+vllm_limit_mm_per_prompt: '{"image": 1, "video": 0}'

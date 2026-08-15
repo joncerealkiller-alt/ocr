@@ -253,19 +253,72 @@ def _make_vllm_send_turn_fn(model_name: str, config):
             user_content = prompt_text
         messages.append({"role": "user", "content": user_content})
 
+        # do_sample=False -> temperature=0.0 (greedy) is the vLLM-side
+        # translation of the SAME requested field the transformers path
+        # reads directly (base_loader.py's loaders pass do_sample=False
+        # straight to generate()'s own greedy branch) - behaviorally
+        # equivalent (deterministic, most-likely-token decoding either
+        # way) but implemented by a different mechanism in each engine.
+        # Recorded explicitly in settings_translation_notes below rather
+        # than assumed identical (task #6).
         temperature = config.temperature if config.do_sample else 0.0
         start = _time.time()
-        raw_text = vllm_runtime.chat_completion(
+        result = vllm_runtime.chat_completion(
             config, messages, max_tokens=config.max_new_tokens, temperature=temperature,
         )
+        generation_time_s = result["generation_time_s"]
+        usage = result.get("usage") or {}
+        prompt_tokens = usage.get("prompt_tokens")
+        generated_tokens = usage.get("completion_tokens")
+        tokens_per_sec = (
+            round(generated_tokens / generation_time_s, 2)
+            if generated_tokens and generation_time_s > 0 else None
+        )
+
+        load_telemetry = vllm_runtime.last_load_telemetry
+        telemetry: dict[str, Any] = {
+            "generate": {
+                "prompt_tokens": prompt_tokens,
+                "generated_tokens": generated_tokens,
+                "tokens_per_sec": tokens_per_sec,
+                "vram_used_mb": result.get("vram_used_mb"),
+                "generation_time_s": round(generation_time_s, 4),
+                # vLLM's OpenAI-compatible API does not expose a
+                # separate prefill/time-to-first-token figure over
+                # non-streaming /v1/chat/completions (task #8 asks for
+                # prefill distinctly - this is the one metric this
+                # engine genuinely cannot report without switching to
+                # streaming mode, which the plain chat_completion() path
+                # deliberately doesn't use). None, not a fabricated
+                # estimate, so a comparison table can show "n/a" instead
+                # of a misleading number.
+                "prefill_time_s": None,
+                # vLLM's finish_reason maps 1:1 to a stop-reason concept
+                # but isn't captured by chat_completion() today (it only
+                # reads .choices[0].message.content) - left None rather
+                # than guessed; a future pass could thread finish_reason
+                # through the same way usage already is here.
+                "stop_reason": None,
+            },
+        }
+        if load_telemetry is not None and load_telemetry.get("model_name") == model_name:
+            telemetry["load"] = load_telemetry
+
         meta = {
             "model_name": model_name,
             "runtime": "vllm",
             "generation_config_snapshot": asdict(config),
             "runtime_seconds": _time.time() - start,
             "context_enabled": history is not None,
+            "telemetry": telemetry,
+            "settings_translation_notes": [
+                "do_sample=False sent as temperature=0.0 (greedy) - deterministic either way, different mechanism than transformers' generate() greedy branch.",
+                "no_repeat_ngram_size has NO vLLM sampler equivalent - NOT applied under this backend regardless of config value.",
+                "top_k/repetition_penalty are vLLM server extensions to the OpenAI schema, sent only when non-default - see core/vllm_runtime.py's chat_completion() docstring.",
+                "prefill_time_s is not obtainable from vLLM's non-streaming chat-completions response - always None here.",
+            ],
         }
-        return raw_text, meta
+        return result["text"], meta
 
     return send_turn_fn
 

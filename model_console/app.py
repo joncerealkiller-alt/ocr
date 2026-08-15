@@ -96,6 +96,7 @@ def main() -> None:
 
     def on_close():
         tab.shutdown()
+        benchmark_tab.shutdown()
         root.destroy()
 
     root.protocol("WM_DELETE_WINDOW", on_close)

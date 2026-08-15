@@ -60,19 +60,41 @@ LOADER_REGISTRY = {
 }
 
 
+def is_vllm_model(cfg: GenerationConfig) -> bool:
+    """
+    True for a config served by core/vllm_runtime.py's subprocess
+    rather than a BaseLoader subclass - config.runtime == "vllm" is the
+    authoritative signal (set in ~5 config/models/*.yaml files as of
+    2026-08-15: qwen25_vl_7b_awq, gemma_12b_w4a16, gemma_e4b_w4a16,
+    internvl3_5_8b_awq, minicpm_v_gptq). Every such config's
+    loader_class is the literal string "vllm" - a documented sentinel
+    (see those YAMLs' own comments) that is NEVER looked up in
+    LOADER_REGISTRY; api/agent_main.py branches on config.runtime
+    BEFORE any loader_class dispatch, and this function exists so
+    validate_model_assignment() below mirrors that exact same branch
+    instead of treating "vllm" as an unregistered/broken loader_class
+    (which it would otherwise look like - a real bug this fixes: every
+    vLLM-runtime model failed validate_model_assignment() before this,
+    since "vllm" was never a real LOADER_REGISTRY key).
+    """
+    return cfg.runtime == "vllm"
+
+
 def validate_model_assignment(
     model_name: str, *, require_vision: bool = False, context: str = "",
 ) -> GenerationConfig:
     """
     Loads model_name's config and checks it's actually usable as a
     pipeline/console assignment: exists, enabled, has a registered
-    loader_class, and (if require_vision) can accept an image. Raises
-    ValueError with a specific, actionable message rather than letting
-    an unknown/disabled/wrong-capability model fail later as a confusing
-    load error or - worse - silently run with the wrong model. `context`
-    is a short label (e.g. "pipeline.yaml buckets.map_land_record.model")
-    prepended to the error so a config-validation failure points straight
-    at the offending config line, not just the model name.
+    loader_class (or is a valid vLLM-runtime config - see
+    is_vllm_model()), and (if require_vision) can accept an image.
+    Raises ValueError with a specific, actionable message rather than
+    letting an unknown/disabled/wrong-capability model fail later as a
+    confusing load error or - worse - silently run with the wrong
+    model. `context` is a short label (e.g. "pipeline.yaml
+    buckets.map_land_record.model") prepended to the error so a
+    config-validation failure points straight at the offending config
+    line, not just the model name.
     """
     prefix = f"{context}: " if context else ""
     try:
@@ -89,7 +111,7 @@ def validate_model_assignment(
             f"(config/models/{model_name}.yaml has enabled: false)."
         )
 
-    if cfg.loader_class not in LOADER_REGISTRY:
+    if not is_vllm_model(cfg) and cfg.loader_class not in LOADER_REGISTRY:
         raise ValueError(
             f"{prefix}model '{model_name}' declares loader_class="
             f"{cfg.loader_class!r}, which is not registered in "
@@ -119,6 +141,15 @@ def build_loader(model_name: str, *, debug: bool = False) -> BaseLoader:
     call sequence isn't copy-pasted at every one of them.
     """
     cfg = validate_model_assignment(model_name)
+    if is_vllm_model(cfg):
+        raise ValueError(
+            f"build_loader(): {model_name!r} is a runtime='vllm' config - it has "
+            "no BaseLoader subclass at all (served by core/vllm_runtime.py's "
+            "subprocess instead - see api/agent_main.py's runtime dispatch). "
+            "Use core.vllm_runtime.vllm_runtime / model_console.adapter."
+            "ChatBackendAdapter(backend='remote') instead of build_loader() for "
+            "this model."
+        )
     loader_cls = LOADER_REGISTRY[cfg.loader_class]
     loader = loader_cls(cfg)
     loader._debug_mode = debug

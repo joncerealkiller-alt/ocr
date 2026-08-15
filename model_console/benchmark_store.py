@@ -95,6 +95,12 @@ def _summarize(run_data: dict[str, Any]) -> dict[str, Any]:
         "suite_version": run_data.get("suite_version"),
         "suite_qualified_id": run_data.get("suite_qualified_id"),
         "backend": run_data.get("backend"),
+        # Old runs (pre-2026-08-16) predate this field entirely - default
+        # matches BenchmarkRunResult.inference_engine's own default, so
+        # the index and the full record never disagree about a run that
+        # simply predates the field.
+        "inference_engine": run_data.get("inference_engine", "transformers"),
+        "repo_id": run_data.get("repo_id"),
         "started_at": run_data.get("started_at"),
         "status": run_data.get("status"),
         "total_runtime_seconds": run_data.get("total_runtime_seconds"),

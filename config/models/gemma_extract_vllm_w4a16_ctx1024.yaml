@@ -1,0 +1,94 @@
+model_name: gemma_extract_vllm_w4a16_ctx1024
+repo_id: google/gemma-4-E2B-it-qat-w4a16-ct
+# SAME checkpoint as gemma_extract_vllm_w4a16.yaml, graphs ON (NOT the
+# eager variant - gemma_extract_vllm_w4a16_eager.yaml already showed
+# eager mode is a bad tradeoff: -76% tok/s for only -216MB VRAM). Every
+# field below is identical to gemma_extract_vllm_w4a16.yaml EXCEPT
+# context_length (4096 -> 1024) and this model_name/role - one variable
+# changed at a time, same discipline as the eager experiment.
+#
+# WHY THIS EXISTS (2026-08-16): real per-case telemetry from BOTH
+# gemma_extract_vllm.yaml and gemma_extract_vllm_w4a16.yaml's actual
+# vision_baseline_v4 runs shows max observed (prompt + generated) tokens
+# in any single call was 528-530 - this project's context_length: 4096
+# is roughly 8x over-provisioned for what this suite actually uses.
+# vLLM sizes its KV-cache allocation off --max-model-len (the point
+# raised directly, 2026-08-16) - a much smaller max-model-len should, in
+# principle, let vLLM commit far fewer/smaller KV-cache blocks even at
+# the SAME --gpu-memory-utilization, independent of the
+# quantization/graphs levers already tested. This tests that lever in
+# isolation.
+#
+# 1024 (not exactly 530) leaves real margin above the largest observed
+# call for this suite specifically, since a genuinely different
+# document/prompt could legitimately need more - this is meant to find
+# out whether context_length itself moves the VRAM needle at all, not
+# to shave the absolute minimum possible.
+#
+# UNTESTED until a real run completes - see vision_validation_status.
+loader_class: vllm   # sentinel - see qwen25_vl_7b_awq.yaml's comment.
+runtime: vllm
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5   # inert under vLLM - see gemma_extract_vllm.yaml's identical note.
+max_new_tokens: 512
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+text_only_supported: true
+image_input_supported: true
+# PRIOR RESULT (kept for the record, at --max-num-seqs 256 default):
+# 4/5 pass, VRAM 15922->15939MB (+17MB, noise), tok/s 69.9->63.2 (within
+# normal run-to-run variance), cold load higher (not attributed to this
+# flag). Conclusion held: --max-model-len was NOT the lever, confirming
+# real usage (528-530 tokens/call) was already far below the 4096
+# ceiling and KV-cache sizing was never the dominant VRAM consumer for
+# this checkpoint.
+#
+# RE-VALIDATED 2026-08-16 at --max-num-seqs 4: 4/5 pass (unchanged
+# pattern), VRAM 15939MB -> 14960MB (-979MB), tok/s 63.2 -> 71.8 (no
+# regression). Consistent with gemma_extract_vllm_w4a16_lowseqs.yaml's
+# result - context_length compounds neutrally with max-num-seqs, no
+# interaction found, as expected from its own isolated null result.
+vision_validation_status: validated
+
+restrict_output_charset: true   # inert under vLLM - see gemma_extract_vllm.yaml's identical note.
+
+prompt_version: v1
+prompt_text: ""
+
+extra:
+  image_token_budget: 560   # NOT read by the vLLM path - see gemma_extract_vllm.yaml's identical note.
+  system_prompt: |
+    You are an OCR transcription model.
+
+    Transcribe exactly what appears in the image.
+    If unreadable, output only "?".
+    Do not describe the image.
+    Do not explain your reasoning.
+  # Graphs stay ON (no vllm_enforce_eager here) - deliberately isolating
+  # context_length as the only changed variable vs. gemma_extract_vllm_
+  # w4a16.yaml, not compounding it with the eager experiment.
+  # Adopted 2026-08-16 - see gemma_extract_vllm_w4a16.yaml's identical
+  # note for the source of this value.
+  vllm_max_num_seqs: 4
+
+# Unchanged from gemma_extract_vllm_w4a16.yaml's own hard-won value -
+# isolating context_length as the one variable under test here.
+vram_headroom_gb: 2.5
+# THE ONE FUNCTIONAL DIFFERENCE from gemma_extract_vllm_w4a16.yaml -
+# maps to vLLM's --max-model-len (core/vllm_runtime.py's acquire():
+# "--max-model-len", str(config.context_length or 4096)). Real max
+# observed usage for this suite was 528-530 tokens; 1024 leaves
+# genuine margin above that rather than shaving to the exact minimum.
+context_length: 1024
+
+role: extraction_candidate_vllm_quantized_ctx1024   # descriptive only.

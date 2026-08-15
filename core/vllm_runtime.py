@@ -81,6 +81,18 @@ class VllmRuntime:
         self._lock = threading.RLock()
         self._process: Optional[subprocess.Popen] = None
         self._model_name: Optional[str] = None
+        # Engine-startup telemetry (2026-08-16, benchmark backend-
+        # comparison work) - mirrors core/model_residency.py's
+        # last_load_telemetry, same shape philosophy: captures the ONE
+        # most recent acquire() that actually launched a subprocess
+        # (the reuse-already-running fast path leaves this untouched,
+        # same as residency's own reuse-in-place branch not re-timing a
+        # load that didn't happen). None until the first real launch.
+        self._last_load_telemetry: Optional[dict[str, Any]] = None
+
+    @property
+    def last_load_telemetry(self) -> Optional[dict[str, Any]]:
+        return self._last_load_telemetry
 
     @property
     def running_model_name(self) -> Optional[str]:
@@ -137,6 +149,76 @@ class VllmRuntime:
             # Qwen/Gemma checkpoints. Off unless the config says so.
             if config.extra.get("vllm_trust_remote_code"):
                 cmd.append("--trust-remote-code")
+            # Skips CUDA-graph capture at startup (2026-08-16, added for
+            # the eager-vs-graphs VRAM/throughput experiment -
+            # gemma_extract_vllm_w4a16_eager.yaml is the first config to
+            # set this). Same opt-in-via-extra pattern as
+            # vllm_trust_remote_code above - off unless a config asks for
+            # it, so every existing vLLM config's launch command is
+            # byte-for-byte unchanged. This is the ONE knob this project
+            # has found so far that actually targets the CUDA-graph-
+            # capture overhead identified in gemma_extract_vllm.yaml's
+            # vram_headroom_gb investigation (that overhead did not
+            # shrink with --gpu-memory-utilization OR with a smaller
+            # quantized checkpoint - --enforce-eager skips graph capture
+            # entirely rather than trying to shrink its footprint).
+            if config.extra.get("vllm_enforce_eager"):
+                cmd.append("--enforce-eager")
+            # KV-cache quantization (2026-08-16, the fourth VRAM lever
+            # tried after --gpu-memory-utilization, --enforce-eager, and
+            # --max-model-len all failed to meaningfully move this
+            # checkpoint's ~15.7-15.9GB floor - see gemma_extract_vllm_
+            # w4a16_ctx1024.yaml's own vision_validation_status comment
+            # for that history). Distinct mechanism from the other three:
+            # shrinks the per-token KV-cache entry size itself (fp8 vs
+            # the default fp16/bf16), rather than changing how much of
+            # the card vLLM is ALLOWED to use or how large a context it
+            # plans for. Same opt-in-via-extra pattern - off unless a
+            # config sets vllm_kv_cache_dtype (e.g. "fp8", "fp8_e4m3",
+            # "fp8_e5m2"), so every existing config is unaffected. No
+            # calibration/scale file required for plain "fp8" (vLLM
+            # defaults K/V scales to 1.0 without one - see vLLM's
+            # quantized_kvcache docs) - accuracy impact is checkpoint/
+            # architecture-dependent (sliding-window attention layers are
+            # documented as more sensitive) and gets verified the same
+            # way every other lever here has been: a real vision_baseline
+            # run, not assumed from the docs alone.
+            kv_cache_dtype = config.extra.get("vllm_kv_cache_dtype")
+            if kv_cache_dtype:
+                cmd.extend(["--kv-cache-dtype", str(kv_cache_dtype)])
+            # Fifth VRAM lever (2026-08-16) - caps the max concurrent
+            # sequence count vLLM plans for, which bounds two things its
+            # own startup log (gpu_worker.py:789) shows separately:
+            # "peak activation" memory (profiled for a worst-case batch
+            # up to this count) and, via the CUDA-graph batch-size list
+            # this project's launches already log spanning 1-512, how
+            # many graph shapes get captured. On gemma_extract_vllm_
+            # w4a16.yaml's own real log those two categories were 0.26
+            # GiB and 0.45 GiB respectively (0.71 GiB combined ceiling,
+            # already mostly probed by --enforce-eager's -216 to -470MB
+            # result) - default vLLM max_num_seqs is 256; this project's
+            # real workload never runs more than 1 concurrent sequence.
+            # Same opt-in-via-extra pattern - off unless a config sets
+            # vllm_max_num_seqs, every existing config unaffected.
+            max_num_seqs = config.extra.get("vllm_max_num_seqs")
+            if max_num_seqs:
+                cmd.extend(["--max-num-seqs", str(max_num_seqs)])
+            # Multimodal item limits (2026-08-15 audit follow-up).
+            # Verified from the installed vLLM 0.27.1 source
+            # (config/multimodal.py get_limit_per_prompt): an UNSPECIFIED
+            # modality defaults to 999 items per prompt - so a Gemma4
+            # server (T+I+V+A) is by default provisioned to accept up to
+            # 999 images/videos/audios per request, and the 12B log shows
+            # a real cost ("Raising max_num_batched_tokens from 2048 to
+            # 2496 to accommodate 'video' input"). This project's real
+            # workload is exactly ONE image per prompt, never video or
+            # audio. Same opt-in-via-extra pattern - a config sets e.g.
+            # vllm_limit_mm_per_prompt: '{"image": 1, "video": 0,
+            # "audio": 0}' (JSON string passed through verbatim);
+            # existing configs unaffected.
+            limit_mm = config.extra.get("vllm_limit_mm_per_prompt")
+            if limit_mm:
+                cmd.extend(["--limit-mm-per-prompt", str(limit_mm)])
             # Resolution capping (2026-08-15, real gap found live): every
             # transformers-path loader already caps image resolution via
             # GenerationConfig.min_pixels/max_pixels BEFORE tokenization
@@ -182,6 +264,8 @@ class VllmRuntime:
             env["VLLM_WSL2_ENABLE_PIN_MEMORY"] = "1"
 
             print(f"[core.vllm_runtime] launching vLLM server: {config.repo_id!r} on port {VLLM_PORT}")
+            baseline_vram_mb = _nvidia_smi_used_mb()
+            load_start = time.time()
             self._process = subprocess.Popen(
                 cmd, env=env,
                 stdout=open(f"/tmp/vllm_{model_name}.log", "w"),
@@ -197,7 +281,24 @@ class VllmRuntime:
             except Exception:
                 self.release()
                 raise
-            print(f"[core.vllm_runtime] {model_name!r} healthy at {self.base_url}")
+            load_time_s = round(time.time() - load_start, 3)
+            after_load_vram_mb = _nvidia_smi_used_mb()
+            # Distinct from core/model_residency.py's last_load_telemetry
+            # (task #8: subprocess startup + engine init are NOT the same
+            # cost as a transformers weight load - this whole load_time_s
+            # includes subprocess spawn, weight load, AND CUDA graph
+            # capture, all inseparable from outside the subprocess. See
+            # this dict's own "startup_includes" note - recorded
+            # explicitly rather than letting a reader assume it's
+            # apples-to-apples with residency's load_time_s.
+            self._last_load_telemetry = {
+                "model_name": model_name,
+                "baseline_vram_mb": baseline_vram_mb,
+                "after_load_vram_mb": after_load_vram_mb,
+                "load_time_s": load_time_s,
+                "startup_includes": "subprocess_spawn+weight_load+cuda_graph_capture (not separable)",
+            }
+            print(f"[core.vllm_runtime] {model_name!r} healthy at {self.base_url} ({load_time_s}s)")
             return self.base_url
 
     def _wait_for_health(self) -> None:
@@ -263,29 +364,72 @@ class VllmRuntime:
             log_resource_trend("vllm_runtime")
 
     def chat_completion(self, config: GenerationConfig, messages: list[dict[str, Any]],
-                         max_tokens: int, temperature: float) -> str:
+                         max_tokens: int, temperature: float) -> dict[str, Any]:
         """
         One /v1/chat/completions call against the running server.
         Caller must have called acquire() first (same precondition shape
         as ChatBackendAdapter.send_turn after ensure_loaded).
+
+        Returns a dict {"text": str, "usage": dict|None, "vram_used_mb":
+        float|None, "generation_time_s": float} rather than a bare
+        string (2026-08-16, benchmark backend-comparison work) - task
+        #8 wants tokens/sec and VRAM for a vLLM run exactly as it's
+        already available for a transformers run, and vLLM's own
+        OpenAI-compatible response already carries a `usage` block
+        (prompt_tokens/completion_tokens) this was previously
+        discarding.
+
+        Sampling-parameter equivalence (task #6, recorded here rather
+        than assumed): the standard OpenAI chat-completions schema only
+        has temperature/top_p/max_tokens/stop natively. top_k and
+        repetition_penalty are vLLM SERVER EXTENSIONS to that schema
+        (not part of the OpenAI spec) - vLLM accepts them as additional
+        top-level JSON fields and honors them; a generic OpenAI client
+        would silently drop them. no_repeat_ngram_size has NO vLLM
+        equivalent at all (vLLM's sampler has no n-gram-repeat-block
+        parameter) - it is NOT sent, and is NOT applied, full stop. Any
+        config that relies on no_repeat_ngram_size for repetition
+        control will behave differently under vLLM than under
+        transformers for that reason alone - see benchmark/
+        console_runner.py's settings_translation_notes for where this
+        gets recorded per-run rather than silently assumed away.
         """
         with self._lock:
             if self.running_model_name is None:
                 raise RuntimeError("vllm_runtime.chat_completion() called with no server running - call acquire() first.")
             base_url = self.base_url
             repo_id = config.repo_id
-        resp = requests.post(
-            f"{base_url}/v1/chat/completions",
-            json={
-                "model": repo_id,
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-            },
-            timeout=300,
-        )
+
+        payload: dict[str, Any] = {
+            "model": repo_id,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        if config.top_p is not None:
+            payload["top_p"] = config.top_p
+        # vLLM extensions (see docstring) - only sent when the config
+        # actually sets a non-default value, so a config that never
+        # touched these fields produces a request byte-identical to
+        # before this change.
+        if config.top_k and config.top_k > 0:
+            payload["top_k"] = config.top_k
+        if config.repetition_penalty and config.repetition_penalty != 1.0:
+            payload["repetition_penalty"] = config.repetition_penalty
+        if config.stop_string:
+            payload["stop"] = [config.stop_string]
+
+        start = time.time()
+        resp = requests.post(f"{base_url}/v1/chat/completions", json=payload, timeout=300)
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        generation_time_s = time.time() - start
+        data = resp.json()
+        return {
+            "text": data["choices"][0]["message"]["content"],
+            "usage": data.get("usage"),
+            "vram_used_mb": _nvidia_smi_used_mb(),
+            "generation_time_s": generation_time_s,
+        }
 
 
 def _kill_stray_processes() -> list[int]:
@@ -325,6 +469,24 @@ def _gpu_memory_utilization(config: GenerationConfig) -> float:
     vram_headroom_gb field (same meaning it already has: VRAM
     deliberately left unused) - the confirmed test value 0.85 on this
     16GB card corresponds to vram_headroom_gb: 2.4.
+
+    IMPORTANT, corrected 2026-08-16 after a real live sweep (see
+    config/models/gemma_extract_vllm*.yaml's vision_validation_status
+    comments for the full data): this fraction is NOT a ceiling on the
+    vLLM process's total observed VRAM. It is only the input to vLLM's
+    own KV-cache-block-count calculation (available_kv_cache = total *
+    utilization - weights - profiled_activation_memory) - it does not
+    bound the separate EngineCore worker process's CUDA context, CUDA-
+    graph capture buffers, or PyTorch allocator fragmentation, none of
+    which shrink proportionally when this value is lowered. Four
+    independent levers (this fraction, --enforce-eager, --max-model-len,
+    --kv-cache-dtype fp8) were each tested in isolation against the same
+    checkpoint on this project's actual hardware and NONE meaningfully
+    reduced total observed VRAM below a ~15.7-16.0GB floor - do not
+    assume raising vram_headroom_gb further will free real memory for
+    other processes without re-verifying live; it may only shrink the
+    KV-cache budget (irrelevant for a workload that never approached it
+    anyway) while leaving total usage roughly unchanged.
     """
     total_mb = _nvidia_smi_total_mb()
     if total_mb is None:

@@ -1,0 +1,128 @@
+model_name: gemma_extract_vllm_w4a16
+repo_id: google/gemma-4-E2B-it-qat-w4a16-ct
+# OFFICIAL Google checkpoint (2026-08-16 verification) - NOT a
+# third-party quantization. Same naming/format pattern as this
+# project's already-proven gemma_12b_unified/gemma_12b_w4a16 pair:
+# QAT-trained (quality-preserving by construction, not post-hoc round-
+# to-nearest), shipped in compressed-tensors w4a16 format (4-bit
+# integer weights, bf16 activations, group_size=32, vision/audio towers
+# EXCLUDED from quantization per the checkpoint's own quantization_
+# config - confirmed via its config.json). Architecture class is
+# Gemma4ForConditionalGeneration - the EXACT same class as
+# gemma_extract_vllm.yaml's unquantized google/gemma-4-E2B-it, so vLLM
+# dispatch/support is not in question (that class is already twice-
+# confirmed live on this machine/vLLM 0.27.1: once for this checkpoint
+# family's 12B sibling, once for the unquantized E2B itself).
+#
+# THIS IS NOT THE SAME WEIGHTS AS gemma_extract_vllm.yaml. Per the
+# task's own framing: this is a QUANTIZATION experiment, not a repeat
+# of the engine-isolation test - compare its results against
+# gemma_extract_vllm (unquantized, same engine) to isolate quantization
+# effects, and against gemma_extract (transformers, unquantized) only
+# with that double difference (engine AND quantization) kept explicit.
+# Official vLLM recipe (vllm-project/recipes/Google/Gemma4.md) reports
+# ~9.8GB->~7.3GB (~26%) WEIGHT size reduction for this exact checkpoint
+# vs BF16 - a real, sourced expectation for RESIDENT WEIGHT size, NOT a
+# promise about this project's own measured ~15.9GB TOTAL footprint
+# (gemma_extract_vllm.yaml's own vram_headroom_gb note already found
+# live that CUDA-graph-capture overhead dominates total usage almost
+# independent of weight/pool size on this setup - the same caveat
+# applies here until re-measured).
+#
+# Third-party alternatives exist (checked 2026-08-16, NOT used here):
+# Vishva007/gemma-4-E2B-it-W4A16-AutoRound-GPTQ, Chunity/gemma-4-E2B-it-
+# AWQ-4bit - individual HF accounts, not an established quantization
+# org (unlike e.g. RedHatAI/neuralmagic/bartowski elsewhere in this
+# ecosystem) - lower confidence, not verified, skipped in favor of the
+# official Google checkpoint per the task's own stated preference.
+loader_class: vllm   # sentinel - see qwen25_vl_7b_awq.yaml's comment.
+runtime: vllm
+
+# Every field below MATCHES gemma_extract_vllm.yaml exactly (same
+# reasoning it documents: match gemma_extract.yaml's transformers-side
+# settings, with the same "no vLLM equivalent" fields called out the
+# same way) - the ONLY intentional differences from gemma_extract_vllm.
+# yaml are repo_id above and vram_headroom_gb below (a fresh, untested
+# starting guess, not carried over - see that field's own note).
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5   # inert under vLLM - see gemma_extract_vllm.yaml's identical note.
+max_new_tokens: 512
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+text_only_supported: true
+image_input_supported: true
+# RESET TO UNTESTED 2026-08-16 (was "validated") - this config now sets
+# extra.vllm_max_num_seqs: 4 (see below), which changes the actual
+# launch command from what was validated. The prior validation (4/5
+# pass, 69.9 tok/s, 15922MB, cold load 183.1s at --max-num-seqs 256
+# default) is preserved in git history / gemma_extract_vllm_w4a16_
+# lowseqs.yaml's own comments, not deleted, but does not carry forward
+# automatically to a different launch command - same "verify live,
+# don't assume" discipline this whole investigation has followed.
+# RE-VALIDATED 2026-08-16 at --max-num-seqs 4: 4/5 pass (unchanged
+# pattern), VRAM 15922MB -> 14758MB (-1164MB), tok/s 69.9 -> 76.0 (no
+# regression, if anything higher), cold load 183.1s -> 174.1s. Matches
+# gemma_extract_vllm_w4a16_lowseqs.yaml's result closely (expected -
+# this file is now effectively the same config).
+# RE-VALIDATED 2026-08-15 at the full folded-in operating point
+# (graphs ON, normal KV, ctx4096, seqs 4, image-only mm-limit,
+# headroom 3.1): 4/5 (unchanged pattern), 77.0 tok/s (70-81 band),
+# init 141s, net-of-baseline VRAM 13265MB. Session summary: from
+# ~15.9GB net / 174-291s cold starts at the session start to ~13.3GB /
+# ~141s at identical quality. PRIOR (mm-limit @ headroom 2.5): 4/5,
+# 81.2 tok/s, net ~13.8GB.
+vision_validation_status: validated
+
+restrict_output_charset: true   # inert under vLLM - see gemma_extract_vllm.yaml's identical note.
+
+prompt_version: v1
+prompt_text: ""
+
+extra:
+  image_token_budget: 560   # NOT read by the vLLM path - see gemma_extract_vllm.yaml's identical note.
+  system_prompt: |
+    You are an OCR transcription model.
+
+    Transcribe exactly what appears in the image.
+    If unreadable, output only "?".
+    Do not describe the image.
+    Do not explain your reasoning.
+  # Adopted 2026-08-16 from gemma_extract_vllm_w4a16_lowseqs.yaml's
+  # confirmed result (default 256 -> 4): -1190MB VRAM with NO throughput
+  # cost, the best of five levers tried against this checkpoint. See
+  # that file's own vision_validation_status comment for the full
+  # numbers/log accounting this is based on.
+  vllm_max_num_seqs: 4
+  # Adopted 2026-08-15 from the mmlimit experiment (gemma_extract_vllm_
+  # w4a16_mmlimit.yaml: same quality, ~30s faster init, 0.6GiB of
+  # unused-modality provisioning freed - vLLM defaults unspecified
+  # modalities to 999 items/prompt; this workload is exactly 1 image).
+  vllm_limit_mm_per_prompt: '{"image": 1, "video": 0, "audio": 0}'
+
+# RAISED 2.5 -> 3.1 (2026-08-15, folded in from the validated hr31
+# experiment - gemma_extract_vllm_w4a16_hr31.yaml): with the mm-limit
+# flag having freed ~0.6GiB of unused-modality provisioning, tightening
+# the budget by the same amount returns that memory to the CARD instead
+# of vLLM re-investing it in KV cache. Measured at 3.1: -517MB net
+# VRAM, KV capacity 5.9GiB (still above the pre-mm-limit 5.77GiB),
+# same quality/throughput. History: 2.5 was itself the hard-won value
+# from the utilization sweep (1.5 worked/wasteful, 10.0 failed to load
+# - see gemma_extract_vllm.yaml's fuller writeup); 3.1 is only safe
+# BECAUSE the mm-limit flag runs alongside it - do not raise headroom
+# without that flag present.
+vram_headroom_gb: 3.1
+context_length: 4096
+
+role: extraction_candidate_vllm_quantized   # descriptive only - distinguishes
+                                              # this from gemma_extract_vllm's
+                                              # role string in any listing.

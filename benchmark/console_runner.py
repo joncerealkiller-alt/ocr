@@ -41,9 +41,11 @@ from PIL import Image
 from benchmark.run_result import BenchmarkRunResult, CaseResult
 from benchmark.scorers import score_case
 from benchmark.suite_schema import BenchmarkSuite
-from core.loader_registry import validate_model_assignment
+from core.loader_registry import is_vllm_model, validate_model_assignment
 from core.model_residency import residency
-from model_console.adapter import ChatBackendAdapter, build_config
+from model_console.adapter import (
+    ChatBackendAdapter, build_config, model_requires_remote_backend,
+)
 
 
 class BenchmarkCancelled(Exception):
@@ -59,6 +61,12 @@ def eligible_for_suite(model_name: str, suite: BenchmarkSuite) -> tuple[bool, st
     "validated"). Raises nothing - a missing/disabled model is simply
     "not eligible", since the caller (benchmark_tab.py) only calls this
     after already sourcing model_name from the shared registry listing.
+
+    Deliberately independent of inference_engine (task #5: backend
+    compatibility and model capability are separate dimensions) - a
+    vLLM-only VLM is exactly as eligible for the vision suite as a
+    transformers-only one; which ENGINE a model can run under is
+    checked separately by required_backend_transport()/build_loader().
     """
     try:
         cfg = validate_model_assignment(model_name)
@@ -69,6 +77,84 @@ def eligible_for_suite(model_name: str, suite: BenchmarkSuite) -> tuple[bool, st
     if suite.required_capability == "text" and not cfg.text_only_supported:
         return False, f"{model_name!r} has text_only_supported: false (not confirmed text-capable)."
     return True, ""
+
+
+def inference_engine_for_model(model_name: str) -> str:
+    """
+    "transformers" | "vllm" - directly from config.runtime (existing
+    registry metadata, see GenerationConfig.runtime's docstring). This
+    is a per-config, FIXED property today: no single registered model
+    entry supports being run under both engines - runtime is baked into
+    which subprocess/loader machinery serves it. "Same model, both
+    engines" (task #3) therefore means two DIFFERENT model_name entries
+    that happen to share weights - see find_cross_engine_pairs() below,
+    not a per-run toggle on one entry.
+    """
+    return validate_model_assignment(model_name).runtime
+
+
+def required_backend_transport(model_name: str) -> str:
+    """"local" | "remote" - which ChatBackendAdapter transport this
+    model can actually run under, reusing model_requires_remote_backend()
+    (existing config-driven check: runtime != "transformers", or an
+    explicit extra.requires_backend: remote) rather than a second
+    hard-coded compatibility list (task #4)."""
+    return "remote" if model_requires_remote_backend(model_name) else "local"
+
+
+def find_cross_engine_pairs() -> list[tuple[str, str]]:
+    """
+    Returns [(transformers_model_name, vllm_model_name), ...] for every
+    pair of ENABLED registered models that share the exact same repo_id
+    but run under different engines - the only configuration in this
+    registry where "same model weights, different backend" (task #3) is
+    actually true today. Computed by grouping config/models/*.yaml by
+    repo_id, not a hand-maintained pairing list - a future config that
+    happens to share a repo_id with an existing one is automatically
+    picked up.
+
+    As of 2026-08-16 there is exactly one such pair in this project's
+    registry: gemma_12b_unified.yaml (transformers, Gemma4UnifiedLoader)
+    and gemma_12b_w4a16.yaml (vllm) both declare repo_id
+    "google/gemma-4-12B-it-qat-w4a16-ct" - literally the same checkpoint
+    on disk, served by two different engines. Every other vLLM config
+    (qwen25_vl_7b_awq, gemma_e4b_w4a16, internvl3_5_8b_awq,
+    minicpm_v_gptq) uses a differently-quantized or differently-packaged
+    repo_id than any transformers-path config, so those are NOT
+    weight-identical pairs even when they're the same base model family
+    - see the benchmark completion report's Equivalence caveats section
+    for why qwen25_vl_7b vs qwen25_vl_7b_awq was used as a same-FAMILY
+    (not same-weights) comparison instead.
+    """
+    from pathlib import Path
+    import yaml as _yaml
+    from core.loaders.base_loader import CONFIG_DIR
+
+    by_repo: dict[str, list[tuple[str, str]]] = {}
+    for path in sorted(Path(CONFIG_DIR).glob("*.yaml")):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = _yaml.safe_load(f) or {}
+        except Exception:
+            continue
+        repo_id = data.get("repo_id")
+        if not repo_id:
+            continue
+        try:
+            cfg = validate_model_assignment(path.stem)
+        except ValueError:
+            continue  # disabled/unregistered - not offerable either side
+        engine = "vllm" if is_vllm_model(cfg) else "transformers"
+        by_repo.setdefault(repo_id, []).append((path.stem, engine))
+
+    pairs = []
+    for repo_id, entries in by_repo.items():
+        transformers_names = [n for n, e in entries if e == "transformers"]
+        vllm_names = [n for n, e in entries if e == "vllm"]
+        for t_name in transformers_names:
+            for v_name in vllm_names:
+                pairs.append((t_name, v_name))
+    return pairs
 
 
 def run_suite(
@@ -99,19 +185,33 @@ def run_suite(
     if not eligible:
         raise ValueError(f"Model/suite mismatch: {reason}")
 
+    required_transport = required_backend_transport(model_name)
+    if adapter.backend != required_transport:
+        raise ValueError(
+            f"Backend/model mismatch: {model_name!r} requires backend="
+            f"{required_transport!r} (see model_console.adapter."
+            f"model_requires_remote_backend()), but the given adapter is "
+            f"backend={adapter.backend!r}."
+        )
+
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     started_at = datetime.now(timezone.utc).isoformat()
 
-    was_resident_before = (
-        (residency.resident_model_name == model_name) if adapter.backend == "local" else None
-    )
+    # Real server-side residency truth, not this adapter instance's own
+    # bookkeeping (task #9 - cold vs warm needs this to be correct for
+    # BOTH engines, including a fresh adapter checking a server that
+    # already has something resident from an earlier call).
+    was_resident_before = adapter.server_resident_model_name() == model_name
 
     config = build_config(model_name, overrides=dict(suite.generation_settings))
+    inference_engine = config.runtime
+    repo_id = config.repo_id
 
     case_results: list[CaseResult] = []
     run_status = "completed"
     abort_reason: Optional[str] = None
     load_telemetry: Optional[dict[str, Any]] = None
+    settings_translation_notes: list[str] = []
     generation_config_snapshot: Optional[dict[str, Any]] = None
 
     run_start = time.time()
@@ -120,9 +220,6 @@ def run_suite(
             adapter.ensure_loaded(model_name, config)
         except Exception as e:
             raise _AbortRun(f"model load failed: {type(e).__name__}: {e}") from e
-
-        if adapter.backend == "local":
-            load_telemetry = residency.last_load_telemetry
 
         total = len(suite.cases)
         for index, case in enumerate(suite.cases):
@@ -146,19 +243,33 @@ def run_suite(
     finally:
         total_runtime = time.time() - run_start
 
-    # generation_config_snapshot: reuse whatever the last successful
-    # case reported (byte-identical config every case, so any one of
-    # them is representative) - falls back to the pre-load config
-    # (asdict) if every case errored before producing a snapshot, so
-    # "what was requested" is still recorded even on a fully failed run.
+    # generation_config_snapshot / load_telemetry / settings_translation_
+    # notes: reused from whatever the FIRST case that actually captured
+    # them reported - a fresh load only happens once per run, so the
+    # first case to run it is the representative one (byte-identical
+    # requested config every case regardless). Falls back to the
+    # pre-load config (asdict) / residency's own last_load_telemetry
+    # for the local-transformers path specifically, where load telemetry
+    # is available even before this function's own case loop runs (a
+    # single-case suite with a load failure could otherwise report None).
     for case in case_results:
-        if case.telemetry and "generation_config_snapshot" in case.telemetry:
+        if not case.telemetry:
+            continue
+        if "generation_config_snapshot" in case.telemetry:
             popped = case.telemetry.pop("generation_config_snapshot")
-            if popped is not None:
+            if popped is not None and generation_config_snapshot is None:
                 generation_config_snapshot = popped
+        if "settings_translation_notes" in case.telemetry:
+            popped_notes = case.telemetry.pop("settings_translation_notes")
+            if popped_notes and not settings_translation_notes:
+                settings_translation_notes = popped_notes
+        if load_telemetry is None and case.telemetry.get("load"):
+            load_telemetry = case.telemetry["load"]
     if generation_config_snapshot is None:
         from dataclasses import asdict
         generation_config_snapshot = asdict(config)
+    if load_telemetry is None and adapter.backend == "local":
+        load_telemetry = residency.last_load_telemetry
 
     return BenchmarkRunResult(
         run_id=run_id,
@@ -167,8 +278,11 @@ def run_suite(
         suite_version=suite.version,
         suite_qualified_id=suite.qualified_id,
         backend=adapter.backend,
+        inference_engine=inference_engine,
+        repo_id=repo_id,
         generation_settings=dict(suite.generation_settings),
         generation_config_snapshot=generation_config_snapshot,
+        settings_translation_notes=settings_translation_notes,
         was_resident_before_run=was_resident_before,
         load_telemetry=load_telemetry,
         started_at=started_at,
@@ -178,6 +292,30 @@ def run_suite(
         abort_reason=abort_reason,
         case_results=case_results,
     )
+
+
+def run_suite_auto(
+    model_name: str,
+    suite: BenchmarkSuite,
+    *,
+    remote_base_url: Optional[str] = None,
+    on_progress: Optional[Callable[[int, int, str], None]] = None,
+    cancel_check: Optional[Callable[[], bool]] = None,
+) -> BenchmarkRunResult:
+    """
+    Convenience entry point (task #4/#11: "the UI should only offer
+    valid model/backend combinations") - builds the correct
+    ChatBackendAdapter transport for `model_name` automatically via
+    required_backend_transport(), instead of the caller having to know
+    whether a given model needs backend="local" or "remote". This is
+    what benchmark_tab.py calls; run_suite() itself stays adapter-
+    agnostic for tests/scripts that want to construct/reuse a specific
+    adapter instance (e.g. to keep one adapter warm across two
+    sequential suite runs).
+    """
+    transport = required_backend_transport(model_name)
+    adapter = ChatBackendAdapter(backend=transport, base_url=remote_base_url)
+    return run_suite(adapter, model_name, suite, on_progress=on_progress, cancel_check=cancel_check)
 
 
 class _AbortRun(Exception):
@@ -215,10 +353,12 @@ def _run_one_case(adapter: ChatBackendAdapter, case) -> CaseResult:
     score_result = score_case(case.scorer, case.scorer_args, raw_output)
     telemetry = dict(meta.get("telemetry") or {})
     # Stashed here transiently so run_suite() can pull ONE representative
-    # snapshot for the whole run without threading it through as a
-    # separate return value - popped back out before this CaseResult's
-    # telemetry is persisted (see run_suite()'s loop above).
+    # value for the whole run without threading extra return values
+    # through _run_one_case()'s signature - both popped back out before
+    # this CaseResult's telemetry is persisted (see run_suite()'s loop).
     telemetry["generation_config_snapshot"] = meta.get("generation_config_snapshot")
+    if meta.get("settings_translation_notes"):
+        telemetry["settings_translation_notes"] = meta["settings_translation_notes"]
 
     return CaseResult(
         case_id=case.case_id, category=case.category, prompt=case.prompt,

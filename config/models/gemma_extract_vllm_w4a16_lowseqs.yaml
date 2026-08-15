@@ -1,0 +1,118 @@
+model_name: gemma_extract_vllm_w4a16_lowseqs
+repo_id: google/gemma-4-E2B-it-qat-w4a16-ct
+# SAME checkpoint as gemma_extract_vllm_w4a16.yaml, graphs ON, ctx4096,
+# default kv-cache dtype - every field identical EXCEPT
+# extra.vllm_max_num_seqs (new) and this model_name/role.
+#
+# WHY THIS EXISTS (2026-08-16): the fifth VRAM lever, requested
+# specifically to CONFIRM (not just predict from vLLM's own log
+# accounting) whether --max-num-seqs can recover meaningful VRAM.
+# gemma_extract_vllm_w4a16.yaml's own real startup log gives the exact
+# accounting this predicts from: "Actual usage is 7.65 GiB for consumed
+# memory (weights + non-torch), 0.26 GiB for peak activation, and 0.45
+# GiB for CUDAGraph memory." --max-num-seqs bounds ONLY the activation
+# (0.26 GiB) and part of the CUDA-graph (0.45 GiB) categories - a
+# combined ceiling of ~0.71 GiB, already mostly probed by
+# gemma_extract_vllm_w4a16_eager.yaml's full-eager result (-216 to
+# -470MB recovered for -76% tok/s). It CANNOT reach the ~1.7-2GiB gap
+# between vLLM's own tracked total (~13.4-13.8GiB) and this project's
+# actually observed total VRAM (~15.5-15.9GiB) - that gap sits outside
+# every category vLLM's memory-utilization accounting covers at all
+# (most likely EngineCore worker CUDA context + allocator overhead, per
+# gemma_extract_vllm.yaml's corrected vram_headroom_gb note).
+#
+# Prediction going into this run (stated explicitly so the actual
+# result can be checked against it, not fitted after the fact): a small
+# VRAM change on the order of the eager-mode result's magnitude or
+# smaller, NOT a substantial reduction. This config exists to confirm
+# that prediction empirically rather than accept it from log analysis
+# alone - this project's own stated discipline (verify live, don't
+# assume from documentation/logs).
+#
+# 4 chosen for max_num_seqs (default is 256) - this project's real
+# workload never runs more than 1 concurrent sequence; 4 leaves a
+# little real headroom rather than hard-coding the literal minimum.
+#
+# UNTESTED until a real run completes - see vision_validation_status.
+loader_class: vllm   # sentinel - see qwen25_vl_7b_awq.yaml's comment.
+runtime: vllm
+
+do_sample: false
+temperature: 0.1
+top_p: 0.9
+top_k: 20
+repetition_penalty: 1.15
+no_repeat_ngram_size: 5   # inert under vLLM - see gemma_extract_vllm.yaml's identical note.
+max_new_tokens: 512
+
+min_pixels: null
+max_pixels: null
+
+reasoning_toggle_mechanism: system_prompt
+reasoning_enabled: false
+
+text_only_supported: true
+image_input_supported: true
+# VALIDATED 2026-08-16 - real live run, vision_baseline_v4: 4/5 pass
+# (80%), identical per-case pattern to every other gemma_extract*
+# config.
+#
+# RESULT: THE BEST LEVER FOUND THIS SESSION, AND IT EXCEEDED THE
+# PREDICTION. vs gemma_extract_vllm_w4a16.yaml (identical weights/
+# graphs/context, --max-num-seqs 256 default):
+#   VRAM:       15922MB -> 14732MB   (-1190MB, ~7.5% of the card - the
+#                                     first lever this session to move
+#                                     total VRAM by more than noise)
+#   tokens/sec:   69.9  ->   72.6    (unchanged/slightly up - NO
+#                                     throughput cost, unlike
+#                                     --enforce-eager's -76%)
+#   cold load:   183.1s -> 255.1s    (higher - consistent with the
+#                                     run-to-run variance already seen
+#                                     on ctx1024/fp8kv, not attributed
+#                                     to this flag)
+# The PREDICTION IN THIS FILE'S OWN HEADER WAS WRONG IN MAGNITUDE (said
+# to expect at most ~0.71GiB combined, based on vLLM's own log
+# categories) - real log accounting for THIS run: CUDAGraph memory
+# 0.45->0.14 GiB (-0.31), peak activation 0.26->0.21 GiB (-0.05).
+# Combined tracked reduction: only ~0.36 GiB (~369MB) - LESS THAN HALF
+# the actual ~1190MB observed. Conclusion: --max-num-seqs reaches MORE
+# than what vLLM's "Actual usage is..." log line tracks - part of the
+# ~1.7-2GiB "unexplained gap" identified in gemma_extract_vllm.yaml's
+# vram_headroom_gb note is APPARENTLY proportional to max_num_seqs too
+# (plausibly allocator/IPC buffers sized for concurrency, not purely
+# fixed CUDA-context overhead as that note speculated) - a real,
+# useful correction to that earlier theory, not just a confirmation of
+# it. This is the ONE lever in the whole five-lever sweep (utilization,
+# eager, context-length, kv-cache-dtype, max-num-seqs) that delivered a
+# meaningful VRAM reduction without a throughput cost - worth
+# preferring over gemma_extract_vllm_w4a16.yaml as the default
+# production config for this checkpoint if concurrency above 4
+# sequences is never actually needed.
+vision_validation_status: validated
+
+restrict_output_charset: true   # inert under vLLM - see gemma_extract_vllm.yaml's identical note.
+
+prompt_version: v1
+prompt_text: ""
+
+extra:
+  image_token_budget: 560   # NOT read by the vLLM path - see gemma_extract_vllm.yaml's identical note.
+  system_prompt: |
+    You are an OCR transcription model.
+
+    Transcribe exactly what appears in the image.
+    If unreadable, output only "?".
+    Do not describe the image.
+    Do not explain your reasoning.
+  # THE ONE FUNCTIONAL DIFFERENCE from gemma_extract_vllm_w4a16.yaml -
+  # read by core/vllm_runtime.py's acquire(), which appends
+  # "--max-num-seqs 4" to the launch command only when this is set
+  # (added 2026-08-16 specifically for this experiment).
+  vllm_max_num_seqs: 4
+
+# Unchanged from gemma_extract_vllm_w4a16.yaml's own hard-won value -
+# isolating max_num_seqs as the one variable under test here.
+vram_headroom_gb: 2.5
+context_length: 4096
+
+role: extraction_candidate_vllm_quantized_lowseqs   # descriptive only.
