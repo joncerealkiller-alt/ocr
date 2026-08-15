@@ -1,0 +1,215 @@
+# Generated 2026-08-15 (Fable session) - see description. Version rule
+# applies as everywhere: any edit to prompts/GT/assets -> new version file.
+suite_id: census_fieldcrops
+version: '1'
+display_name: Census Per-Field Crops v1 (real 1931 cells)
+description: 'Sixteen single-cell crops (4 rows x Name/Age/Birthplace/Relationship) from the same real
+  1931 census page as census_headtohead_v1, cut with the sidecar''s human-calibrated column ranges - the
+  pipeline''s ACTUAL per-field crop shape. Ground truth from ground_truth_log.jsonl. Built for the deployment-grade
+  12B-vs-E2B comparison: does the 3.3x gap measured on full-row strips survive on real per-field inputs?
+  Sex column deliberately excluded (substring-scorer hazard).'
+required_capability: vision
+generation_settings:
+  do_sample: false
+  temperature: 0.1
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.15
+  max_new_tokens: 60
+cases:
+- case_id: r4_name
+  category: field_name
+  image_path: data/_test_fixtures/census_1931_r4_name.png
+  prompt: This is a small crop of a single handwritten cell from the Name column of a 1931 Canadian census
+    table (a fragment of the adjacent row may show at the edge - read the central entry only). Transcribe
+    exactly the name written in this cell. Reply with only the transcription; if unreadable, reply only
+    "?".
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Dorothy
+  expected_display: 'GT: ditto-mark + "Dorothy"'
+- case_id: r4_age
+  category: field_age
+  image_path: data/_test_fixtures/census_1931_r4_age.png
+  prompt: This is a small crop of a single handwritten cell from the Age column of a 1931 Canadian census
+    table (a fragment of the adjacent row may show at the edge - read the central entry only). Transcribe
+    exactly the number written in this cell. Reply with only the transcription; if unreadable, reply only
+    "?".
+  scorer: exact_match_any
+  scorer_args:
+    expected_any:
+    - '12'
+  expected_display: 'GT: 12'
+- case_id: r4_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1931_r4_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1931 Canadian
+    census table (a fragment of the adjacent row may show at the edge - read the central entry only).
+    Transcribe exactly the place written in this cell. Reply with only the transcription; if unreadable,
+    reply only "?".
+  scorer: contains_any
+  scorer_args:
+    keywords:
+    - Manitoba
+  expected_display: 'GT: Manitoba'
+- case_id: r4_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1931_r4_rel.png
+  prompt: This is a small crop of a single handwritten cell from the 'Relationship to Head of household'
+    column of a 1931 Canadian census table (a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: contains_any
+  scorer_args:
+    keywords:
+    - Daughter
+  expected_display: 'GT: Daughter'
+- case_id: r5_name
+  category: field_name
+  image_path: data/_test_fixtures/census_1931_r5_name.png
+  prompt: This is a small crop of a single handwritten cell from the Name column of a 1931 Canadian census
+    table (a fragment of the adjacent row may show at the edge - read the central entry only). Transcribe
+    exactly the name written in this cell. Reply with only the transcription; if unreadable, reply only
+    "?".
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Hyzie
+    - Bertha
+  expected_display: 'GT: Hyzie Bertha'
+- case_id: r5_age
+  category: field_age
+  image_path: data/_test_fixtures/census_1931_r5_age.png
+  prompt: This is a small crop of a single handwritten cell from the Age column of a 1931 Canadian census
+    table (a fragment of the adjacent row may show at the edge - read the central entry only). Transcribe
+    exactly the number written in this cell. Reply with only the transcription; if unreadable, reply only
+    "?".
+  scorer: exact_match_any
+  scorer_args:
+    expected_any:
+    - '18'
+  expected_display: 'GT: 18'
+- case_id: r5_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1931_r5_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1931 Canadian
+    census table (a fragment of the adjacent row may show at the edge - read the central entry only).
+    Transcribe exactly the place written in this cell. Reply with only the transcription; if unreadable,
+    reply only "?".
+  scorer: contains_any
+  scorer_args:
+    keywords:
+    - Manitoba
+  expected_display: 'GT: Manitoba'
+- case_id: r5_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1931_r5_rel.png
+  prompt: This is a small crop of a single handwritten cell from the 'Relationship to Head of household'
+    column of a 1931 Canadian census table (a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: contains_any
+  scorer_args:
+    keywords:
+    - Domestic
+  expected_display: 'GT: Domestic'
+- case_id: r6_name
+  category: field_name
+  image_path: data/_test_fixtures/census_1931_r6_name.png
+  prompt: This is a small crop of a single handwritten cell from the Name column of a 1931 Canadian census
+    table (a fragment of the adjacent row may show at the edge - read the central entry only). Transcribe
+    exactly the name written in this cell. Reply with only the transcription; if unreadable, reply only
+    "?".
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Roberts
+    - Burton
+  expected_display: 'GT: Mc Roberts Burton C'
+- case_id: r6_age
+  category: field_age
+  image_path: data/_test_fixtures/census_1931_r6_age.png
+  prompt: This is a small crop of a single handwritten cell from the Age column of a 1931 Canadian census
+    table (a fragment of the adjacent row may show at the edge - read the central entry only). Transcribe
+    exactly the number written in this cell. Reply with only the transcription; if unreadable, reply only
+    "?".
+  scorer: exact_match_any
+  scorer_args:
+    expected_any:
+    - '44'
+  expected_display: 'GT: 44'
+- case_id: r6_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1931_r6_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1931 Canadian
+    census table (a fragment of the adjacent row may show at the edge - read the central entry only).
+    Transcribe exactly the place written in this cell. Reply with only the transcription; if unreadable,
+    reply only "?".
+  scorer: contains_any
+  scorer_args:
+    keywords:
+    - Manitoba
+  expected_display: 'GT: Manitoba'
+- case_id: r6_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1931_r6_rel.png
+  prompt: This is a small crop of a single handwritten cell from the 'Relationship to Head of household'
+    column of a 1931 Canadian census table (a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: contains_any
+  scorer_args:
+    keywords:
+    - Head
+  expected_display: 'GT: Head'
+- case_id: r9_name
+  category: field_name
+  image_path: data/_test_fixtures/census_1931_r9_name.png
+  prompt: This is a small crop of a single handwritten cell from the Name column of a 1931 Canadian census
+    table (a fragment of the adjacent row may show at the edge - read the central entry only). Transcribe
+    exactly the name written in this cell. Reply with only the transcription; if unreadable, reply only
+    "?".
+  scorer: contains_all
+  scorer_args:
+    keywords:
+    - Knott
+    - Alfred
+    - William
+  expected_display: 'GT: Knott Alfred William'
+- case_id: r9_age
+  category: field_age
+  image_path: data/_test_fixtures/census_1931_r9_age.png
+  prompt: This is a small crop of a single handwritten cell from the Age column of a 1931 Canadian census
+    table (a fragment of the adjacent row may show at the edge - read the central entry only). Transcribe
+    exactly the number written in this cell. Reply with only the transcription; if unreadable, reply only
+    "?".
+  scorer: exact_match_any
+  scorer_args:
+    expected_any:
+    - '37'
+  expected_display: 'GT: 37'
+- case_id: r9_birthplace
+  category: field_birthplace
+  image_path: data/_test_fixtures/census_1931_r9_birthplace.png
+  prompt: This is a small crop of a single handwritten cell from the Birthplace column of a 1931 Canadian
+    census table (a fragment of the adjacent row may show at the edge - read the central entry only).
+    Transcribe exactly the place written in this cell. Reply with only the transcription; if unreadable,
+    reply only "?".
+  scorer: contains_any
+  scorer_args:
+    keywords:
+    - England
+  expected_display: 'GT: England'
+- case_id: r9_rel
+  category: field_rel
+  image_path: data/_test_fixtures/census_1931_r9_rel.png
+  prompt: This is a small crop of a single handwritten cell from the 'Relationship to Head of household'
+    column of a 1931 Canadian census table (a fragment of the adjacent row may show at the edge - read
+    the central entry only). Transcribe exactly what is written in this cell. Reply with only the transcription;
+    if unreadable, reply only "?".
+  scorer: contains_any
+  scorer_args:
+    keywords:
+    - Head
+  expected_display: 'GT: Head'
