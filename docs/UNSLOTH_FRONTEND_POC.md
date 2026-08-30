@@ -72,13 +72,25 @@ reader say? check GT for row 5 of the 1931 page"), same tools, same flow:
   Bertha/Henzie Bertha, 444/44, ...), attributed readers correctly from the
   model string, and quoted row-5 GT exactly (Hyzie Bertha / 18 / Domestic /
   Manitoba / F). Zero fabrication.
+- **Gemma-12B W4A16 (local, 2026-08-29 follow-up): FAITHFUL.** On the
+  1931_174 page question (search_sources → get_source_details), every claim
+  checked out against the databases: bucket/confidence/model, status, profile,
+  real source path, all seven stage outputs incl. the pass-through decision.
+  Notably it relayed the person-names docstring caveat correctly WITHOUT
+  calling search_genealogy_facts - it used the guardrail to skip a pointless
+  call, the opposite failure profile from the 4B. Ran via CPU offload
+  (compressed-tensors W4A16 decompresses to bf16 under transformers; ~24GB
+  doesn't fit 16GB VRAM) - slow but correct; a GGUF quant is the usable-speed
+  path for local 12B chat.
 
 ## Production guidance (when this graduates from PoC)
 
-- Chat layer: 4B-class is disqualified by direct evidence; frontier-class is
-  validated. Where the fidelity floor sits between them is NOT established —
-  this was one A/B, not a sweep. Any intermediate candidate (7B-30B local)
-  gets its own faithfulness test on real tool outputs before being trusted.
+- Chat layer: 4B-class is disqualified by direct evidence; Gemma-12B-class
+  and frontier are validated (each on one question - single-datapoint passes,
+  not a sweep). The fidelity floor sits somewhere in 4B-12B; any untested
+  candidate still gets its own faithfulness test on real tool outputs before
+  being trusted. For local-only use, serve the 12B as a GGUF quant
+  (llama.cpp keeps weights quantized in VRAM) rather than W4A16 offload.
 - Project instructions must include: "Answer only from tool results; quote
   values verbatim; if a tool result doesn't contain the answer, say so."
 - Permission split: "Always allow" acceptable for read-only tools once
