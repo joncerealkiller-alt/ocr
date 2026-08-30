@@ -75,8 +75,10 @@ reader say? check GT for row 5 of the 1931 page"), same tools, same flow:
 
 ## Production guidance (when this graduates from PoC)
 
-- Chat layer: frontier or large-local models ONLY. 4B-class is disqualified
-  by direct evidence.
+- Chat layer: 4B-class is disqualified by direct evidence; frontier-class is
+  validated. Where the fidelity floor sits between them is NOT established —
+  this was one A/B, not a sweep. Any intermediate candidate (7B-30B local)
+  gets its own faithfulness test on real tool outputs before being trusted.
 - Project instructions must include: "Answer only from tool results; quote
   values verbatim; if a tool result doesn't contain the answer, say so."
 - Permission split: "Always allow" acceptable for read-only tools once
