@@ -82,6 +82,17 @@ reader say? check GT for row 5 of the 1931 page"), same tools, same flow:
   (compressed-tensors W4A16 decompresses to bf16 under transformers; ~24GB
   doesn't fit 16GB VRAM) - slow but correct; a GGUF quant is the usable-speed
   path for local 12B chat.
+- **Gemma-12B, second (hard) question: PASS - two-for-two.** Same
+  disagreements+GT question GPT-5.6 was tested on: reproduced all 15
+  disagreed fields with correct rows and stage-2 values, and row-5 GT
+  verbatim incl. per-field condition notes. Where stage1_read was null
+  (this leg predates the terse no-think prompt, so stage1_raw_output is
+  MiniCPM CoT and the tool's parser found no values), it said so accurately
+  ("Stage 1 produced internal reasoning instead of a final value") instead
+  of inventing plausible stage-1 readings - verified against the leg JSON.
+  GPT-5.6 went deeper (dug stage-1 strings out of the raw CoT); both
+  faithful. Local-only frontend viability is settled in principle; the
+  remaining work is engineering (GGUF for conversational speed).
 
 ## Production guidance (when this graduates from PoC)
 
