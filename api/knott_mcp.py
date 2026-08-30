@@ -35,6 +35,8 @@ from core.workspace_context import WorkspaceContext
 
 GT_LOG = PROJECT_ROOT / "data" / "outputs" / "ground_truth_log.jsonl"
 WORKSPACE = WorkspaceContext.resolve().workspace_root
+GENEALOGY_DB = WORKSPACE / "genealogy_memory.db"
+PIPELINE_DB = WORKSPACE / "pipeline.db"
 EXPERIMENTS_DIR = WORKSPACE / "research" / "experiments"
 BENCHMARK_RUNS_DIR = WORKSPACE / "research" / "model_console" / "benchmark_runs"
 
@@ -155,6 +157,109 @@ def query_ground_truth(image_name_contains: str, row_index: int | None = None) -
     ]
     return json.dumps({"filter": image_name_contains, "row_index": row_index,
                         "labels": results, "count": len(results)}, indent=1)
+
+
+def _ro_connect(db_path):
+    """Read-only SQLite connection (mode=ro URI). Deliberately NOT the
+    project's GenealogyMemory/PipelineDatabase classes - their
+    constructors run _init_schema() over a read-write connection, and
+    this server's contract is that no tool can write anything, ever."""
+    import sqlite3
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+@mcp_server.tool()
+def search_genealogy_facts(query: str, entity_type: str | None = None, limit: int = 25) -> str:
+    """Search the genealogy discoveries fact log (case-insensitive
+    substring over recorded values, newest first). entity_type filters
+    to exactly 'personal_name', 'place_name', or 'visible_date' - use
+    'personal_name' to search people. Every fact carries provenance:
+    the source image it was extracted from, the model that extracted
+    it, its confidence, and when. These are EXTRACTED facts, not
+    verified genealogy - always report the provenance. NOTE the log's
+    current contents (2026-08-16): place_name and visible_date facts
+    from agent-framework extraction sessions only - the census
+    two-stage pipeline does not feed this store, so person names from
+    census pages live in extraction results (get_extraction_
+    disagreements) and the ground-truth log (query_ground_truth)
+    instead. An empty result here means "not recorded in this store",
+    never "this person does not exist in the corpus"."""
+    if entity_type is not None and entity_type not in ("personal_name", "place_name", "visible_date"):
+        return json.dumps({"error": "entity_type must be one of: personal_name, place_name, visible_date"})
+    if not GENEALOGY_DB.is_file():
+        return json.dumps({"error": f"no genealogy memory db at {GENEALOGY_DB}"})
+    conn = _ro_connect(GENEALOGY_DB)
+    try:
+        clauses, params = ["value LIKE ? COLLATE NOCASE"], [f"%{query}%"]
+        if entity_type:
+            clauses.append("entity_type = ?"); params.append(entity_type)
+        rows = conn.execute(
+            f"SELECT * FROM discoveries WHERE {' AND '.join(clauses)} ORDER BY id DESC LIMIT ?",
+            (*params, max(1, min(int(limit), 100))),
+        ).fetchall()
+        return json.dumps({"query": query, "entity_type": entity_type,
+                            "facts": [dict(r) for r in rows], "count": len(rows)}, indent=1)
+    finally:
+        conn.close()
+
+
+@mcp_server.tool()
+def search_sources(path_contains: str | None = None, bucket: str | None = None,
+                    status: str | None = None, limit: int = 25) -> str:
+    """Search the pipeline's source-page database (scanned census pages,
+    certificates, photos...). Filter by a source-path substring (e.g.
+    '1931_174' or 'e002880409'), document bucket (e.g.
+    'dense_tabular_rows', 'printed_document'), and/or pipeline status.
+    Returns each page's id, paths, classification (bucket + confidence
+    + model), pipeline stage, and run id. Use get_source_details for
+    one page's full history."""
+    if not PIPELINE_DB.is_file():
+        return json.dumps({"error": f"no pipeline db at {PIPELINE_DB}"})
+    conn = _ro_connect(PIPELINE_DB)
+    try:
+        clauses, params = [], []
+        if path_contains:
+            clauses.append("(source_path LIKE ? COLLATE NOCASE OR working_path LIKE ? COLLATE NOCASE)")
+            params += [f"%{path_contains}%", f"%{path_contains}%"]
+        if bucket:
+            clauses.append("bucket = ?"); params.append(bucket)
+        if status:
+            clauses.append("status = ?"); params.append(status)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = conn.execute(
+            f"SELECT id, source_path, working_path, page_number, current_stage, status, "
+            f"bucket, classifier_confidence, classifier_model, run_id, updated_at "
+            f"FROM images {where} ORDER BY id DESC LIMIT ?",
+            (*params, max(1, min(int(limit), 100))),
+        ).fetchall()
+        total = conn.execute(f"SELECT COUNT(*) FROM images {where}", params).fetchone()[0]
+        return json.dumps({"filters": {"path_contains": path_contains, "bucket": bucket, "status": status},
+                            "total_matching": total, "showing": len(rows),
+                            "sources": [dict(r) for r in rows]}, indent=1)
+    finally:
+        conn.close()
+
+
+@mcp_server.tool()
+def get_source_details(image_id: int) -> str:
+    """Full pipeline history for one source page (id from
+    search_sources): the image record, every recorded stage output
+    (classification, sensor captures, extraction...), newest first.
+    All provenance fields included."""
+    if not PIPELINE_DB.is_file():
+        return json.dumps({"error": f"no pipeline db at {PIPELINE_DB}"})
+    conn = _ro_connect(PIPELINE_DB)
+    try:
+        img = conn.execute("SELECT * FROM images WHERE id = ?", (image_id,)).fetchone()
+        if img is None:
+            return json.dumps({"error": f"no image with id {image_id}"})
+        outputs = [dict(r) for r in conn.execute(
+            "SELECT * FROM stage_outputs WHERE image_id = ? ORDER BY id DESC", (image_id,))]
+        return json.dumps({"image": dict(img), "stage_outputs": outputs}, indent=1)
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":
