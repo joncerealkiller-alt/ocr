@@ -72,16 +72,17 @@ reader say? check GT for row 5 of the 1931 page"), same tools, same flow:
   Bertha/Henzie Bertha, 444/44, ...), attributed readers correctly from the
   model string, and quoted row-5 GT exactly (Hyzie Bertha / 18 / Domestic /
   Manitoba / F). Zero fabrication.
-- **Gemma-12B W4A16 (local, 2026-08-29 follow-up): FAITHFUL.** On the
+- **Gemma-12B local (2026-08-29 follow-up): FAITHFUL.** Model:
+  gemma-4-12B-it-qat-GGUF, UD-Q4_K_XL quant (the W4A16 checkpoint was tried
+  first and hit the known transformers offload wall - compressed-tensors
+  decompresses to bf16, ~24GB doesn't fit 16GB VRAM; GGUF via llama.cpp
+  keeps weights quantized in VRAM and is the working local path). On the
   1931_174 page question (search_sources → get_source_details), every claim
   checked out against the databases: bucket/confidence/model, status, profile,
   real source path, all seven stage outputs incl. the pass-through decision.
   Notably it relayed the person-names docstring caveat correctly WITHOUT
   calling search_genealogy_facts - it used the guardrail to skip a pointless
-  call, the opposite failure profile from the 4B. Ran via CPU offload
-  (compressed-tensors W4A16 decompresses to bf16 under transformers; ~24GB
-  doesn't fit 16GB VRAM) - slow but correct; a GGUF quant is the usable-speed
-  path for local 12B chat.
+  call, the opposite failure profile from the 4B.
 - **Gemma-12B, second (hard) question: PASS - two-for-two.** Same
   disagreements+GT question GPT-5.6 was tested on: reproduced all 15
   disagreed fields with correct rows and stage-2 values, and row-5 GT
@@ -91,8 +92,8 @@ reader say? check GT for row 5 of the 1931 page"), same tools, same flow:
   ("Stage 1 produced internal reasoning instead of a final value") instead
   of inventing plausible stage-1 readings - verified against the leg JSON.
   GPT-5.6 went deeper (dug stage-1 strings out of the raw CoT); both
-  faithful. Local-only frontend viability is settled in principle; the
-  remaining work is engineering (GGUF for conversational speed).
+  faithful. Local-only frontend viability is settled: the validated recipe
+  is gemma-4-12B-it-qat-GGUF UD-Q4_K_XL in Unsloth over the Knott MCP tools.
 
 ## Production guidance (when this graduates from PoC)
 
