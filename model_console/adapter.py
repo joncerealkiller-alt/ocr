@@ -665,6 +665,22 @@ class ChatBackendAdapter:
             messages.extend(kept_messages)
         user_content: list[dict[str, Any]] = [{"type": "text", "text": prompt_text}]
         if image is not None:
+            # min_pixels, applied client-side (2026-09-01, image-transport
+            # parity finding): llama.cpp's Gemma vision path is resolution-
+            # adaptive - a small field crop gets ~64-80 image tokens where
+            # vLLM's fixed-canvas processing always spends ~256, and that
+            # detail loss measurably degraded cursive reads (Hygie/Hyzie,
+            # Trasmilobas/Manitoba - confirmed live, 4x upscale flipped
+            # them back). Same config field the other two engines already
+            # honor: transformers loaders cap/floor before tokenization,
+            # vLLM maps it to --mm-processor-kwargs.
+            min_pixels = self._config.min_pixels
+            if min_pixels and (image.width * image.height) < min_pixels:
+                scale = (min_pixels / (image.width * image.height)) ** 0.5
+                image = image.resize(
+                    (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
+                    Image.LANCZOS,
+                )
             b64 = _encode_image_b64(image)
             user_content.append({
                 "type": "image_url",

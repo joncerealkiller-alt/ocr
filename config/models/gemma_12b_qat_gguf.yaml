@@ -36,6 +36,15 @@ llamacpp_reasoning: "off"
 
 context_length: 4096
 
+# Image-transport parity with the vLLM leg (2026-09-01, confirmed live):
+# llama.cpp's Gemma vision path is resolution-adaptive - small field
+# crops got ~64-80 image tokens vs vLLM's fixed ~256, and the lost
+# detail produced one-letter cursive misreads (Hygie/Hyzie, Trasmilobas/
+# Manitoba). 896x896 = Gemma's native vision canvas area; crops below
+# this area are upscaled client-side before sending (adapter.py's
+# _send_turn_llamacpp), restoring ~256-290 prompt image tokens.
+min_pixels: 802816
+
 # Sampling mirrors gemma_12b_w4a16.yaml so the A/B holds generation
 # settings constant across the two legs.
 do_sample: false
