@@ -80,6 +80,17 @@ def is_vllm_model(cfg: GenerationConfig) -> bool:
     return cfg.runtime == "vllm"
 
 
+def is_llamacpp_model(cfg: GenerationConfig) -> bool:
+    """
+    True for a config served by core/llamacpp_runtime.py's Windows-side
+    llama-server subprocess (2026-09-01, two-system architecture
+    benchmark) - config.runtime == "llamacpp", loader_class sentinel
+    "llamacpp", exact same pattern as is_vllm_model() above and exempted
+    from LOADER_REGISTRY lookup for the exact same reason.
+    """
+    return cfg.runtime == "llamacpp"
+
+
 def validate_model_assignment(
     model_name: str, *, require_vision: bool = False, context: str = "",
 ) -> GenerationConfig:
@@ -111,7 +122,8 @@ def validate_model_assignment(
             f"(config/models/{model_name}.yaml has enabled: false)."
         )
 
-    if not is_vllm_model(cfg) and cfg.loader_class not in LOADER_REGISTRY:
+    if not is_vllm_model(cfg) and not is_llamacpp_model(cfg) \
+            and cfg.loader_class not in LOADER_REGISTRY:
         raise ValueError(
             f"{prefix}model '{model_name}' declares loader_class="
             f"{cfg.loader_class!r}, which is not registered in "
@@ -148,6 +160,14 @@ def build_loader(model_name: str, *, debug: bool = False) -> BaseLoader:
             "subprocess instead - see api/agent_main.py's runtime dispatch). "
             "Use core.vllm_runtime.vllm_runtime / model_console.adapter."
             "ChatBackendAdapter(backend='remote') instead of build_loader() for "
+            "this model."
+        )
+    if is_llamacpp_model(cfg):
+        raise ValueError(
+            f"build_loader(): {model_name!r} is a runtime='llamacpp' config - it "
+            "has no BaseLoader subclass (served by core/llamacpp_runtime.py's "
+            "llama-server subprocess instead). Use model_console.adapter."
+            "ChatBackendAdapter(backend='local') instead of build_loader() for "
             "this model."
         )
     loader_cls = LOADER_REGISTRY[cfg.loader_class]

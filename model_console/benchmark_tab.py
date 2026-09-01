@@ -656,7 +656,10 @@ class BenchmarkTab(Frame):
             return f"{label:<22} {a:>28} {b:>28}"
 
         def vram_str(run: BenchmarkRunResult) -> str:
-            if run.inference_engine == "vllm":
+            if run.inference_engine != "transformers":
+                # Subprocess engines (vllm, llamacpp) - no in-process torch
+                # counter exists across the process boundary; see
+                # run_result.py's peak_vram_mb/resident_vram_mb docstrings.
                 return f"{run.resident_vram_mb:.0f}MB (nvidia-smi snapshot)" if run.resident_vram_mb else "n/a"
             return f"{run.peak_vram_mb:.0f}MB peak" if run.peak_vram_mb else "n/a"
 

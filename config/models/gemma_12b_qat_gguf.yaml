@@ -1,0 +1,48 @@
+model_name: gemma_12b_qat_gguf
+repo_id: unsloth/gemma-4-12B-it-qat-GGUF
+# Sentinel - same pattern as gemma_12b_w4a16.yaml's "vllm"; runtime
+# "llamacpp" models never instantiate a loader class (served by
+# core/llamacpp_runtime.py's Windows-side llama-server subprocess).
+loader_class: llamacpp
+runtime: llamacpp
+
+# 2026-09-01, two-system architecture benchmark (GO WITH CONDITIONS
+# recon report). The GGUF leg of the engine/quant comparison against
+# gemma_12b_w4a16 (vLLM, W4A16). QUANT LINEAGE CAVEAT, stated up front:
+# these two configs share the same bf16 QAT ancestor (Gemma-4-12B-it
+# QAT) but are DIFFERENT quantizations of it (UD-Q4_K_XL here vs
+# compressed-tensors w4a16 there) - a result difference between them is
+# engine+quant combined, NOT engine alone. This exact artifact
+# (UD-Q4_K_XL) is the one that passed the Knott-MCP faithfulness tests
+# two-for-two on 2026-08-29 via Unsloth Studio; extraction accuracy on
+# census crops is what THIS benchmark exists to measure.
+#
+# Artifact paths point into the shared HF hub cache on E: - the files
+# are snapshot symlinks to content-addressed blobs, pinned to snapshot
+# 980b060c (the deployment-artifact identity for this experiment; the
+# ~6.3GB weights blob's sha256 prefix is 90fd44e2). Model file verified
+# to resolve with a valid GGUF magic before this config was written.
+llamacpp_model_path: "E:/huggingface/hub/models--unsloth--gemma-4-12B-it-qat-GGUF/snapshots/980b060c40a8539ac159e0501a3e0f66a6365af3/gemma-4-12B-it-qat-UD-Q4_K_XL.gguf"
+llamacpp_mmproj_path: "E:/huggingface/hub/models--unsloth--gemma-4-12B-it-qat-GGUF/snapshots/980b060c40a8539ac159e0501a3e0f66a6365af3/mmproj-F16.gguf"
+# Fully GPU-offloaded (~6.7GB weights + mmproj + KV comfortably inside
+# 16GB - the whole point of this leg); 1 slot, workload is sequential.
+llamacpp_ngl: 999
+llamacpp_parallel: 1
+# The QAT GGUF's chat template defaults Gemma-4 thinking ON (confirmed
+# live: answers arrive wrapped in a thought channel and a 400-token
+# budget dies mid-thought). The vLLM leg answers directly - "off" for
+# A/B parity. See core/llamacpp_runtime.py's --reasoning comment.
+llamacpp_reasoning: "off"
+
+context_length: 4096
+
+# Sampling mirrors gemma_12b_w4a16.yaml so the A/B holds generation
+# settings constant across the two legs.
+do_sample: false
+temperature: 0.1
+max_new_tokens: 400
+
+text_only_supported: true
+image_input_supported: true
+vision_validation_status: untested
+role: vision_candidate

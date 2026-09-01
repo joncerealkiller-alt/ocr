@@ -237,6 +237,13 @@ console:
     # never console-selectable.
     - qwen25_vl_7b
     - qwen25_vl_7b_awq
+    # gemma_12b_qat_gguf (llamacpp, Windows-native llama-server via
+    # core/llamacpp_runtime.py) - added 2026-09-01 for the two-system
+    # architecture benchmark: the GGUF/llama.cpp leg to compare against
+    # gemma_12b_w4a16 (vllm). Same QAT ancestor, DIFFERENT quantization
+    # (UD-Q4_K_XL vs w4a16) - see that config's own quant-lineage
+    # caveat. Selectable with Backend=local (unlike the vLLM configs).
+    - gemma_12b_qat_gguf
     # gemma_12b_unified (transformers) / gemma_12b_w4a16 (vllm) - the
     # ONE pair in this registry that IS the same literal checkpoint
     # (repo_id "google/gemma-4-12B-it-qat-w4a16-ct") under both engines

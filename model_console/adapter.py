@@ -205,7 +205,8 @@ class ChatBackendAdapter:
                 return resp.json().get("resident_model_name")
             except requests.RequestException:
                 return None
-        return residency.resident_model_name
+        from core.llamacpp_runtime import llamacpp_runtime
+        return residency.resident_model_name or llamacpp_runtime.running_model_name
 
     def _get_loader(self) -> Optional[BaseLoader]:
         """
@@ -233,6 +234,11 @@ class ChatBackendAdapter:
             return None
         if self._model_name is None or self._config is None:
             return None
+        if self._config.runtime == "llamacpp":
+            # No local BaseLoader exists for a llama-server model - same
+            # None-means-fall-back-to-heuristic contract as the remote
+            # branch above (see that comment).
+            return None
         return residency.acquire(self._model_name, self._config)
 
     def ensure_loaded(self, model_name: str, config: GenerationConfig) -> None:
@@ -254,6 +260,17 @@ class ChatBackendAdapter:
         """
         if self._backend == "remote":
             self._remote_post("/model/load", {"model_name": model_name, "config_overrides": asdict(config)})
+            self._model_name = model_name
+            self._config = config
+            return
+        if config.runtime == "llamacpp":
+            # Windows-side llama-server subprocess (2026-09-01, two-system
+            # architecture benchmark) - the local-path sibling of the WSL
+            # backend's vllm_runtime dispatch. llamacpp_runtime.acquire()
+            # claims the GPU via gpu_coordinator, which evicts a resident
+            # transformers model in this process first (and vice versa).
+            from core.llamacpp_runtime import llamacpp_runtime
+            llamacpp_runtime.acquire(model_name, config)
             self._model_name = model_name
             self._config = config
             return
@@ -315,6 +332,8 @@ class ChatBackendAdapter:
             )
         if self._backend == "remote":
             return self._send_turn_remote(prompt_text, image, system_prompt, history)
+        if self._config is not None and self._config.runtime == "llamacpp":
+            return self._send_turn_llamacpp(prompt_text, image, system_prompt, history)
 
         loader = self._get_loader()
         if loader is None:
@@ -547,6 +566,8 @@ class ChatBackendAdapter:
             self._config = None
             return
         residency.release_all()
+        from core.llamacpp_runtime import llamacpp_runtime
+        llamacpp_runtime.release()
         self._model_name = None
         self._config = None
 
@@ -588,6 +609,115 @@ class ChatBackendAdapter:
         meta = data["meta"]
         self._update_status_hub_from_meta(meta)
         return raw_text, meta
+
+    def _send_turn_llamacpp(self, prompt_text: str, image: Optional[Image.Image],
+                             system_prompt: str, history: Optional[list[ChatTurn]]
+                             ) -> tuple[str, dict[str, Any]]:
+        """
+        The runtime="llamacpp" implementation of send_turn() (2026-09-01,
+        two-system architecture benchmark) - builds the same OpenAI
+        chat-content-part message shape api/agent_main.py's
+        _make_vllm_send_turn_fn() sends to vLLM (text part + data-URI
+        image_url part), and posts it to the Windows-side llama-server
+        via core.llamacpp_runtime. Same (raw_text, meta) contract as the
+        other two paths; history handling mirrors the remote/vLLM
+        policy: text-only history via build_history_for_context() (whose
+        token estimate falls back to the len//4 heuristic here - no
+        local tokenizer exists, same as the remote branch), current
+        turn's image fully included.
+        """
+        from core.llamacpp_runtime import llamacpp_runtime
+
+        if image is None and not self._config.text_only_supported:
+            raise ValueError(
+                f"No image attached, and {self._model_name!r}'s config "
+                "does not declare text_only_supported=True - either attach an "
+                "image, or confirm/add text-only support for this loader "
+                "(see base_loader.py's GenerationConfig.text_only_supported)."
+            )
+        if image is not None and not self._config.image_input_supported:
+            raise ValueError(
+                f"An image is attached, but {self._model_name!r}'s config "
+                "declares image_input_supported=False - this loader has no "
+                "vision path at all (see base_loader.py's GenerationConfig."
+                "image_input_supported). Pick a different model for image "
+                "input, or remove the attached image."
+            )
+
+        # Same precondition shape as the vLLM path: the server may have
+        # been released by another client between ensure_loaded() and now.
+        llamacpp_runtime.acquire(self._model_name, self._config)
+
+        context_meta: dict[str, Any] = {"context_enabled": history is not None}
+        messages: list[dict[str, Any]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        if history is not None:
+            kept_messages, kept_turn_ids, dropped_turn_ids, approx_tokens = \
+                self.build_history_for_context(history, system_prompt, prompt_text,
+                                                self._config.max_new_tokens)
+            context_meta.update({
+                "history_turn_ids": kept_turn_ids,
+                "history_turn_count": len(kept_turn_ids),
+                "approx_input_tokens": approx_tokens,
+                "dropped_turn_ids": dropped_turn_ids,
+            })
+            messages.extend(kept_messages)
+        user_content: list[dict[str, Any]] = [{"type": "text", "text": prompt_text}]
+        if image is not None:
+            b64 = _encode_image_b64(image)
+            user_content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{b64}"},
+            })
+        messages.append({"role": "user", "content": user_content})
+
+        start = time.time()
+        result = llamacpp_runtime.chat_completion(
+            self._config, messages,
+            max_tokens=self._config.max_new_tokens,
+            temperature=0.0 if not self._config.do_sample else (self._config.temperature or 1.0),
+        )
+        runtime_seconds = time.time() - start
+
+        # Per-case generate telemetry in the exact key shape benchmark/
+        # run_result.py's mean_tokens_per_sec / resident_vram_mb read
+        # (vram_used_mb, tokens_per_sec) - mirrors what api/agent_main.py
+        # derives from vLLM's usage block.
+        usage = result.get("usage") or {}
+        completion_tokens = usage.get("completion_tokens")
+        gen_time = result.get("generation_time_s")
+        generate_telemetry: dict[str, Any] = {
+            "prompt_tokens": usage.get("prompt_tokens"),
+            "generated_tokens": completion_tokens,
+            "tokens_per_sec": (
+                round(completion_tokens / gen_time, 2)
+                if completion_tokens and gen_time else None
+            ),
+            "vram_used_mb": result.get("vram_used_mb"),
+        }
+        telemetry: dict[str, Any] = {"generate": generate_telemetry}
+        load_telemetry = llamacpp_runtime.last_load_telemetry
+        if load_telemetry is not None and load_telemetry.get("model_name") == self._model_name:
+            telemetry["load"] = load_telemetry
+
+        meta = {
+            "model_name": self._model_name,
+            "generation_config_snapshot": asdict(self._config),
+            "runtime_seconds": runtime_seconds,
+            "telemetry": telemetry,
+            # Same per-run recording contract as the vLLM path (see
+            # core/vllm_runtime.py chat_completion()'s docstring):
+            # differences a reader of an OLD run must not have to re-read
+            # source code to learn.
+            "settings_translation_notes": [
+                "llamacpp: repetition_penalty sent as llama.cpp's repeat_penalty field",
+                "llamacpp: no_repeat_ngram_size has no llama.cpp equivalent - not applied",
+            ],
+            **context_meta,
+        }
+        self._update_status_hub_from_meta(meta)
+        return result["text"], meta
 
     def send_agent_turn(self, prompt_text: str, image: Optional[Image.Image],
                          system_prompt: str, history: Optional[list[ChatTurn]] = None,
@@ -757,6 +887,12 @@ def model_requires_remote_backend(model_name: str) -> bool:
     `requires_backend: remote` (transformers-path models whose
     dependency stack only exists in WSL, e.g. minicpm_v_gptq needing
     gptqmodel, which has no Windows build).
+
+    runtime="llamacpp" (2026-09-01) is the exception among non-
+    transformers runtimes: llama-server runs NATIVELY on Windows
+    (core/llamacpp_runtime.py spawns it from this process), so those
+    models are local-backend models, not remote-only.
     """
     config = load_model_config(model_name)
-    return config.runtime != "transformers" or config.extra.get("requires_backend") == "remote"
+    return (config.runtime not in ("transformers", "llamacpp")
+            or config.extra.get("requires_backend") == "remote")
