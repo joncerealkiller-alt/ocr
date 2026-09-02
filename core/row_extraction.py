@@ -670,32 +670,42 @@ def fields_agree(stage1_text: str | None, stage2_value: str | None) -> bool:
 
 class _RemoteVllmFieldLoader:
     """
-    Adapts a runtime="vllm" model to the loader interface this module's
-    extraction loops actually use (_run_generate / release /
-    initialize_model_and_tokenizer / .config) - the same runtime
-    dispatch api/agent_main.py performs, applied here so the two-stage
-    pipeline can run vLLM-served models (2026-08-15: the validated
-    ensemble pair, gemma_12b_w4a16 + minicpm_v_gptq, are BOTH
+    Adapts a non-transformers-runtime model to the loader interface
+    this module's extraction loops actually use (_run_generate /
+    release / initialize_model_and_tokenizer / .config) - the same
+    runtime dispatch api/agent_main.py performs, applied here so the
+    two-stage pipeline can run engine-served models (2026-08-15: the
+    validated ensemble pair, gemma_12b_w4a16 + minicpm_v_gptq, are BOTH
     vLLM-runtime models that the in-process transformers path cannot
     load on Windows at all - the 12B checkpoint decompresses to ~25GB
     and MiniCPM's gptqmodel stack is WSL-only; see their YAMLs).
 
-    Serving goes through ChatBackendAdapter(backend="remote") -> the
-    WSL backend -> core/vllm_runtime.py, which already owns sequential
-    GPU handoff (acquiring the second model tears down the first
-    server), preserving this module's "never two models resident"
-    guarantee across the stage1 -> stage2 swap.
+    Two engine transports behind the same shim (the class name predates
+    the second one):
+    - runtime="vllm": ChatBackendAdapter(backend="remote") -> the WSL
+      backend -> core/vllm_runtime.py.
+    - runtime="llamacpp" (2026-09-02, two-system architecture): a
+      backend="local" adapter -> core/llamacpp_runtime.py's Windows-
+      native llama-server subprocess.
+
+    Sequential GPU handoff is preserved WITHIN an engine (each runtime
+    owns one slot - acquiring the second model tears down the first
+    server), so a same-engine stage pair keeps this module's "never two
+    models resident" guarantee across the stage1 -> stage2 swap. A
+    MIXED vllm+llamacpp pair would put the two servers in different
+    processes with no cross-process arbitration - not supported; use a
+    same-engine pair.
 
     Lazy import of model_console.adapter (core -> model_console is
     backwards layering as a module-level import; contained here, used
-    only when a vllm-runtime profile is actually requested).
+    only when an engine-runtime profile is actually requested).
     """
 
-    def __init__(self, model_name: str, config):
+    def __init__(self, model_name: str, config, backend: str = "remote"):
         self.model_name = model_name
         self.config = config
         from model_console.adapter import ChatBackendAdapter
-        self._adapter = ChatBackendAdapter(backend="remote")
+        self._adapter = ChatBackendAdapter(backend=backend)
 
     def initialize_model_and_tokenizer(self):
         self._adapter.ensure_loaded(self.model_name, self.config)
@@ -703,9 +713,9 @@ class _RemoteVllmFieldLoader:
 
     def apply_checkpoint(self, checkpoint_path: str) -> None:
         raise RuntimeError(
-            f"{self.model_name!r} is served by the vLLM runtime - LoRA "
-            "checkpoints are a transformers-path feature and cannot be "
-            "applied here."
+            f"{self.model_name!r} is served by an engine runtime "
+            f"({getattr(self.config, 'runtime', '?')}) - LoRA checkpoints "
+            "are a transformers-path feature and cannot be applied here."
         )
 
     def _run_generate(self, raw_image, prompt: str) -> str:
@@ -722,10 +732,16 @@ def _build_field_loader(model_profile_name: str, config):
     paths: transformers-runtime profiles dispatch through
     LOADER_REGISTRY exactly as before (byte-identical behavior);
     runtime="vllm" profiles get a _RemoteVllmFieldLoader instead of the
-    previous hard failure ("No loader registered for 'vllm'").
+    previous hard failure ("No loader registered for 'vllm'");
+    runtime="llamacpp" profiles get the same shim over a local-backend
+    adapter (see the class docstring, incl. the no-mixed-engine-pairs
+    caveat).
     """
-    if getattr(config, "runtime", "transformers") == "vllm":
+    runtime = getattr(config, "runtime", "transformers")
+    if runtime == "vllm":
         return _RemoteVllmFieldLoader(model_profile_name, config)
+    if runtime == "llamacpp":
+        return _RemoteVllmFieldLoader(model_profile_name, config, backend="local")
     loader_cls = LOADER_REGISTRY.get(config.loader_class)
     if loader_cls is None:
         raise ValueError(f"No loader registered for {config.loader_class!r}")
