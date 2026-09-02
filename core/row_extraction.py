@@ -650,22 +650,100 @@ def fields_agree(stage1_text: str | None, stage2_value: str | None) -> bool:
       "27" (disagree), "m" is NOT a token of "m2" (disagree -> review,
       the correct routing for the 1921 column-spill case).
     - Everything else (names, places, relationships) -> normalized
-      CONTAINMENT either way, because stage 1's raw reading is a noisy
-      string that legitimately wraps the value ("3. Manitoba" vs
-      "Manitoba" is agreement; exact match scored 0/30 on real stage-1
-      output).
+      TOKEN-BOUNDARY containment either way, because stage 1's raw
+      reading is a noisy string that legitimately wraps the value
+      ("3. Manitoba" vs "Manitoba" is agreement; exact match scored
+      0/30 on real stage-1 output).
+
+    2026-09-02 hardening (detector study over 549 GT cells,
+    experiments/gguf_two_stage_20260902 - each rule below closed a
+    MEASURED false auto-accept, not a hypothetical):
+    - A stage-1 reading containing MULTIPLE digit tokens is AMBIGUOUS
+      for a numeric/short stage-2 value -> never agreement. Measured
+      FPs: stage1 "5 1 4" auto-accepted stage2 "4" (GT 14), "5 10"
+      accepted "5" (GT 10). Costs some true accepts ("5 18" vs "18"
+      now routes to review) - accepted deliberately: FP-minimization
+      outranks auto-accept volume (Jon, 2026-09-02).
+    - Stage-1 CoT contamination ("<think>"...) is not a reading ->
+      never agreement. Measured FP: agreement computed against a bare
+      "<think>" fragment accepted a wrong age.
+    - Text containment is at TOKEN boundaries (contiguous token
+      sublist), not substring: substring containment accepted stage2
+      "Umanitoba" against stage1 "Manitoba" (measured FP - a mangled
+      word matching a clean read as a substring).
     """
     import re
     v1 = _normalize_for_agreement(stage1_text)
     v2 = _normalize_for_agreement(stage2_value)
     if not v1 or not v2 or v1 == "?" or v2 == "?":
         return False
+    if "<think" in v1 or "<think" in v2:
+        return False
+    tokens1 = [t for t in re.split(r"[^0-9a-z'&]+", v1) if t]
+    tokens2 = [t for t in re.split(r"[^0-9a-z'&]+", v2) if t]
     if v2.isdigit() or len(v2) <= 2:
         if v1 == v2:
             return True
-        tokens = re.split(r"[^0-9a-z]+", v1)
-        return v2 in tokens
-    return v1 == v2 or v2 in v1 or v1 in v2
+        digit_tokens = [t for t in tokens1 if any(c.isdigit() for c in t)]
+        if len(digit_tokens) > 1:
+            return False  # ambiguous multi-number stage-1 read
+        return v2 in tokens1
+    if v1 == v2:
+        return True
+
+    def sublist(needle: list[str], hay: list[str]) -> bool:
+        n = len(needle)
+        return n > 0 and any(hay[i:i + n] == needle for i in range(len(hay) - n + 1))
+
+    return sublist(tokens2, tokens1) or sublist(tokens1, tokens2)
+
+
+_COLUMN_SCHEMAS: dict | None = None
+
+
+def _load_column_schemas() -> dict:
+    """Lazy-loads config/column_schemas.yaml once per process. Returns
+    {} (fully permissive) if the file is missing/unreadable - the
+    schema gate must degrade to agreement-only gating, never block the
+    pipeline on a config problem."""
+    global _COLUMN_SCHEMAS
+    if _COLUMN_SCHEMAS is None:
+        import yaml
+        from pathlib import Path
+        path = Path(__file__).resolve().parent.parent / "config" / "column_schemas.yaml"
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                _COLUMN_SCHEMAS = yaml.safe_load(f) or {}
+        except OSError:
+            _COLUMN_SCHEMAS = {}
+    return _COLUMN_SCHEMAS
+
+
+def column_schema_valid(column_name: str, value: str | None) -> bool:
+    """
+    Deterministic per-column value gate for auto-accept (2026-09-02,
+    Jon's design): each column has an expected content shape
+    (config/column_schemas.yaml); a value failing its column's schema
+    is never auto-accepted regardless of reader agreement - same
+    routing as abstention. Catches the FP mechanisms agreement
+    structurally cannot (malformed garbage, column spill like "m2" in
+    Sex or "brother 3" in Relationship) while deliberately NOT
+    second-guessing plausible values - "Hamilton" in Birthplace passes
+    schema; only error diversity or a human catches plausible-wrong.
+
+    Unknown columns and empty/abstention values return True: schema
+    only ever REMOVES auto-accepts, and abstention routing is already
+    fields_agree()'s job.
+    """
+    import re
+    schemas = _load_column_schemas()
+    spec = schemas.get(column_name)
+    if not spec or not isinstance(spec, dict) or not spec.get("pattern"):
+        return True
+    v = _normalize_for_agreement(value)
+    if not v or v == "?":
+        return True
+    return re.fullmatch(spec["pattern"], v, flags=re.IGNORECASE) is not None
 
 
 class _RemoteVllmFieldLoader:
@@ -1326,9 +1404,15 @@ def run_two_stage_extraction(
                     # overwrite the stage-2 value: disagreement is
                     # review-routing metadata, not a correction.
                     parsed_value = parsed.get(column_name)
-                    field_agreement[column_name] = fields_agree(
-                        field_reading,
-                        parsed_value.value if parsed_value is not None else None,
+                    # Auto-accept requires BOTH independent-reader
+                    # agreement AND the value passing its column's
+                    # deterministic schema (2026-09-02 detector
+                    # hardening - see column_schema_valid()). Schema
+                    # failure routes to review even on agreement.
+                    _v2 = parsed_value.value if parsed_value is not None else None
+                    field_agreement[column_name] = (
+                        fields_agree(field_reading, _v2)
+                        and column_schema_valid(column_name, _v2)
                     )
                     debug_item.finalize(raw_output=raw_output)
                 except Exception as e:

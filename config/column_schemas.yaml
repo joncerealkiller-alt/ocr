@@ -1,0 +1,61 @@
+# Per-column value schemas for the two-stage auto-accept gate
+# (2026-09-02, detector-hardening pass - Jon's design: "we know what
+# each column should contain... anything not matching the expected
+# schema for that row/column pair gets sent for review").
+#
+# Consulted by core/row_extraction.py's column_schema_valid() at the
+# point field_agreement is computed: a value failing its column's
+# schema is NEVER auto-accepted, even when both readers agree - same
+# routing as abstention. A schema failure does not mean "wrong", it
+# means "a human looks at it"; unknown/unlisted columns are permissive
+# (valid by default) so new column sets degrade to agreement-only
+# gating rather than rejecting everything.
+#
+# Keyed by exact column name as it appears in config/columns/*.txt.
+# Patterns are case-insensitive full-match regexes applied to the
+# normalized value (stripped, trailing periods removed). Keep patterns
+# WIDE: the gate exists to catch malformed garbage and column spill
+# (digits in Birthplace, "m2" in Sex), not to second-guess plausible
+# values - a plausible wrong value is review's job via disagreement,
+# not schema's.
+#
+# Scope note: these are the era-generic shapes for the 5 core census
+# columns. Enumerator conventions vary by year (the multi-schedule
+# lesson) - if a form year needs different shapes (e.g. different age
+# abbreviations), add a per-year override mechanism THEN, keyed off the
+# columns file; don't pre-build it.
+
+"Age":
+  # Integer years 0-115 (1-3 digits, leading zeros tolerated), OR
+  # infant forms enumerators actually used: "<n> mo"/"mos"/"m"/"wks"/
+  # "w"/"d"/"days" (Jon, 2026-09-02: "some enumerators used mo for a
+  # baby's age or similar abbreviations"), a bare "mo", OR the
+  # months-as-twelfths fraction form ("7/12").
+  pattern: '(1[0-1][0-5]|1[0-1][0-9]|[0-9]{1,2})|([0-9]{1,2}\s*(mo|mos|m|wks|w|d|days))|mo|([0-9]{1,2}\s*/\s*1?[0-9])'
+
+"Sex":
+  # Exactly one sex letter. Catches the known column-spill class
+  # ("m2") and stutter artifacts ("M.M." normalizes to "m.m" - fails).
+  pattern: '[mf]'
+
+"Name":
+  # Letters (incl. accented Latin - French names are common in the
+  # Manitoba pages, e.g. Genevieve with a grave accent) plus the
+  # punctuation real name cells carry: ditto marks (") and
+  # leading-quote conventions the GT log itself uses, periods for
+  # initials, hyphens/apostrophes, commas. Must contain at least one
+  # letter. No digits.
+  pattern: '["'']?\s*[a-zÀ-ÿ][a-zÀ-ÿ .,''"-]*'
+
+"Relationship to Head":
+  # Alphabetic phrase (Head, Wife, Son-in-law, Domestic...). Wide on
+  # purpose: an unknown but well-formed word is review's judgment call
+  # (routed there by disagreement if wrong), not schema's. No digits -
+  # catches spill like "brother 3".
+  pattern: '[a-z][a-z /-]*'
+
+"Birthplace":
+  # Alphabetic place string, >= 3 chars, spaces/hyphens/apostrophes/
+  # periods allowed ("Eng.", "U.S.A.", "Nova Scotia"). No digits, no
+  # stray symbols - catches "Eng &"-class garbage.
+  pattern: '[a-zÀ-ÿ][a-zÀ-ÿ .''-]{2,}'
