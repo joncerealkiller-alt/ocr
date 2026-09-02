@@ -14,16 +14,24 @@ runtime: llamacpp
 # UD-Q4_K_XL), so plain Q4_K_M is the standard artifact - if it
 # underperforms, Q5/Q6 from the same repo is the next lever.
 #
-# BENCHMARKED 2026-09-02, census_pairing_v2, one run per leg: THIS
-# config 28/35, minicpm_v_gptq-under-vLLM 25/35. The GPTQ leg's misses
-# included blend-word garbling (Glancitoba, Tiannitoba, Futurio) that
-# Q4_K_M read cleanly. HYPOTHESIS, not established: GPTQ quantization
-# is materially degrading fine visual-text discrimination relative to
-# Q4_K_M. One run does not isolate quant from runtime/template/image-
-# processing/sampling differences between the engines. Disambiguators
-# if it matters later: repeat runs (n=1 now), compare per-case image
-# prompt_tokens across engines (the Gemma-leg method), try Q5/Q6 here,
-# or run the same GPTQ checkpoint under the transformers loader.
+# BENCHMARKED 2026-09-02, census_pairing_v2: THIS config 28/35 vs
+# minicpm_v_gptq-under-vLLM 25/35. A GPTQ-quant-degradation hypothesis
+# was raised for the vLLM leg's blend-word garbling (Glancitoba,
+# Tiannitoba, Futurio) - then KILLED the same day by a controlled
+# prompt_tokens check + image-parity rerun: this leg had been seeing
+# 2.3-3.7x more image tokens (349-541 vs vLLM's flat ~145; the
+# min_pixels floor below applies client-side on the llamacpp path
+# only). Rerun with min_pixels=None: 26/35 and the SAME garbling class
+# appeared here too (Hamiltonba, Sant'Anio). At matched detail the two
+# quants are statistically indistinguishable (26 vs 25, n=35).
+# ESTABLISHED instead: image detail is the dominant accuracy variable
+# for this model on both engines - low-detail encodings hallucinate
+# blend-words on hard cursive; the min_pixels floor is worth +2-3
+# points and eliminates that error class. (Consistent with the
+# production two-stage pipeline's existing upscaled-sidecar
+# preprocessing and its 26/30 result.) Runs: 20260902T125502383182Z
+# (this leg), 20260902T125609754353Z (vllm), 20260902T130726943482Z
+# (parity control).
 llamacpp_model_path: "E:/huggingface/hub/models--openbmb--MiniCPM-V-4_5-gguf/snapshots/8bfaecb5b1a65f068b86c32b997a3d5d8902eb36/ggml-model-Q4_K_M.gguf"
 llamacpp_mmproj_path: "E:/huggingface/hub/models--openbmb--MiniCPM-V-4_5-gguf/snapshots/8bfaecb5b1a65f068b86c32b997a3d5d8902eb36/mmproj-model-f16.gguf"
 llamacpp_ngl: 999
