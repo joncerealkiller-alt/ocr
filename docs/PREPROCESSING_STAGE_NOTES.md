@@ -18,6 +18,39 @@ pre-preprocessing as originally labeled.
 
 ---
 
+## INVARIANT (Jon, 2026-09-02): crop detail is part of Stage 1's accuracy contract
+
+**Do not remove or "optimize away" the crop upscaling step on the
+grounds that a vision model handles arbitrary resolutions.** This is
+not a cosmetic enhancement - it is load-bearing for extraction
+accuracy, established by controlled measurement (2026-09-02,
+census_pairing_v2, benchmark runs 20260902T125502383182Z /
+20260902T125609754353Z / 20260902T130726943482Z, full story in
+config/models/minicpm_v_gguf.yaml):
+
+- MiniCPM-V-4.5 fed native-size field crops does not merely lose
+  accuracy - it **hallucinates blend-words on hard cursive**
+  ("Hamiltonba", "Glancitoba", "Sant'Anio" for Manitoba/Ontario),
+  which is this pipeline's worst failure class (fabrication, not
+  abstention). Confirmed on BOTH engines (vLLM and llama.cpp) and both
+  quantizations tested - it is an input-detail property, not an
+  engine or quant artifact.
+- Upscaling crops to adequate detail (~896^2-pixel-area floor) was
+  worth +2-3/35 GT points and eliminated the blend-word class
+  entirely.
+- The trap for a future optimizer: removing the upscale still LOOKS
+  fine - adaptive-slicing models keep producing confident, fluent
+  output. The damage only shows against ground truth on hard
+  handwriting. "MiniCPM supports adaptive slicing anyway" is exactly
+  the reasoning this invariant exists to block.
+
+Gemma has the same property from the other direction: llama.cpp's
+resolution-adaptive Gemma path under-tokenized small crops (~64-80
+image tokens vs 256) until a min_pixels floor was added
+(config/models/gemma_12b_qat_gguf.yaml, 24/35 -> 29/35). Any new
+vision model/engine combination should get a per-case image-token
+(prompt_tokens) parity check before its accuracy numbers are trusted.
+
 ## Conceptual model (Jon, 2026-08-02): two complementary sensor systems
 
 The pipeline has two independent measurement systems feeding evidence
@@ -125,9 +158,12 @@ Stage A's own `image_analysis.py` is still not wired into
 
 **2026-08-02, a related but separate capability WAS wired in**:
 `core/baseline_embeddings.py` captures a pre-preprocessing vision-tower
-embedding (all 8 qualified encoders) for every image, called from
-`build_working_manifest_from_paths()` immediately after
-`copy_to_working_dir()` and before `preprocess_for_manifest()` -
+embedding (all 8 qualified encoders) for every image, called via
+`core/manifest_pipeline.py`'s own `stage1_capture_baseline_embeddings()`
+(independently callable as of the 2026-08-02 Stage 0/1/3 split - see
+`docs/PIPELINE_STAGE_TERMINOLOGY.md`), which `build_working_manifest_
+from_paths()` still runs by default between Stage 0 (copy) and Stage 3
+(preprocess) -
 persisted to `data/baseline_embeddings.json` (image_hash, all 8
 encoders' vectors, `preprocessing_stage: "pre_preprocessing"`,
 library_versions). This is Jon's proposal to have a real per-image
