@@ -125,6 +125,44 @@ stage-1 per-column reparse approximates the pipeline's own
 field_reading); a live rerun would firm them up but the FP-level
 conclusions were verified cell-by-cell.
 
+## Investigated and NOT adopted (2026-09-02, same day) — negative results, recorded so they aren't re-derived
+
+**Sex <-> Relationship cross-field veto** (Jon's proposal: trusted
+Sex=M + agreed Relationship "Mother" is internally inconsistent ->
+review). Offline test against both pairs' stored runs, using only
+inference-time information, trust = the cell's own layer-1+2 result
+(no circularity - Sex's trust never consults Relationship):
+
+- **Zero veto opportunities exist in the 549-cell set.** No row
+  anywhere has a trusted Sex conflicting with a trusted sex-associated
+  Relationship - when both fields are readable enough to be trusted,
+  the readers are gender-consistent.
+- **The motivating FP (1921_022 r21 Brother/mother) is structurally
+  uncatchable**: that row's Sex is "?" from BOTH readers and the GT
+  label itself is illegible. The evidence the veto needs does not
+  exist in the row. The trust precondition (required - a noisy Sex
+  must not veto a valid Relationship) is exactly what rules it out.
+- Verdict: dead code today; zero catches, zero false vetoes. The
+  mechanism is sound and cheap, so revisit IF corpus growth ever
+  surfaces actual trusted-Sex-vs-gendered-Relationship conflicts; a
+  generic row-consistency-rule architecture is justified only then.
+
+**Row-health veto** (generic variant surfaced by the same
+investigation: r21's Relationship was the ONLY trusted cell in an
+otherwise-failing row - veto accepts in mostly-untrusted rows?).
+Measured, and the cost is disqualifying: correct accepts are NOT
+concentrated in healthy rows on hard pages -
+
+| rule | GGUF catches | GGUF cost (correct accepts lost) | vLLM catches | vLLM cost |
+|---|---|---|---|---|
+| veto if >=3 of 4 other cells untrusted | 6 | 83 | 2 | 71 |
+| veto if all 4 others untrusted | 3 | 35 | 0 | 29 |
+
+A ~1:14 catch:cost ratio is precisely the review-volume explosion the
+decision frame forbids. Not adopted. (The distribution itself is
+informative: on hard pages, isolated-good-cell rows are the NORM, not
+an anomaly.)
+
 ## Open items
 
 - Human adjudication of the 3 GT cells listed above.
