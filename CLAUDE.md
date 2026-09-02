@@ -1,5 +1,11 @@
 # Instructions for Claude Code
 
+## User Instructions
+
+Do not frame large tasks as reasons to stop. Do not suggest wrapping up, deferring, or moving work to a later session unless the user asks to pause. If a task is substantial, state the scope/risks briefly, then continue methodically. Only stop automatically when a genuine safety, data-loss, architectural, or ambiguity threshold requires user approval.
+
+Do not ask “want me to continue?” after completing an intermediate phase when the user has already given an ongoing implementation direction. Continue to the next logical step unless a real decision point requires input.
+
 ## Check docs/CODE_MAP.md before re-deriving how something already works
 
 Before exploring the codebase to find an existing helper, schema, or
@@ -47,3 +53,32 @@ process is already running (not just background driver/OS processes):
 
 If nothing is running, proceed normally - this isn't a gate on every single
 action, just the two categories above.
+
+## Archive exclusion rule (Jon, 2026-09-02)
+
+For any NEW inference, benchmark, extraction, sidecar generation, or
+derived artifact, inputs must originate from one of the two designated
+active project directories:
+
+1. `J:\Genealogy\genealogy_pipeline\` (the repo)
+2. `J:\Genealogy\genealogy_workspace\` (the workspace)
+
+Anything resolved OUTSIDE those two folders is presumed historical/
+archive material and MUST NOT be used unless the task explicitly
+requests historical reproduction, comparison, recovery, or other
+archived-artifact use. Additionally, the explicitly-archival subtrees
+INSIDE the workspace carry the same presumption by name:
+`genealogy_workspace\research\baselines\` (reference_pipeline_prerefactor,
+reference_pipeline_v1-v4) and completed dated `research\experiments\`
+artifacts. **Always report the resolved input paths before using an
+archive source.**
+
+Why this rule exists (2026-09-02, learned the expensive way): the
+549-cell detector study unknowingly ran on prerefactor-archive sidecars
+whose geometry predates the field-bbox rework (uniform band grid, every
+adjacent row pair overlapping 10px, ~26% neighbor ink per crop on the
+worst page) - a provenance investigation after the fact had to establish
+that all its absolute accuracy/coverage numbers are lower bounds under
+obsolete crop geometry, not representative of the current pipeline. See
+docs/AUTO_ACCEPT_DETECTOR_STUDY.md's provenance addendum. Archives are
+older than they look and are NOT representative of the current pipeline.
