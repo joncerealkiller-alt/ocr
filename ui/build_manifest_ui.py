@@ -426,7 +426,16 @@ class BuildManifestApp:
         root.title("Build Manifest")
         root.geometry("780x780")
 
-        self.paths: dict[Path, None] = {}
+        # 2026-08-09, per Jon: bypass tagging is a property of the
+        # SELECTED INPUT ITEM, not the whole batch - was dict[Path,
+        # None] before (value unused, just dedup). Value is now
+        # {"skip": bool, "status": str} - "skip" is what actually
+        # drives the per-row CSV column _build_preprocessing_command()
+        # writes; "status" is the human-readable tree-column label
+        # (may legitimately differ from "skip" - e.g. a requested
+        # bypass with no real sidecar found still gets skip=False but a
+        # status that SAYS so, per Jon: "don't silently tag it").
+        self.paths: dict[Path, dict] = {}
 
         self.log_queue: queue.Queue = queue.Queue()
         self.process: subprocess.Popen | None = None
@@ -480,6 +489,35 @@ class BuildManifestApp:
         Button(button_row, text="Add Folder", width=12, command=self._on_add_folder).pack(
             side="left", padx=(8, 0))
 
+        # Bypass-tagging checkbox (2026-08-09, per Jon's "one-shot
+        # import modifier" design): a ONE-SHOT modifier for the NEXT Add
+        # File/Add Folder action, not a whole-run setting - checking it,
+        # then adding files, tags just THAT batch as a bypass candidate
+        # (still individually validated against a real matching sidecar
+        # - see _add_paths()'s own docstring); the checkbox resets to
+        # off the instant that add action completes, so it can never
+        # silently carry over to a later, unrelated add. Positioned
+        # right next to Add File/Add Folder (not down by "Build
+        # Manifest") since THIS is the moment it actually takes effect.
+        self.skip_preprocess_if_sidecar_var = BooleanVar(value=False)
+        Checkbutton(
+            button_row, text="Trust matching sidecars / bypass preprocessing (next add only)",
+            variable=self.skip_preprocess_if_sidecar_var,
+        ).pack(side="left", padx=(16, 0))
+
+        skip_warning_row = Frame(self.manifest_frame)
+        skip_warning_row.pack(anchor="w", padx=12, pady=(0, 2))
+        Label(
+            skip_warning_row,
+            text="⚠ Only enable this if you know why. Files added while this is checked skip "
+                 "deskew/preprocessing ONLY if a real matching JSON sidecar is found next to them "
+                 "at add-time (same-dir .json/_sidecar.json, or a sibling sidecars/ folder) - a "
+                 "file with no match is added as Normal instead, never silently tagged. Intended "
+                 "for pointing this at an already-corrected folder (e.g. a column-calibration "
+                 "workspace's images/), not general use. Resets to OFF after every add.",
+            font=("Segoe UI", 8), fg="#a00", wraplength=730, justify="left",
+        ).pack(anchor="w")
+
         self.status_var = StringVar(value="")
         Label(self.manifest_frame, textvariable=self.status_var,
               font=("Segoe UI", 9), fg="#256029").pack(anchor="w", padx=12, pady=(0, 6))
@@ -491,12 +529,20 @@ class BuildManifestApp:
         list_frame.pack(fill="both", expand=True, padx=12, pady=(2, 6))
 
         self.tree = ttk.Treeview(
-            list_frame, columns=("idx", "path"), show="headings", selectmode="extended",
+            list_frame, columns=("idx", "path", "status"), show="headings", selectmode="extended",
         )
         self.tree.heading("idx", text="#")
         self.tree.heading("path", text="Path")
+        self.tree.heading("status", text="Preprocessing")
         self.tree.column("idx", width=50, anchor="e", stretch=False)
-        self.tree.column("path", width=650, anchor="w", stretch=True)
+        self.tree.column("path", width=560, anchor="w", stretch=True)
+        self.tree.column("status", width=170, anchor="w", stretch=False)
+        # Per-item bypass tag renders visibly distinct from normal rows
+        # (2026-08-09, per Jon: "appear in the queue with a visible
+        # status" - not just a text label, a real color cue too) -
+        # ttk.Treeview tags a row via item(iid, tags=(...)), styled once
+        # here rather than per-row.
+        self.tree.tag_configure("bypass", foreground="#a00")
 
         vscroll = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=vscroll.set)
@@ -515,6 +561,19 @@ class BuildManifestApp:
         Label(self.manifest_frame, textvariable=self.count_var, font=("Segoe UI", 10)).pack(
             pady=(0, 4))
 
+        # Skip-preprocess-if-sidecar-exists checkbox (2026-08-09, per
+        # Jon - matches core/manifest_pipeline.py's --skip-preprocess-
+        # if-sidecar-exists CLI flag, threaded through to scripts/
+        # run_preprocessing.py, the actual subprocess this UI launches
+        # for the Preprocessing stage). OFF by default - this changes
+        # what Preprocessing DOES to queued files (skips deskew/profile
+        # entirely for any file with a matching JSON sidecar already
+        # next to it, e.g. one already processed via a column-
+        # calibration workspace), so it needs to be visibly opt-in with
+        # a real warning, not just a quiet extra option - a queued file
+        # that HAPPENS to have a same-named JSON nearby for an unrelated
+        # reason would also get silently skipped, which is surprising
+        # behavior for anyone who didn't deliberately choose this.
         # "Build Manifest ->" is the swap trigger to Preprocessing - see
         # module docstring's CANVAS SWAP MODEL. Command wired in
         # _wire_stages() once preprocessing_stage exists.
@@ -677,13 +736,29 @@ class BuildManifestApp:
 
     # -- path collection -----------------------------------------------
 
-    def _add_paths(self, new_paths: list[Path]) -> None:
+    def _add_paths(self, new_paths: list[Path], bypass_requested: bool = False) -> None:
         """
         The only place self.paths is mutated. Resolves each path (the
         real de-duplication key - see module docstring), skips anything
         already present WITHOUT moving its existing position, and
         reports the outcome as a status line rather than a popup.
+
+        bypass_requested (2026-08-09, per Jon's "one-shot import
+        modifier" design - see the checkbox's own comment for the full
+        spec): when True, this ENTIRE picker batch gets tagged - but
+        each file is independently VALIDATED against a real matching
+        JSON sidecar (core.manifest_pipeline._find_matching_sidecar_
+        json(), the SAME check preprocess_for_manifest() itself makes
+        at execution time - not a separate, possibly-diverging rule).
+        A file with no real match does NOT get silently tagged - per
+        Jon: "don't silently tag it... mark it NORMAL - no valid
+        sidecar found". This is a per-BATCH request, not a per-file
+        UI selection - the caller (_on_add_file/_on_add_folder) resets
+        the checkbox to off immediately after this call, so it can
+        never accidentally apply to a later, separate add action.
         """
+        from core.manifest_pipeline import _find_matching_sidecar_json
+
         added = 0
         skipped = 0
         for p in new_paths:
@@ -691,7 +766,13 @@ class BuildManifestApp:
             if resolved in self.paths:
                 skipped += 1
                 continue
-            self.paths[resolved] = None
+            if bypass_requested:
+                if _find_matching_sidecar_json(resolved) is not None:
+                    self.paths[resolved] = {"skip": True, "status": "Bypass"}
+                else:
+                    self.paths[resolved] = {"skip": False, "status": "Normal - no sidecar found"}
+            else:
+                self.paths[resolved] = {"skip": False, "status": "Normal"}
             added += 1
 
         if added or skipped:
@@ -711,28 +792,39 @@ class BuildManifestApp:
 
     def _refresh_tree(self) -> None:
         self.tree.delete(*self.tree.get_children())
-        for i, p in enumerate(self.paths, start=1):
-            self.tree.insert("", END, iid=str(p), values=(i, str(p)))
+        for i, (p, meta) in enumerate(self.paths.items(), start=1):
+            tags = ("bypass",) if meta["skip"] else ()
+            self.tree.insert("", END, iid=str(p), values=(i, str(p), meta["status"]), tags=tags)
         self.count_var.set(f"{len(self.paths)} file{'s' if len(self.paths) != 1 else ''}")
 
     # -- button/menu handlers -------------------------------------------
 
     def _on_add_file(self) -> None:
+        # Capture + reset happens around the picker call itself, not
+        # just around _add_paths() - per Jon's spec point 5: "As soon as
+        # the picker closes and the files are added, the checkbox
+        # automatically resets to off" - true regardless of whether the
+        # user picked 0 files or cancelled, so it never silently stays
+        # armed for a later, unrelated add action.
+        bypass_requested = self.skip_preprocess_if_sidecar_var.get()
+        self.skip_preprocess_if_sidecar_var.set(False)
         picked = filedialog.askopenfilenames(
             title="Select image or PDF file(s)", filetypes=_IMAGE_FILETYPES,
         )
         if not picked:
             return
-        self._add_paths([Path(p) for p in picked])
+        self._add_paths([Path(p) for p in picked], bypass_requested=bypass_requested)
 
     def _on_add_folder(self) -> None:
+        bypass_requested = self.skip_preprocess_if_sidecar_var.get()
+        self.skip_preprocess_if_sidecar_var.set(False)
         picked = filedialog.askdirectory(title="Select a folder of images (scanned recursively)")
         if not picked:
             return
         folder = Path(picked)
         # collect_image_paths() IS the folder-scan logic, unmodified from
         # core/manifest_pipeline.py - see module docstring.
-        self._add_paths(collect_image_paths(folder))
+        self._add_paths(collect_image_paths(folder), bypass_requested=bypass_requested)
 
     def _on_right_click(self, event) -> None:
         # Right-clicking a row that isn't already part of the selection
@@ -763,6 +855,18 @@ class BuildManifestApp:
         exists only to hand this one subprocess its input list, and is
         deleted once that subprocess finishes (see
         _on_preprocessing_done).
+
+        SECOND COLUMN, "skip_preprocess_if_sidecar_exists" (2026-08-09,
+        per Jon - see the checkbox's own comment for the full "one-shot
+        import modifier" design): per-row "true"/"false", one per
+        self.paths entry's own "skip" flag - this is what carries each
+        queued file's individually-tagged bypass intent through to
+        scripts/run_preprocessing.py (that script's own _read_per_row_
+        skip_names() reads this exact column back out). Replaces the
+        older whole-run --skip-preprocess-if-sidecar-exists CLI flag for
+        THIS caller - that flag still exists for other/scripted callers,
+        but this UI never mixes bypassed and normal files any other way
+        now that bypass is a per-item property, not a run setting.
         """
         if not self.paths:
             return None
@@ -770,9 +874,9 @@ class BuildManifestApp:
         temp_path = Path(temp_path_str)
         with open(fd, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["file_path"])
-            for p in self.paths:
-                writer.writerow([str(p)])
+            writer.writerow(["file_path", "skip_preprocess_if_sidecar_exists"])
+            for p, meta in self.paths.items():
+                writer.writerow([str(p), "true" if meta["skip"] else "false"])
         self._preprocessing_input_csv = temp_path
         return [PYTHON, str(RUN_PREPROCESSING_SCRIPT), str(temp_path)]
 

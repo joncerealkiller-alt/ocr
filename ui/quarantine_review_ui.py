@@ -61,7 +61,22 @@ complex multi-range mask still goes through the full manual tool
 (ui/row_segmentation_ui.py) afterward, same as any other column.
 
 Usage:
-    python ui/quarantine_review_ui.py [--sidecar-dir data/outputs/auto_row_segmentation]
+    python ui/quarantine_review_ui.py [--sidecar-dir <dir>] [--run-id <hashed_run_id>]
+
+--run-id resumes a real hashed run (docs/RUN_ARCHITECTURE.md) explicitly
+and defaults --sidecar-dir to ctx.outputs/'auto_row_segmentation' -
+same convention scripts/run_batch_auto_sidecar.py already uses to WRITE
+these sidecars, so this UI can review whichever run's batch it was
+pointed at (2026-08-08, per Jon's direction: "the run does not own the
+UI" - a fixed run isn't baked in, it's inferred per-invocation from
+whatever sidecar directory you're reviewing). Omitted, --run-id is
+auto-detected from --sidecar-dir when that path already sits inside a
+run directory; if neither applies, falls back to the legacy_pre_run_system
+run's path (once the workspace migration has run) or the pre-migration
+flat data/ layout - identical three-tier fallback to
+run_batch_auto_sidecar.py's own DEFAULT_INPUT/DEFAULT_OUT_DIR, so a
+sidecar this UI corrects and a sidecar that script writes always agree
+on where to look.
 """
 
 from __future__ import annotations
@@ -94,10 +109,46 @@ from core.row_segmentation import (
     save_sidecar,
     segment_rows_uniform_tile,
 )
+from core.workspace_context import WorkspaceContext
+from core.run_context import RunContext
 
-DEFAULT_SIDECAR_DIR = PROJECT_ROOT / "data" / "outputs" / "auto_row_segmentation"
-DEWARPED_DIR = PROJECT_ROOT / "data" / "outputs" / "dewarped"
+# Legacy fallback - identical pattern/comment to scripts/
+# run_batch_auto_sidecar.py's DEFAULT_INPUT/DEFAULT_OUT_DIR (2026-08-08
+# migration, docs/RUN_ARCHITECTURE.md). Real hashed runs should pass
+# --run-id (or have it auto-detected, see _ctx_from_path() below)
+# instead of relying on these module-level constants - they exist ONLY
+# so this UI still does something sensible when launched without a run.
+_legacy_root = WorkspaceContext.resolve().runs_root / "legacy_pre_run_system"
+if _legacy_root.exists():
+    DEFAULT_SIDECAR_DIR = _legacy_root / "outputs" / "auto_row_segmentation"
+    DEWARPED_DIR = _legacy_root / "outputs" / "dewarped"
+else:
+    DEFAULT_SIDECAR_DIR = PROJECT_ROOT / "data" / "outputs" / "auto_row_segmentation"
+    DEWARPED_DIR = PROJECT_ROOT / "data" / "outputs" / "dewarped"
 COLUMNS_DIR = PROJECT_ROOT / "config" / "columns"
+
+
+def _ctx_from_path(path: Path) -> RunContext | None:
+    """Best-effort: if path sits under <runs_root>/<run_id>/..., resume
+    that run and return its RunContext - same auto-detection trick as
+    scripts/run_batch_auto_sidecar.py's own _ctx_from_path() (itself
+    adapted from core/classifier.py's _ctx_from_manifest_path()) -
+    duplicated here rather than imported since each caller's own path
+    shape differs and this project's convention (per those two) is a
+    small adapted copy per call site, not a shared central helper.
+    Returns None (not an error) for any path outside a real run
+    directory - e.g. the legacy/flat defaults above - so this UI still
+    works unchanged when no run is in play."""
+    try:
+        workspace = WorkspaceContext.resolve()
+        resolved = path.resolve()
+        runs_root = workspace.runs_root.resolve()
+        if runs_root not in resolved.parents:
+            return None
+        run_id = resolved.relative_to(runs_root).parts[0]
+        return RunContext.resume(workspace, run_id)
+    except (IndexError, FileNotFoundError, ValueError):
+        return None
 
 # Magnifier loupe (2026-07-28, per Jon's direction: the downscaled full-
 # page preview isn't sharp enough to read column-header text or place
@@ -661,12 +712,28 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--sidecar-dir", type=str, default=str(DEFAULT_SIDECAR_DIR),
                          help="Directory of auto-generated sidecars to scan for quarantined pages.")
+    parser.add_argument("--run-id", type=str, default=None,
+                         help="Resume a real hashed run (docs/RUN_ARCHITECTURE.md) explicitly - "
+                              "overrides --sidecar-dir to ctx.outputs/'auto_row_segmentation'. "
+                              "Auto-detected from --sidecar-dir when omitted, if it already points "
+                              "inside a run directory.")
     parser.add_argument("--columns-file", type=str, default=None,
                          help="Force a specific config/columns/*.txt file for every page in this run, "
                               "overriding each page's own template's columns_file default.")
     args = parser.parse_args()
 
     sidecar_dir = Path(args.sidecar_dir)
+
+    ctx = None
+    if args.run_id:
+        ctx = RunContext.resume(WorkspaceContext.resolve(), args.run_id)
+    else:
+        ctx = _ctx_from_path(sidecar_dir)
+    if ctx is not None:
+        print(f"Reviewing run {ctx.run_id}")
+        if args.sidecar_dir == str(DEFAULT_SIDECAR_DIR):
+            sidecar_dir = ctx.outputs / "auto_row_segmentation"
+
     if not sidecar_dir.exists():
         print(f"ERROR: sidecar dir not found: {sidecar_dir}")
         sys.exit(1)

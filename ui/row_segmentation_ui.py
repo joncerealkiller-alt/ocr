@@ -1467,10 +1467,30 @@ class RowSegmentationApp:
                     **self._current_padding_kwargs(),
                 )
             else:
+                table_top = self._parse_optional_int(self.table_top_var)
+                table_bottom = self._parse_optional_int(self.table_bottom_var)
+                table_left = self._parse_optional_int(self.table_left_var)
+                table_right = self._parse_optional_int(self.table_right_var)
+
                 result, row_crops, header_crop, overlay = segment_rows(
                     self.original_image, header_row_count=header_rows,
+                    table_top=table_top, table_bottom=table_bottom,
+                    table_left=table_left, table_right=table_right,
+                    deskew_angle=angle,
+                    metadata_bottom=self._parse_optional_int(self.metadata_bottom_var),
+                    **self._current_header_box_kwargs(),
                     **self._current_padding_kwargs(),
                 )
+                # Same write-back UX as periodic mode - if table_top/bottom
+                # were auto-estimated (left blank), surface the confirmed
+                # value rather than leaving it hidden.
+                if table_top is None or table_bottom is None:
+                    deskewed = apply_deskew_angle(self.original_image, angle)
+                    auto_top, auto_bottom = estimate_table_extent(
+                        deskewed, x0=table_left, x1=table_right)
+                    self.table_top_var.set(str(table_top if table_top is not None else auto_top))
+                    self.table_bottom_var.set(
+                        str(table_bottom if table_bottom is not None else auto_bottom))
         except Exception as e:
             self.status_label.config(text=f"ERROR: {e}")
             messagebox.showerror("Segmentation failed", str(e))
@@ -1904,12 +1924,15 @@ class RowSegmentationApp:
         try:
             from core.row_extraction import run_single_column_extraction
             from core.debug_dump import DebugModelInputRecorder
-            debug_recorder = DebugModelInputRecorder(enabled=debug_model_inputs)
+            debug_recorder = DebugModelInputRecorder(
+                enabled=debug_model_inputs, source_input=sidecar_path,
+            )
             results = run_single_column_extraction(
                 sidecar_path, model_name, column_name=column_name, mark_done=True,
                 debug_recorder=debug_recorder)
             if debug_recorder.enabled:
                 print(f"Debug model-input capture: ON -> {debug_recorder.run_dir}")
+            debug_recorder.close()
             self._extraction_queue.put(("ok", sidecar_path, column_name, len(results)))
         except Exception as e:
             self._extraction_queue.put(("error", sidecar_path, column_name, str(e)))

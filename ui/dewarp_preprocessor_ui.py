@@ -89,6 +89,16 @@ from core.bucket_worklist import (
     load_bucket_filepaths, preprocessed_bucket_path, load_processed_sources,
     load_processed_records, append_preprocessed_record,
 )
+from core.pipeline_db import PipelineDatabase, DEFAULT_DB_PATH, sync_one_dewarp_result
+# stdlib-only import (no torch/timm), safe at module top - see core/
+# pipeline_db.py's own docstring. DB sync here (2026-08-02) records a
+# dedicated "stage2a_dewarp" stage_outputs event live, at the moment of
+# each Save/Bypass in bucket-worklist mode, rather than leaving it for
+# the next core/manifest_pipeline.py finalize_manifest() run's passive
+# sync_dewarp_results() to pick up - same pattern already applied to
+# core/classifier.py and debug_tools/review_uncertain.py. Reuses
+# sync_one_dewarp_result() (the per-row unit sync_dewarp_results()
+# itself calls) so both the live and batch paths stay one implementation.
 
 OUTPUT_DIR = PROJECT_ROOT / "data" / "outputs" / "dewarped"
 PREVIEW_SIZE = (900, 700)
@@ -148,8 +158,9 @@ def bypass_passthrough(source_path: str) -> str:
 
 
 class DewarpApp:
-    def __init__(self, root: Tk):
+    def __init__(self, root: Tk, db_path: Path = DEFAULT_DB_PATH):
         self.root = root
+        self.db = PipelineDatabase(db_path)
         root.title("Dewarp Preprocessor - 4-point perspective correction (no model calls)")
         root.geometry("1300x900")
         root.minsize(1000, 700)
@@ -594,18 +605,30 @@ class DewarpApp:
 
     def _record_and_advance_if_worklist(self, status: str) -> None:
         """
-        No-op in single-file mode (bucket_csv_path is None). In
-        worklist mode, appends one result row to the preprocessed
-        bucket CSV (source path -> self.output_path, which Save vs.
-        Bypass already set correctly above) and auto-advances to the
-        next undone entry - see core/bucket_worklist.py and
-        _advance_worklist().
+        No-op in single-file mode (bucket_csv_path is None) - including
+        the DB sync below, matching the same gate as the CSV recording:
+        a manually-picked single file isn't tracked in any bucket CSV,
+        so there's no "this file was classified, now it's been dewarped"
+        relationship to record. In worklist mode, appends one result row
+        to the preprocessed bucket CSV (source path -> self.output_path,
+        which Save vs. Bypass already set correctly above), records the
+        SAME event live in core/pipeline_db.py (sync_one_dewarp_result()
+        - the identical per-row logic core/manifest_pipeline.py's
+        finalize_manifest() uses via its own batch sync_dewarp_results()
+        call, so a later finalize_manifest() run simply finds this
+        already synced), and auto-advances to the next undone entry -
+        see core/bucket_worklist.py and _advance_worklist().
         """
         if not self.bucket_csv_path:
             return
         append_preprocessed_record(
             self.preprocessed_csv_path, source_file_path=self.image_path,
             output_file_path=self.output_path, status=status,
+        )
+        sync_one_dewarp_result(
+            self.db, source_file_path=self.image_path,
+            output_file_path=self.output_path,
+            dewarped_csv_path=Path(self.preprocessed_csv_path),
         )
         self._advance_worklist()
 
@@ -629,6 +652,14 @@ class DewarpApp:
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Dewarp Preprocessor UI")
+    parser.add_argument(
+        "--db-path", default=str(DEFAULT_DB_PATH),
+        help=f"core/pipeline_db.py database path (default: {DEFAULT_DB_PATH})",
+    )
+    args = parser.parse_args()
+
     root = Tk()
-    app = DewarpApp(root)
+    app = DewarpApp(root, db_path=Path(args.db_path))
     root.mainloop()
