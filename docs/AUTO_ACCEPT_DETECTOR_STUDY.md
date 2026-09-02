@@ -163,6 +163,36 @@ decision frame forbids. Not adopted. (The distribution itself is
 informative: on hard pages, isolated-good-cell rows are the NORM, not
 an anomaly.)
 
+## Provenance addendum (2026-09-02, post-study): the fixture geometry is PRE-REWORK
+
+Verified by hash + coordinate comparison (not timestamps): all three
+pages' study sidecars are the OLD pre-field-bbox-rework generation
+(byte-identical row bboxes to `research/baselines/reference_pipeline_
+prerefactor/row_segmentation/`, 2026-07-25/26; only source_image_path
+patched). No generation mixing. The GT log was labeled 2026-07-26/27
+against the SAME generation, so the study is internally consistent.
+
+**Measured spill mechanism in that geometry**: rows are a uniform band
+grid (heights identical to the pixel: 38px/44px/63px per page) and
+EVERY consecutive row pair overlaps by exactly 10px - on the 1921 page
+~26% of each crop's height is neighbor-row ink. Every spill-shaped
+read in this study ("brother 3", "m2", "5 1 4", "5 10") comes from
+this regime, and the worst-overlap page (1921) is where accuracy
+cratered.
+
+**Interpretation limits**: the GGUF-vs-vLLM comparison and all
+detector-layer results STAND (both pairs ate identical crops). The
+ABSOLUTE numbers (61% accuracy, review volume, auto-accept coverage)
+are lower bounds under known-contaminated geometry - NOT representative
+of the current production pipeline's sidecar quality.
+
+**No post-rework sidecars exist for these three pages** (the current-
+generation set covers different pages); a controlled follow-up
+requires recalibrating them first, then rerunning as a separate
+experiment: old geometry + frozen models/detector vs new geometry +
+identical frozen models/detector - measuring the sidecar rework's
+value in isolation.
+
 ## Open items
 
 - Human adjudication of the 3 GT cells listed above.
