@@ -55,10 +55,12 @@
   pattern: '[a-z][a-z /-]*'
 
 "Birthplace":
-  # Alphabetic place string, >= 3 chars, spaces/hyphens/apostrophes/
-  # periods allowed ("Eng.", "U.S.A.", "Nova Scotia"). No digits, no
-  # stray symbols - catches "Eng &"-class garbage.
-  pattern: '[a-zÀ-ÿ][a-zÀ-ÿ .''-]{2,}'
+  # Alphabetic place string, >= 2 chars (two-letter province
+  # abbreviations are real enumerator forms: "BC", "NS", "NB"),
+  # spaces/hyphens/apostrophes/periods allowed ("Eng.", "U.S.A.",
+  # "N.S.", "Nova Scotia"). No digits, no stray symbols - catches
+  # "Eng &"-class garbage.
+  pattern: '[a-zÀ-ÿ][a-zÀ-ÿ .''-]+'
   # Page-context granularity veto (2026-09-02, Jon's design): census
   # enumerators record this column at a locally consistent granularity
   # - typically province/state/country. When a page's TRUSTED cells
@@ -92,14 +94,19 @@
     - alta
     - british columbia
     - bc
+    - b.c
     - nova scotia
     - ns
+    - n.s
     - new brunswick
     - nb
+    - n.b
     - prince edward island
     - pei
+    - p.e.i
     - newfoundland
     - nfld
+    - nfd
     - yukon
     - northwest territories
     - nwt
