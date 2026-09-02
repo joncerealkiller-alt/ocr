@@ -122,11 +122,50 @@ def test_column_schema():
     check(column_schema_valid("Age", "?"), "abstention passes schema (routing is fields_agree's job)")
 
 
+def test_page_context_veto():
+    """Detector layer 3 (2026-09-02): page-local convention veto.
+    Synthetic pages mirror the MEASURED shapes from the 549-cell study
+    (1931_174's 15/16 province-level profile with the Hamilton FP; the
+    1921/31228 pages' 1-trusted-cell abstain condition)."""
+    print("test_page_context_veto")
+    from core.row_extraction import RowExtractionResult, RowFieldValue, apply_page_context_vetoes
+
+    def mk(ri, bp_value, agree=True):
+        return RowExtractionResult(
+            row_index=ri, bbox=[0, 0, 1, 1],
+            fields={"Birthplace": RowFieldValue(value=bp_value, confidence="confirmed")},
+            raw_output="", model="t", runtime_seconds=0.1,
+            schema_pass=True, schema_error=None,
+            field_agreement={"Birthplace": agree})
+
+    page = [mk(i, v) for i, v in enumerate(
+        ["Manitoba"] * 5 + ["Scotland"] * 4 + ["Ontario"] * 3 + ["England"] * 3 + ["Hamilton"])]
+    n = apply_page_context_vetoes(page)
+    check(n == 1, "strong province-level page vetoes the city-level singleton (the Hamilton FP)")
+    check(page[-1].field_agreement["Birthplace"] is False, "vetoed cell routed to review")
+    check("page-context" in page[-1].context_vetoes.get("Birthplace", ""), "veto reason recorded")
+    check(page[-1].fields["Birthplace"].value == "Hamilton", "value NEVER substituted - review only")
+    check(page[0].field_agreement["Birthplace"] is True, "in-vocabulary cells untouched")
+
+    low = [mk(0, "Manitoba"), mk(1, "Hamilton")]
+    check(apply_page_context_vetoes(low) == 0 and low[1].field_agreement["Birthplace"],
+          "below min_trusted the page abstains (the 1921/31228 condition)")
+
+    mixed = [mk(i, v) for i, v in enumerate(
+        ["Manitoba"] * 5 + ["Winnipeg", "Brandon", "Selkirk", "Hamilton", "Dauphin"])]
+    check(apply_page_context_vetoes(mixed) == 0, "mixed-granularity page abstains, no false rejections")
+
+    rare = [mk(i, v) for i, v in enumerate(["Manitoba"] * 8 + ["Saskatchewan"])]
+    check(apply_page_context_vetoes(rare) == 0 and rare[-1].field_agreement["Birthplace"],
+          "rare-but-legitimate in-vocabulary singleton survives (why vocabulary beats frequency)")
+
+
 if __name__ == "__main__":
     test_comparator()
     test_normalize()
     test_loader_dispatch()
     test_comparator_hardening()
     test_column_schema()
+    test_page_context_veto()
     print(f"\n{_PASS} passed, {_FAIL} failed")
     sys.exit(1 if _FAIL else 0)

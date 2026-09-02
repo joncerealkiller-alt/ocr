@@ -59,3 +59,78 @@
   # periods allowed ("Eng.", "U.S.A.", "Nova Scotia"). No digits, no
   # stray symbols - catches "Eng &"-class garbage.
   pattern: '[a-zÀ-ÿ][a-zÀ-ÿ .''-]{2,}'
+  # Page-context granularity veto (2026-09-02, Jon's design): census
+  # enumerators record this column at a locally consistent granularity
+  # - typically province/state/country. When a page's TRUSTED cells
+  # (agreement + schema, GT never consulted) establish that convention
+  # strongly enough (see the two thresholds), an agreed value OUTSIDE
+  # this vocabulary is anomalous (city-level like "Hamilton", garbled
+  # like "L.A." for USA - both MEASURED residual FPs this veto catches
+  # on 1931_174) and routes to review. The veto only ever REMOVES an
+  # auto-accept; it never infers or substitutes a value. Pages without
+  # a derivable convention (measured: the 1921/31228 pages yield 1
+  # trusted cell each) abstain entirely.
+  #
+  # The vocabulary IS the granularity classifier: province/territory
+  # names + period abbreviations + countries seen in this era's pages.
+  # A rare-but-legitimate value ("Saskatchewan", 1x on 1931_174) stays
+  # accepted because it's in-vocabulary - this is why the list beats a
+  # pure page-frequency rule (which would false-reject singletons).
+  context_min_trusted: 8
+  context_min_fraction: 0.8
+  context_vocabulary:
+    - canada
+    - manitoba
+    - man
+    - ontario
+    - ont
+    - saskatchewan
+    - sask
+    - quebec
+    - que
+    - alberta
+    - alta
+    - british columbia
+    - bc
+    - nova scotia
+    - ns
+    - new brunswick
+    - nb
+    - prince edward island
+    - pei
+    - newfoundland
+    - nfld
+    - yukon
+    - northwest territories
+    - nwt
+    - england
+    - eng
+    - scotland
+    - scot
+    - ireland
+    - ire
+    - wales
+    - usa
+    - u.s.a
+    - united states
+    - austria
+    - germany
+    - poland
+    - russia
+    - ukraine
+    - galicia
+    - france
+    - belgium
+    - holland
+    - netherlands
+    - sweden
+    - norway
+    - denmark
+    - iceland
+    - italy
+    - hungary
+    - romania
+    - china
+    - japan
+    - india
+    - australia

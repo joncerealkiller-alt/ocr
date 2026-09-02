@@ -149,6 +149,17 @@ class RowExtractionResult(BaseModel):
     # (measured live: 2/11 hinted agreements were wrong vs 0/9
     # hint-free - see the proposal doc's Live validation section).
     field_agreement: dict[str, bool] = {}
+    # Per-field page-context vetoes (2026-09-02, detector layer 3 -
+    # Jon's design): column -> short reason string, recorded when
+    # apply_page_context_vetoes() flipped an agreed cell back to
+    # review because its value is anomalous against the page's own
+    # established convention (e.g. a city-level birthplace on a
+    # province-level page). Additive default; empty everywhere the
+    # veto didn't fire or the page abstained. The vetoed cell's
+    # field_agreement is False - this dict is WHY, for the review UI
+    # and post-hoc analysis. The stage-2 value itself is never
+    # modified (veto routes to a human, never substitutes).
+    context_vetoes: dict[str, str] = {}
 
 
 def build_row_prompt(column_names: list[str]) -> str:
@@ -744,6 +755,75 @@ def column_schema_valid(column_name: str, value: str | None) -> bool:
     if not v or v == "?":
         return True
     return re.fullmatch(spec["pattern"], v, flags=re.IGNORECASE) is not None
+
+
+def apply_page_context_vetoes(results: list["RowExtractionResult"]) -> int:
+    """
+    Detector layer 3 (2026-09-02, Jon's design): page-local convention
+    consistency, applied AFTER per-cell agreement + schema. Pipeline:
+
+        agreement -> schema valid -> page-context consistent -> auto-accept
+
+    For each column whose schema declares a context_vocabulary
+    (config/column_schemas.yaml): derive the page's convention from its
+    own TRUSTED cells (field_agreement already True, value non-empty -
+    ground truth is never consulted). Only when the convention is
+    STRONG - at least context_min_trusted trusted cells AND at least
+    context_min_fraction of them inside the vocabulary - may the veto
+    fire: any trusted cell whose value falls OUTSIDE the vocabulary is
+    flipped back to review (field_agreement False + a reason in
+    context_vetoes). Below either threshold the page abstains entirely
+    (measured motivation: the 1921/31228 benchmark pages yield 1
+    trusted birthplace cell each - no convention is derivable there,
+    and a weak-evidence veto would only manufacture false rejections).
+
+    NEVER infers or substitutes a value: an anomalous "Hamilton" on a
+    province-level page routes to a human, it does not become
+    "Manitoba". Returns the number of cells vetoed. Mutates results
+    in place (same pattern as the agreement computation itself).
+    Evidence: on the 549-cell detector study this catches the two
+    residual Birthplace FPs (Hamilton/Manitoba, L.A./USA) with zero
+    false rejections - see the schema file's own comments.
+    """
+    schemas = _load_column_schemas()
+    vetoed = 0
+    for column, spec in schemas.items():
+        if not isinstance(spec, dict):
+            continue
+        vocab = spec.get("context_vocabulary")
+        if not vocab:
+            continue
+        vocab_norm = {_normalize_for_agreement(v) for v in vocab}
+        min_trusted = int(spec.get("context_min_trusted", 8))
+        min_fraction = float(spec.get("context_min_fraction", 0.8))
+
+        trusted: list[tuple["RowExtractionResult", str]] = []
+        for r in results:
+            if not (r.field_agreement or {}).get(column):
+                continue
+            f = (r.fields or {}).get(column)
+            v = _normalize_for_agreement(getattr(f, "value", None) if f is not None else None)
+            if v and v != "?":
+                trusted.append((r, v))
+
+        if len(trusted) < min_trusted:
+            continue  # abstain: not enough evidence for a convention
+        in_vocab = sum(1 for _, v in trusted if v in vocab_norm)
+        if in_vocab / len(trusted) < min_fraction:
+            continue  # abstain: mixed-convention page
+
+        for r, v in trusted:
+            if v not in vocab_norm:
+                r.field_agreement[column] = False
+                r.context_vetoes[column] = (
+                    f"page-context: {v!r} outside the page's established "
+                    f"convention ({in_vocab}/{len(trusted)} trusted cells in-vocabulary)"
+                )
+                vetoed += 1
+    if vetoed:
+        print(f"[row_extraction] page-context veto: {vetoed} agreed cell(s) "
+              f"routed to review (see context_vetoes)")
+    return vetoed
 
 
 class _RemoteVllmFieldLoader:
@@ -1450,6 +1530,11 @@ def run_two_stage_extraction(
                   f"{results[-1].runtime_seconds:.1f}s")
     finally:
         _release_model(struct_loader)
+
+    # Detector layer 3: page-context consistency (needs the whole
+    # page's results, so it runs after the per-row loop - see
+    # apply_page_context_vetoes()'s docstring).
+    apply_page_context_vetoes(results)
 
     return results
 
