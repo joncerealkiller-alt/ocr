@@ -244,6 +244,11 @@ console:
     # (UD-Q4_K_XL vs w4a16) - see that config's own quant-lineage
     # caveat. Selectable with Backend=local (unlike the vLLM configs).
     - gemma_12b_qat_gguf
+    # minicpm_v_gguf (llamacpp) - added 2026-09-02, the MiniCPM leg of
+    # the same benchmark: OpenBMB official Q4_K_M GGUF vs minicpm_v_gptq
+    # (vllm). Same ancestor, different quantization - see the config's
+    # own quant-lineage caveat.
+    - minicpm_v_gguf
     # gemma_12b_unified (transformers) / gemma_12b_w4a16 (vllm) - the
     # ONE pair in this registry that IS the same literal checkpoint
     # (repo_id "google/gemma-4-12B-it-qat-w4a16-ct") under both engines

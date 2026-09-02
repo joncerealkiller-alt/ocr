@@ -1,0 +1,44 @@
+model_name: minicpm_v_gguf
+repo_id: openbmb/MiniCPM-V-4_5-gguf
+# Sentinel - see gemma_12b_qat_gguf.yaml; runtime "llamacpp" models
+# never instantiate a loader class (served by core/llamacpp_runtime.py).
+loader_class: llamacpp
+runtime: llamacpp
+
+# 2026-09-02, two-system architecture benchmark - the MiniCPM leg,
+# following gemma_12b_qat_gguf's validated pattern. QUANT LINEAGE
+# CAVEAT: same MiniCPM-V-4.5 ancestor as minicpm_v_gptq (vLLM) but a
+# DIFFERENT quantization (Q4_K_M vs GPTQ) - result differences are
+# engine+quant combined, not engine alone. OpenBMB's own official GGUF
+# repo; no QAT/dynamic variant exists for this family (unlike Gemma's
+# UD-Q4_K_XL), so plain Q4_K_M is the standard artifact - if it
+# underperforms, Q5/Q6 from the same repo is the next lever.
+llamacpp_model_path: "E:/huggingface/hub/models--openbmb--MiniCPM-V-4_5-gguf/snapshots/8bfaecb5b1a65f068b86c32b997a3d5d8902eb36/ggml-model-Q4_K_M.gguf"
+llamacpp_mmproj_path: "E:/huggingface/hub/models--openbmb--MiniCPM-V-4_5-gguf/snapshots/8bfaecb5b1a65f068b86c32b997a3d5d8902eb36/mmproj-model-f16.gguf"
+llamacpp_ngl: 999
+llamacpp_parallel: 1
+# MiniCPM-V-4.5 is a hybrid thinking model (the terse no-think Stage-1
+# prompt exists because of it) - suppress template-level thinking for
+# parity with the vLLM leg, same as the Gemma config. Verified in the
+# smoke test whether this template honors the flag.
+llamacpp_reasoning: "off"
+
+context_length: 2048
+
+# Image-transport parity (adopted from the Gemma leg's confirmed
+# finding, 2026-09-02): llama.cpp vision paths can under-tokenize small
+# field crops vs vLLM's processing. Same 896^2 floor as the Gemma
+# config as a starting point - the smoke test compares prompt_tokens
+# against the vLLM leg's recorded values before the benchmark run.
+min_pixels: 802816
+
+# Sampling mirrors minicpm_v_gptq.yaml so the A/B holds settings
+# constant across the two legs.
+do_sample: false
+temperature: 0.1
+max_new_tokens: 400
+
+text_only_supported: true
+image_input_supported: true
+vision_validation_status: untested
+role: vision_candidate
