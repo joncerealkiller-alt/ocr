@@ -40,6 +40,15 @@ max_pixels: 1003520    # 1280*28*28
 reasoning_toggle_mechanism: unsupported
 reasoning_enabled: false
 
+# Confirmed by real generation calls, 2026-08-10 (model_console adapter
+# testing): QwenLoader._run_generate(raw_image=None, prompt) against
+# THIS repo_id (Qwen2.5-VL-3B-Instruct) produces correct output
+# ("PONG", "Paris") - matches Qwen's own documented default chat-template
+# usage for the 2.5-VL line. See base_loader.py's text_only_supported
+# docstring for what "confirmed" means; does NOT extend to
+# qwen25_vl_7b.yaml (different checkpoint, not tested).
+text_only_supported: true
+
 # Constrained decoding (2026-07-24) - masks generation to only allow
 # expected-script characters (Latin/accented-Latin letters, digits, this
 # project's own output-format punctuation), preventing off-script token

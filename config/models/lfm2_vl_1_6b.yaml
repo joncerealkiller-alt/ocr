@@ -39,6 +39,14 @@ keywords_max_new_tokens: 80
 reasoning_toggle_mechanism: unsupported
 reasoning_enabled: false
 
+# Confirmed by real generation calls, 2026-08-10 (model_console adapter
+# testing): Lfm2VlLoader._run_generate(raw_image=None, prompt) produces
+# correct output ("PONG", "Paris.") - matches the model card's own
+# statement that images aren't technically required. See
+# base_loader.py's text_only_supported docstring for what "confirmed"
+# means here; not a general claim about every loader.
+text_only_supported: true
+
 # Constrained decoding (see core/loaders/constrained_decoding.py) - not
 # enabled by default here yet. Worth trying given the fabrication seen
 # in the initial smoke test involved plausible-but-invented ENGLISH

@@ -1,0 +1,18 @@
+No of family in order of visitation
+Name of each person to family
+Relation to head of family
+Sex
+Marital Status
+Age
+Country of Place of Birth
+Year of immigration to Canada
+Post office address
+Section
+Township
+Range
+Meridian
+Horses all ages
+Milch Cows
+Other Horned
+Sheep and Lambs all ages
+Hogs all ages

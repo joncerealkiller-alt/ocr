@@ -36,9 +36,13 @@ prompt_text: ""
 
 # Model card's "Variable Image Resolution" section lists the same
 # supported budgets (70/140/280/560/1120) for this model as for E2B -
-# kept at the same value as gemma.yaml so this isn't a confound.
+# kept at the same value as gemma.yaml so this isn't a confound. Raised
+# 140 -> 280 alongside gemma.yaml, 2026-08-05 - see that file's comment
+# and docs/GEMMA_TOKEN_BUDGET_INVESTIGATION.md for why (this was already
+# the real effective value before the call-site bug fix, not a new
+# increase).
 extra:
-  image_token_budget: 140
+  image_token_budget: 280
   system_prompt: "You are a strict, non-interpretive archival routing classifier."
 
 # Not expected to matter at this model's real footprint (~10.3GB

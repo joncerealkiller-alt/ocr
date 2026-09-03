@@ -9,143 +9,171 @@
 # around these positions, and only fall back to the raw fraction if
 # nothing is found.
 #
-# Calibrated 2026-07-27 against the one real manually-segmented sample
-# available for this doc type (data/outputs/row_segmentation/
-# 1921_022-E002880409_dewarped_sidecar.json, 3244x2069): metadata_bottom
-# 324/2069=0.157, table_top 638/2069=0.308, table_bottom 2038/2069=0.985,
-# table_left 21/3244=0.007, table_right 3235/3244=0.997. One sample is a
-# thin calibration base - expect to widen these once more real 1921
-# pages have gone through the pipeline.
+# REBUILT 2026-08-08, widened SAME DAY from 3 to 6 real calibrations via
+# ui/column_calibration_ui.py's full workflow (dividers + "Mark table
+# left/right edges" - e002869157 through e002869162, all review_status
+# "done", zero unreviewed dividers, table edges human_placed on all 6
+# from the start). Replaces the original 2026-07-27 version, which was
+# explicitly flagged as "one sample is a thin calibration base" and only
+# covered 6 core fields (5 of them actually calibrated) - this version
+# covers the FULL real 35-field 1921 schedule (config/columns/
+# census_canada_1921.txt), not just a curated subset.
+#
+# REAL FINDING from the 3->6 widen: max per-divider spread across all 6
+# samples is just 0.23% of table width - MUCH tighter agreement than
+# canada_census_1906.yaml's ~5% (that batch mixed pages from a bound-
+# book split workflow with more scan-to-scan registration variance; this
+# 1921 batch's 6 samples come from a more consistent scan source). All 6
+# independently detected exactly 50/50 rows with zero quarantined -
+# strong convergence, not just a bigger n.
 
 doc_type: canada_census_1921
 display_name: "Canada Census 1921"
 
-# columns_file: the curated, ordered field list (config/columns/*.txt)
-# ui/quarantine_review_ui.py offers for manual column masking - a
-# SUBSET of expected_columns below, in the desired OUTPUT order (not
-# left-to-right scan order - census_core_fields.txt reorders "Age"
-# ahead of "Sex"/"Relationship to Head" relative to the physical
-# form), since not every CV-detectable column is one a reviewer wants
-# to mask. Added 2026-07-29, replacing a hardcoded doc_type ->
-# filename dict that lived in quarantine_review_ui.py itself
-# (DEFAULT_COLUMNS_FILE_BY_DOC_TYPE) - moved here so adding a new
-# doc_type stays pure config, no Python edit, matching every other
-# piece of this pipeline. Optional: a template without this field just
-# falls back to expected_columns there, with a visible warning, same
-# as an unmapped doc_type did under the old dict. The UI's
-# --columns-file CLI flag still overrides this per-run for every page,
-# regardless of what each template sets.
-columns_file: census_core_fields.txt
+# The full 35-field 1921 schedule (dwelling/family identification,
+# birthplace/immigration/nationality, language/religion/literacy,
+# occupation/employment/earnings - a much richer form than the 6-field
+# "core" subset the previous version tracked). Real column names,
+# verbatim off the form, supplied directly by Jon - not guessed.
+columns_file: census_canada_1921.txt
 
-# Changed 2026-07-27 (was "periodic", i.e. per-row boundary refinement)
-# per Jon's direction after a real failure on 1931_174-e011707164: two
-# independent per-row searches each snapped to a bad local density
-# minimum, squeezing one row and inflating its neighbor. Fixed-layout
-# forms like this one only need row 1 located - core/auto_sidecar.py's
-# detect_data_rows() then tiles every remaining row by pure arithmetic
-# (segment_rows_uniform_tile()), matching how the manual segmentation
-# tool already handles this exact document type - the real manually-
-# confirmed sidecar for THIS sample (data/outputs/row_segmentation/
-# 1921_022-E002880409_dewarped_sidecar.json) already used mode
-# "uniform_tile", not "periodic". expected_row_count is a strong prior
-# here, not a guess: Canadian census forms of this era print a fixed
-# 50 numbered lines per page.
+# expected_row_count=50, per Jon's direct confirmation (2026-08-08) -
+# matches the PREVIOUS version's own value exactly (unchanged), and now
+# backed by real detection too: all 3 samples in this batch
+# independently detected exactly 50/50 rows with zero quarantined.
 row_strategy: fixed_periodic
 expected_row_count: 50
 
-# What ui/row_segmentation_ui.py's per-column masking step will need to
-# walk through afterward - seeded here so the auto sidecar's column
-# scaffold (core.row_segmentation.init_column_state) matches what a
-# human would normally type in by hand. Matches config/columns/
-# census_standard.txt / census_core_fields.txt.
 expected_columns:
-  - Name
-  - Age
+  - Dwelling house
+  - Family
+  - Name of each person in family
+  - Parish or Township
+  - Name of the municipality
+  - Home owned or rented
+  - If rented, monthly rent paid
+  - Class of house
+  - Material of construction
+  - Number of rooms occupied by this family
+  - Relationship to head of family or household
   - Sex
-  - Relationship to Head
-  - Birthplace
-  - Occupation
+  - Conjugal condition
+  - Age at last birthday
+  - Country or place of birth of person
+  - Country or place of birth of father
+  - Country or place of birth of mother
+  - Year of immigration to Canada
+  - Year of naturalization
+  - Racial or tribal origin
+  - Nationality
+  - Can speak English
+  - Can speak French
+  - Religion
+  - Can read and write
+  - Months at school since September 1, 1920
+  - Chief occupation or trade
+  - Industry or business
+  - Employment status
+  - Total earnings in past 12 months
+  - Whether out of work on June 1, 1921
+  - Number of weeks unemployed in past 12 months
+  - Number of weeks unemployed because of illness
+  - Time employed in other than chief occupation
+  - Language commonly spoken / Infirmities
 
-# Column x-boundaries (2026-07-27, column automation) - calibrated
-# directly from the REAL manually-confirmed masks in data/outputs/
-# row_segmentation/1921_022-E002880409_dewarped_sidecar.json (width
-# 3244), not guessed: Name [141,443], Age [1241,1287], Sex [1155,1198],
-# Relationship to Head [1033,1154], Birthplace [1287,1438]. Same
-# "approx fraction + core/auto_sidecar.py refines against real ruling
-# lines" pattern as regions_approx above - core.auto_sidecar.
-# locate_columns() calls _find_vertical_ruling_line() per column edge.
-# Occupation has NO entry here: the real reference sidecar's own
-# column_order never included it (only 5 of this template's 6
-# expected_columns were ever manually masked) - no real data to
-# calibrate against, so it's left for manual masking rather than
-# guessed at.
-# CHANGED BASIS 2026-07-29 - x_frac is now relative to the TABLE's own
-# left-right span (table_left=21, table_right=3235 on this 3244px-wide
-# reference), not full page width - see canada_census_1911.yaml's own
-# column_regions_approx comment and core/auto_sidecar.py's
-# locate_columns() for the full explanation of why (a real bug, not
-# just imprecision, confirmed on 1911's 3-sample spread). Only one
-# reference sample for this doc type either way, so the values below
-# are a straightforward re-derivation of the SAME real pixel ranges
-# (Name [141,443], Age [1241,1287], Sex [1155,1198], Relationship to
-# Head [1033,1154], Birthplace [1287,1438]) against table width (3214)
-# instead of page width (3244) - a small shift here since this
-# reference's table happens to sit close to the page edges already.
+# x_frac is relative to the table's own left-right span (table_bbox),
+# same basis every other template here uses. Every boundary is n=6 -
+# all 6 samples fully "done", including the table's own outer edges
+# (human-placed via "Mark table left/right edges" on all 6 from the
+# start - "Dwelling house"'s left edge and "Language commonly spoken /
+# Infirmities"'s right edge are both real, not the raw auto-detected
+# frame margin).
 column_regions_approx:
-  Name: {x_frac: [0.0373, 0.1313]}
-  Age: {x_frac: [0.3796, 0.3939]}
-  Sex: {x_frac: [0.3528, 0.3662]}
-  Relationship to Head: {x_frac: [0.3149, 0.3525]}
-  Birthplace: {x_frac: [0.3939, 0.4409]}
+  Dwelling house: {x_frac: [0.0000, 0.0137]}  # n=6
+  Family: {x_frac: [0.0137, 0.0272]}  # n=6
+  Name of each person in family: {x_frac: [0.0272, 0.1231]}  # n=6
+  Parish or Township: {x_frac: [0.1231, 0.1779]}  # n=6
+  Name of the municipality: {x_frac: [0.1779, 0.2295]}  # n=6
+  Home owned or rented: {x_frac: [0.2295, 0.2432]}  # n=6
+  If rented, monthly rent paid: {x_frac: [0.2432, 0.2632]}  # n=6
+  Class of house: {x_frac: [0.2632, 0.2769]}  # n=6
+  Material of construction: {x_frac: [0.2769, 0.2969]}  # n=6
+  Number of rooms occupied by this family: {x_frac: [0.2969, 0.3107]}  # n=6
+  Relationship to head of family or household: {x_frac: [0.3107, 0.3495]}  # n=6
+  Sex: {x_frac: [0.3495, 0.3631]}  # n=6
+  Conjugal condition: {x_frac: [0.3631, 0.3769]}  # n=6
+  Age at last birthday: {x_frac: [0.3769, 0.3917]}  # n=6
+  Country or place of birth of person: {x_frac: [0.3917, 0.4399]}  # n=6
+  Country or place of birth of father: {x_frac: [0.4399, 0.4881]}  # n=6
+  Country or place of birth of mother: {x_frac: [0.4881, 0.5358]}  # n=6
+  Year of immigration to Canada: {x_frac: [0.5358, 0.5557]}  # n=6
+  Year of naturalization: {x_frac: [0.5557, 0.5756]}  # n=6
+  Racial or tribal origin: {x_frac: [0.5756, 0.6176]}  # n=6
+  Nationality: {x_frac: [0.6176, 0.6595]}  # n=6
+  Can speak English: {x_frac: [0.6595, 0.6730]}  # n=6
+  Can speak French: {x_frac: [0.6730, 0.6866]}  # n=6
+  Religion: {x_frac: [0.6866, 0.7254]}  # n=6
+  Can read and write: {x_frac: [0.7254, 0.7673]}  # n=6
+  Months at school since September 1, 1920: {x_frac: [0.7673, 0.7841]}  # n=6
+  Chief occupation or trade: {x_frac: [0.7841, 0.8008]}  # n=6
+  Industry or business: {x_frac: [0.8008, 0.8174]}  # n=6
+  Employment status: {x_frac: [0.8174, 0.8625]}  # n=6
+  Total earnings in past 12 months: {x_frac: [0.8625, 0.8823]}  # n=6
+  Whether out of work on June 1, 1921: {x_frac: [0.8823, 0.9239]}  # n=6
+  Number of weeks unemployed in past 12 months: {x_frac: [0.9239, 0.9499]}  # n=6
+  Number of weeks unemployed because of illness: {x_frac: [0.9499, 0.9666]}  # n=6
+  Time employed in other than chief occupation: {x_frac: [0.9666, 0.9834]}  # n=6
+  Language commonly spoken / Infirmities: {x_frac: [0.9834, 1.0000]}  # n=6
 
-# Printed column-NUMBER row (2026-07-27, Jon's direction) - a thin
-# strip near the very bottom of the header block, where each printed
-# column has its own number centered above it (1, 2, 3, 4, 4a, 4b, 4c,
-# 5, 6...). Measured directly against this sample's real density
-# profile: a thin rule at y=612-614 separates it from the column-TITLE
-# text above, moderate/bumpy digit density from y=615-633 (the numbers
-# themselves), then a gap before the THICK table-divider rule at
-# y=638-641 (table_top=642). Stored as an OFFSET FROM table_top (not
-# an absolute y_frac) since that's the boundary already reliably
-# located by locate_table_boundary() by the time this runs - measured
-# here as top_offset=27px, bottom_offset=9px on a 2069px-tall page
-# (fractions 0.0130/0.0043). See core/auto_sidecar.py's
-# _detect_header_number_blobs() for how this gets used: as a secondary
-# anchor to shift a column's search position, NOT a replacement for
-# ruling-line refinement.
-number_row_approx:
-  top_offset_frac: 0.0130
-  bottom_offset_frac: 0.0043
+# NOT SET - no header-number anchor band was calibrated in this batch
+# (out of scope for this rebuild). Optional field - templates without it
+# just skip the number-row anchor and rely on column_regions_approx
+# alone.
+# number_row_approx: not set
 
-# Real row height (28.0px on a 2069px-tall page) - used by
-# locate_table_boundary()'s table_top plausibility check (2026-07-27,
-# the z000017634 foundation-bug fix). See core/auto_sidecar.py's
-# locate_table_boundary() docstring for the full mechanism.
-expected_row_height_frac: 0.01353
+# Real row height, AS A FRACTION OF PAGE HEIGHT - RECOMPUTED 2026-08-09
+# (replacing the prior 0.01472, which was ~13% too high and caused real
+# tiling failures - see below). The prior value was computed from row
+# BBOX HEIGHT across the 6 samples, not true row-to-row PITCH (top-to-
+# top spacing), same bug class already found and fixed for
+# canada_census_1906.yaml on 2026-08-09. Confirmed via the new row-pitch
+# sanity check in ui/column_calibration_ui.py: even with the "clean"
+# 6-sample 0.01472 value, the tool flagged row 50's expected end as
+# 243px past the actual page bottom for e002869157 - and a live
+# generate_auto_sidecar() run against that exact page independently
+# confirmed the failure (46/50 rows, "tiled span runs 213px past the
+# image's actual bottom edge" warning), not just a theoretical concern.
+# Recomputed from real row1_top -> row50_top pitch across all 6 merged
+# sidecars: e002869157 64.0px (frac 0.01374), e002869158 54.0px
+# (0.01180), e002869159 58.0px (0.01241), e002869160 62.4px (0.01350),
+# e002869161 61.0px (0.01312), e002869162 63.2px (0.01351) - mean
+# 0.01301.
+expected_row_height_frac: 0.01301
 
+# metadata's TOP edge uses the REAL detected physical page boundary
+# (core/image_analysis.py's analyze_image(), run directly against
+# e002869157.png, 7230x4658: page bbox [275.6, 230.5, 6954.4, 4419.3] -
+# the page occupies 83.1% of the raw frame, a real border/surround on
+# this scan) - unaffected by the 3->6 widen (page-edge detection doesn't
+# depend on the calibration batch size). header's y_frac is a rough
+# placeholder (never recalibrated for 1921 specifically, since header/
+# metadata boxes are out of scope for ui/column_calibration_ui.py by
+# design). table's y/x are the real 6-sample-averaged, human-corrected
+# table_bbox.
 regions_approx:
   metadata:
-    y_frac: [0.0, 0.157]
+    y_frac: [0.0495, 0.157]
   header:
-    y_frac: [0.157, 0.308]
+    y_frac: [0.157, 0.3105]
   table:
-    y_frac: [0.308, 0.985]
-    x_frac: [0.007, 0.997]
+    y_frac: [0.3105, 0.9849]
+    x_frac: [0.0770, 0.9409]
 
-# Used by core/document_classification.py's rule-based scorer. Ranges
-# are calibrated 2026-07-27 against real measurements taken through the
-# ACTUAL pipeline path (deskew -> count at run_ratio_threshold=0.35 -
-# see classify_document()'s docstring for why this isn't the raw-image
-# number and why the threshold choice matters):
-#   aspect_ratio: 1921 sample measured 1.568
-#   vertical_ruling_lines (column dividers, measured in the table's
-#     approx y-range): 1921 sample measured ~11 - this is the PRIMARY
-#     signal that separates 1921 from 1911/1931 (which print far more
-#     columns, ~21 and ~41 respectively, on the same era standard form)
-#     - see classify_document()'s own docstring for why year-level
-#     census classification leans on this more than row_count (all
-#     three census years use the same 50-line layout, so row_count
-#     alone can't tell them apart).
+# Used by core/document_classification.py's rule-based scorer. UNCHANGED
+# from the prior version - still based on the original single 2026-07-27
+# reference measurement (aspect_ratio 1.568, vertical_ruling_lines ~11),
+# not re-measured against this new batch. Worth re-measuring once more
+# samples exist and this gets revisited.
 classification:
   aspect_ratio_range: [1.40, 1.75]
   row_count_range: [44, 56]

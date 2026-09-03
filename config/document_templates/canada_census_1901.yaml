@@ -1,0 +1,106 @@
+# Document template for the auto-sidecar-generation experiment
+# (core/auto_sidecar.py, scripts/auto_generate_sidecar.py).
+#
+# Fractions are relative to the DESKEWED page (width/height), not pixel
+# coordinates - a scan's absolute resolution varies, but a given form's
+# layout proportions don't. regions_approx values are GUIDES for where
+# to search, not authoritative: core/auto_sidecar.py's boundary locators
+# prefer an actually-detected printed ruling line/border within a window
+# around these positions, and only fall back to the raw fraction if
+# nothing is found.
+#
+# RECALIBRATED 2026-08-05 against a real manually-templated reference
+# (ui/row_segmentation_ui.py sidecar for data/outputs/lac_pull_1901_
+# batch1/raw_jpgs/z000077117.jpg, 3390x2694, District 9 Marquette,
+# Gilbert Plains area - same district as the original rough estimate,
+# but this time table/header/metadata bounds and row height are
+# MEASURED (uniform_tile mode, row_count=50, 50/50 rows confirmed),
+# not eyeballed. Supersedes the 2026-08-05 "quick visual estimate"
+# version of this file (single-sample, unmeasured).
+
+doc_type: canada_census_1901
+display_name: "Canada Census 1901"
+
+columns_file: census_1901.txt
+
+# Same reasoning as canada_census_1921.yaml: fixed 50-numbered-line
+# form (row numbers 1-50 visible in the left margin), so row 1 located,
+# remainder tiled by pure arithmetic (segment_rows_uniform_tile())
+# rather than independent per-row search. Confirmed directly against
+# the reference sidecar - uniform_tile, row_count=50, 50/50 rows done.
+row_strategy: fixed_periodic
+expected_row_count: 50
+
+# Real column names, per config/columns/census_1901.txt (corrected
+# 2026-08-05 - the original pass merged "Months Employed at trade in
+# factory" and "Months Employed at trade in home" into one masked
+# region; that file now lists both separately, though the reference
+# sidecar's own mask for that pair still needs re-splitting before
+# extraction on those two specific columns would be reliable). The
+# last column on the form ("infirmaties") is listed there for
+# structural completeness but isn't needed for this corpus's
+# extraction targets.
+expected_columns:
+  - Name
+  - Age
+  - Sex
+  - Relationship to Head
+  - Place of Birth
+  - Profession
+
+# Real row height, MEASURED against the reference sidecar:
+# (first_row_bottom - first_row_top) = 758.84 - 722.0 = 36.84px on the
+# 2694px-tall deskewed image -> 36.84 / 2694 = 0.013675.
+expected_row_height_frac: 0.013675
+
+# Measured directly from the reference sidecar's table_bbox/header_bbox/
+# metadata_bbox against deskewed_image_size [3390, 2694]:
+#   metadata_bbox [0, 0, 3390, 294]
+#   header_bbox   [192, 293, 3283, 724]
+#   table_bbox    [192, 722, 3283, 2564]
+regions_approx:
+  metadata:
+    y_frac: [0.0, 0.1091]
+  header:
+    y_frac: [0.1088, 0.2687]
+    x_frac: [0.0566, 0.9684]
+  table:
+    y_frac: [0.268, 0.9517]
+    x_frac: [0.0566, 0.9684]
+
+# Used by core/document_classification.py's rule-based scorer.
+# aspect_ratio: reference sample measured 3390/2694 = 1.2584 - still one
+# real sample; row_count_range mirrors the confirmed 50-row form (tight,
+# since the row count is fixed by the form design, not estimated).
+# column_count_range widened from the original rough-estimate guess
+# ([6, 20], based on no real column list) to reflect the actual ~33-34
+# printed fields per config/columns/census_1901.txt, now that a real
+# column list exists.
+classification:
+  aspect_ratio_range: [1.1, 1.4]
+  row_count_range: [44, 56]
+  column_count_range: [28, 38]
+
+# Row-number-column anchors (2026-08-05) - this form prints row numbers
+# 1-50 down BOTH the left and right margins (confirmed by direct visual
+# check, not assumed). Measured against the reference sidecar's
+# deskewed_image_size [3390, 2694]:
+#   left column:  x=[192, 246]   -> [0.0566, 0.0726]
+#   right column: x=[3220, 3270] -> [0.9499, 0.9646]
+# Fed into core.row_segmentation.detect_row_number_centers() as the
+# strongest available row-boundary signal, pooled from both sides so a
+# printed defect on one margin (confirmed cause on this reference page:
+# an ink blot obscuring one row's number) is covered by the other side
+# rather than losing that row's anchor. alignment="center" confirmed by
+# direct visual check (digit centers land equidistant from the ruling
+# lines above/below on this form) - do not assume this holds for other
+# years, verify per template.
+#
+# NOT YET WIRED into core/auto_sidecar.py's production row_strategy
+# dispatch - "fixed_periodic" currently routes to segment_rows_uniform_
+# tile() (pure arithmetic from row 1 only), not the number-column-
+# anchored segment_rows_periodic() path these fields feed. These values
+# are calibrated and ready; the dispatch change is a separate step.
+row_number_column_x_frac: [0.0566, 0.0726]
+row_number_column2_x_frac: [0.9499, 0.9646]
+row_number_alignment: center

@@ -22,6 +22,13 @@ num_beams: 1
 length_penalty: 1.0
 early_stopping: false
 
+# Confirmed by real generation calls, 2026-08-10 (model_console adapter
+# testing): InternVLLoader._run_generate(raw_image=None, prompt)
+# produces correct output ("PONG", "Paris") - see base_loader.py's
+# text_only_supported docstring for what "confirmed" means here; not a
+# general claim about every loader.
+text_only_supported: true
+
 reasoning_toggle_mechanism: unsupported
 reasoning_enabled: false
 

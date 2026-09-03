@@ -1,0 +1,172 @@
+# Routing Decision Engine configuration (core/routing_decision_engine.py).
+# Built 2026-08-07. Changing `default_policy` or `class_specific_
+# authority` below changes production routing behavior WITHOUT any code
+# change - that is the whole point of this file existing (see
+# core/routing_decision_engine.py's module docstring, "GEMMA PRIORITY IS
+# PROVISIONAL, NOT STRUCTURAL").
+#
+# EVERY threshold in this file is UNCALIBRATED unless its own comment
+# says otherwise. Per Jon's explicit instruction, this project does not
+# invent production thresholds without measured evidence - these are
+# directional starting points from docs/MULTI_SOURCE_VOTING_CLASSIFIER_
+# PROPOSAL.md's research, not validated cutoffs. Recalibrate against
+# real production outcomes before trusting exact numbers here.
+
+# One of: gemma_primary | vision_primary | weighted_fusion | class_specific_authority
+#
+# CURRENT CHOICE: gemma_primary. Rationale (2026-08-07): on the one
+# same-split, apples-to-apples comparison that exists (docs/MULTI_
+# SOURCE_VOTING_CLASSIFIER_PROPOSAL.md's Gemma comparator sections),
+# Gemma scored 93.7-94.0% (depending on prompt taxonomy) vs. the best
+# fine-tuned vision tower (SigLIP) at 92.5% - Gemma is currently the
+# single best-measured sensor. THIS IS PROVISIONAL: the multi-
+# architecture vision benchmark may still improve, Gemma E2B fine-tuning
+# on 16GB hardware is UNPROVEN (may never happen), and per-category
+# vision precision may exceed Gemma's for specific classes even if
+# Gemma wins on average - see class_specific_authority below for how
+# that gets handled without switching this whole field.
+default_policy: gemma_primary
+
+thresholds:
+  # Gemma raw decision-token logit margin (NOT the self-reported
+  # confidence field - that field is measured, repeatedly, to be
+  # unreliable; see core/routing_decision_engine.py's module docstring).
+  # [A] measured: correct-case median gap 30.41 vs wrong-case median
+  # 13.56 (n=368 real ground truth). UNCALIBRATED as an exact cutoff.
+  gemma_logit_margin_auto_accept: 20.0
+  gemma_logit_margin_quarantine_below: 7.0
+
+  # Vision tower normalized top-1 softmax probability. UNCALIBRATED -
+  # no dedicated experiment has calibrated these exact cutoffs yet.
+  vision_softmax_auto_accept: 0.90
+  vision_softmax_quarantine_below: 0.55
+
+  # Generic ordinal/CV confidence (e.g. table_confidence). The
+  # quarantine_below value (0.375) IS a real measured number
+  # (core/image_analysis.py's table_confidence floor - 16 labelled
+  # census pages scored min 0.375, 218 non-table microfilm pages scored
+  # median 0.125) but was calibrated for "is there a table," not "should
+  # the decision engine trust this evidence" - a related, not identical,
+  # question. Still flagged uncalibrated for THIS use.
+  cv_ordinal_auto_accept: 0.80
+  cv_ordinal_quarantine_below: 0.375
+
+# Maps a score's native unit ("score_kind" in an EvidenceRecord's
+# metadata) to which threshold pair governs it. Add a new score_kind
+# here (not in code) when a new sensor type needs its own scale.
+score_semantics:
+  logit_margin:
+    auto_accept_key: gemma_logit_margin_auto_accept
+    quarantine_below_key: gemma_logit_margin_quarantine_below
+  softmax_probability:
+    auto_accept_key: vision_softmax_auto_accept
+    quarantine_below_key: vision_softmax_quarantine_below
+  ordinal_confidence:
+    auto_accept_key: cv_ordinal_auto_accept
+    quarantine_below_key: cv_ordinal_quarantine_below
+
+# Sensor -> family grouping, so correlated architectures don't
+# outweigh one independent signal in weighted_fusion/vision_primary's
+# family-vote mechanism. [A] measured basis: the multi-architecture
+# benchmark found convnext/dinov2/beit/swin/siglip/vit21k pairwise
+# agreement 91-94% (largely redundant with each other) while
+# mobilenetv2 agreed only 76-78% of the time with that cluster
+# (genuinely independent) - see docs/MULTI_SOURCE_VOTING_CLASSIFIER_
+# PROPOSAL.md's complementarity analysis.
+sensor_families:
+  gemma_semantic: [gemma]
+  vit_isotropic_strong_cluster: [dinov2, beit, siglip, vit21k]
+  cnn_modern: [convnext]
+  cnn_lightweight_independent: [mobilenetv2]
+  hierarchical_transformer: [swin]
+  classical_cv: [table_confidence, row_regularity, column_grid, layout_detector]
+
+# Used by vision_primary when a single named sensor should act as the
+# vision "primary" (e.g. once a category's benchmark clearly favors
+# one tower). null = fall back to family-weighted vision consensus
+# instead of one named sensor. [C] not currently set - no single vision
+# tower has been chosen as a standing primary; siglip is the current
+# accuracy leader per the benchmark but this is a decision Jon hasn't
+# made yet, not inferred here.
+vision_primary_sensor: null
+
+# Optional per-family weight override for weighted_fusion/vision_primary's
+# family-vote mechanism (default weight = 1.0 per family if unlisted).
+# [C] Not yet tuned - equal-weight-per-family is the current default,
+# not a validated choice.
+weighted_fusion_family_weight: {}
+
+# Per-category primary/supporting sensor overrides, used only by the
+# class_specific_authority policy. POPULATED 2026-08-07 from REAL
+# per-category accuracy measured on the shared 332-image held-out split
+# (Gemma flat-8 + live logit margin, all 7 fine-tuned towers - see
+# docs/MULTI_SOURCE_VOTING_CLASSIFIER_PROPOSAL.md's "Live Gemma
+# logit-margin adapter" section for the full per-category table this
+# was derived from). NOT hypothetical - every entry below cites the
+# real measured numbers that justify it.
+#
+# Only categories with n>=10 in the held-out set were given an entry -
+# genealogy_chart (n=1), handwritten_ledger (n=4), mixed_text_image
+# (n=3) are EXPLICITLY OMITTED, not silently defaulted with a guess -
+# per this project's tiny-N discipline, any "best sensor" claim at
+# those sample sizes would be noise, not evidence. Omitted categories
+# fall through to class_specific_fallback_policy below.
+class_specific_authority:
+  # gemma 96/97=0.99 (best) - dinov2 94/97=0.97 and siglip 93/97=0.96 close.
+  # table_confidence/layout_detector ADDED 2026-08-09 (core/sensor_
+  # adapters.py) after a real live validation on this same 332-image
+  # split: WITH these two added (class_specific_authority policy only),
+  # dense_tabular_rows-specific routing improved 94/97 -> 95/97, overall
+  # accuracy 309/332 -> 310/332, with essentially no auto_accept/
+  # quarantine cost (unlike gemma_primary/weighted_fusion, where adding
+  # them GLOBALLY cost real auto-accept coverage for no matching accuracy
+  # gain - see diagnostics/validate_classical_cv_sensors_in_decision_
+  # engine.py's report). Deliberately scoped to ONLY this category's
+  # class_specific_authority rule, not sensor_families' global inclusion -
+  # the two sensors only ever get consulted when this specific rule is
+  # evaluated, per Jon's explicit "supporting evidence for dense_
+  # tabular_rows only, keep out of the global policies" instruction
+  # (2026-08-09).
+  dense_tabular_rows:
+    primary: gemma
+    supporting: [dinov2, siglip, table_confidence, layout_detector]
+  # near 3-way tie at the ceiling: gemma 14/14=1.00, dinov2 14/14=1.00,
+  # vit21k 14/14=1.00 - kept gemma as primary since it's TIED, not
+  # beaten (unlike portrait_photo/website_screenshot below, where a
+  # tower strictly wins) - n=14 is still on the smaller side, revisit
+  # if the vision-tower re-benchmark (11-category, once ground truth
+  # exists) changes this picture.
+  map_land_record:
+    primary: gemma
+    supporting: [dinov2, vit21k]
+  # REAL vision-primary category: siglip 11/12=0.92 CLEARLY beats gemma
+  # 9/12=0.75 (others: convnext/mobilenetv2/beit/swin all 7/12=0.58,
+  # dinov2/vit21k 8-9/12=0.67-0.75) - the one category in this dataset
+  # where Gemma is measurably NOT the best available sensor.
+  portrait_photo:
+    primary: siglip
+    supporting: [gemma, vit21k]
+  # gemma 164/175=0.94 and beit 165/175=0.94 tied best, siglip
+  # 162/175=0.93 close - gemma kept as primary, matches Jon's own
+  # hypothesis for this category and the measured tie doesn't
+  # contradict it.
+  printed_document:
+    primary: gemma
+    supporting: [beit, siglip]
+  # REAL vision-primary category: dinov2/beit/swin/vit21k ALL hit
+  # 26/26=1.00, gemma close behind at 25/26=0.96 but not tied for the
+  # ceiling this time (4 independent towers unanimous vs. gemma's one
+  # miss). dinov2 used as the named representative - NOTE: this project
+  # does not yet have a real "vision consensus" synthetic sensor wired
+  # into the live evidence stream the way vision_primary's policy-level
+  # fallback computes one internally; a single strong tower is used
+  # here instead of Jon's original "trained_vision_consensus" naming
+  # example, flagged as a real simplification, not a silent
+  # substitution - see the proposal doc for the fuller caveat.
+  website_screenshot:
+    primary: dinov2
+    supporting: [gemma, beit, swin, vit21k]
+
+# Policy to use for a category with no class_specific_authority entry
+# (or when the candidate bootstrap class itself has no rule).
+class_specific_fallback_policy: weighted_fusion

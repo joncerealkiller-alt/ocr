@@ -57,6 +57,19 @@ keywords_max_new_tokens: 80
 reasoning_toggle_mechanism: unsupported
 reasoning_enabled: false
 
+# Confirmed by real generation calls, 2026-08-10 (model_console adapter
+# testing): SmolVLM2Loader._run_generate(raw_image=None, prompt) runs
+# without error and produces coherent, on-topic text ("Paris." for a
+# factual question - correct and concise). Worth noting: on a literal
+# "reply with exactly the word PONG" instruction it did NOT comply,
+# instead giving an unprompted multi-sentence description of the arcade
+# game Pong - a real instruction-following weakness, not a mechanism
+# failure (no crash, no garbling, on-topic). text_only_supported=True
+# here means "the code path works and produces grounded text," not "this
+# model follows terse instructions as tightly as Gemma/Qwen/LFM2-VL did."
+# See base_loader.py's text_only_supported docstring.
+text_only_supported: true
+
 # Constrained decoding (2026-07-24) - masks generation to only allow
 # expected-script characters (Latin/accented-Latin letters, digits, this
 # project's own output-format punctuation), preventing off-script token

@@ -12,12 +12,32 @@ do_sample: false
 temperature: 0.1
 top_p: 0.9
 top_k: 20
+# REVERTED 2026-08-13 - briefly raised to 1.1/no_repeat_ngram_size=4
+# after a live repetition-loop finding in agent-mode chat (see
+# feedback_gemma_needed_repetition_guard), then reverted per Jon's
+# direction: this config is ALSO config/pipeline.yaml's classifier
+# model, and the repetition fix belongs on the CHAT-role config
+# (gemma_extract.yaml) instead, not here - keeps the classifier
+# pipeline's own tuning completely untouched by agent-mode chat
+# findings. See gemma_extract.yaml for where the actual fix landed,
+# and model_console/chat_tab.py's MVP_ALLOWED_MODELS ordering for why
+# gemma_extract is now the chat UI's default model instead of this one.
 repetition_penalty: 1.0   # model card doesn't recommend a value; leave neutral until tested
 no_repeat_ngram_size: null
 max_new_tokens: 256
 
 min_pixels: null
 max_pixels: null
+
+# Confirmed by real generation calls, 2026-08-10 (model_console adapter
+# testing): GemmaLoader._run_generate(raw_image=None, prompt) produces
+# correct, sensible output ("PONG" for a literal echo prompt, "Paris"
+# for a factual question) - Gemma-4 is a vision fine-tune of a
+# text-only backbone and its chat template/processor accept a
+# no-image content list without error. Not a general claim about every
+# loader in this project - see base_loader.py's text_only_supported
+# docstring for what "confirmed" means here.
+text_only_supported: true
 
 # Confirmed mechanism: <|think|> token prepended to the system prompt
 # turns reasoning on. Absence of the token = reasoning off. This is a
@@ -40,15 +60,22 @@ restrict_output_charset: true
 prompt_version: v1
 prompt_text: ""
 
-# Gemma-4-specific: image_seq_length / visual token budget. Supported
-# values per model card: 70, 140, 280, 560, 1120. Low budget appropriate
-# here since this is the classifier role only (no OCR/fine text reading
-# required) - model card explicitly recommends lower budgets for
-# classification tasks. If Gemma is ever assigned an OCR/extraction
-# role, this needs raising to 560 or 1120 in a separate config, since
-# extraction is the opposite use case the model card describes.
+# Gemma-4-specific: visual token budget (real per-call control is
+# `max_soft_tokens`, wired through images_kwargs in gemma_loader.py -
+# see that file's own comment). Supported values per model card: 70,
+# 140, 280, 560, 1120.
+#
+# Set to 280, not the originally-intended lower classifier budget
+# (2026-08-05, docs/GEMMA_TOKEN_BUDGET_INVESTIGATION.md): the old
+# call-site bug meant every classify() call was ALREADY running at 280
+# regardless of what this file said (a flat `image_seq_length=` kwarg
+# the installed processor silently ignores) - so 280 reflects real,
+# already-in-production behavior, not a new increase. Confirmed
+# directly: dropping to 140 measurably reduces how much of the image
+# Gemma actually sees, so do not lower this without re-validating
+# classification quality first.
 extra:
-  image_token_budget: 140
+  image_token_budget: 280
   # Moved out of core/loaders/gemma_loader.py's _run_generate() 2026-07-30
   # (was hardcoded there, applied to every call through this loader
   # regardless of config - see that file's own comment at the point

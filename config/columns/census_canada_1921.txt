@@ -1,0 +1,35 @@
+Dwelling house 
+Family
+Name of each person in family
+Parish or Township
+Name of the municipality
+Home owned or rented
+If rented, monthly rent paid
+Class of house
+Material of construction
+Number of rooms occupied by this family
+Relationship to head of family or household
+Sex
+Conjugal condition
+Age at last birthday
+Country or place of birth of person
+Country or place of birth of father
+Country or place of birth of mother
+Year of immigration to Canada
+Year of naturalization
+Racial or tribal origin
+Nationality
+Can speak English
+Can speak French
+Religion
+Can read and write
+Months at school since September 1, 1920
+Chief occupation or trade
+Industry or business
+Employment status
+Total earnings in past 12 months
+Whether out of work on June 1, 1921
+Number of weeks unemployed in past 12 months
+Number of weeks unemployed because of illness
+Time employed in other than chief occupation
+Language commonly spoken / Infirmities

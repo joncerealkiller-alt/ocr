@@ -31,6 +31,19 @@ max_pixels: null
 reasoning_toggle_mechanism: system_prompt
 reasoning_enabled: false
 
+# Same repo_id and loader_class as gemma.yaml, which was empirically
+# confirmed text-only capable via real generation calls, 2026-08-10
+# (model_console adapter testing - "PONG"/"Paris" on gemma.yaml).
+# Extended here by the same same-repo-id precedent used for
+# qwen2b.yaml/qwen3b.yaml, not independently re-tested against THIS
+# config's own settings (different system_prompt/repetition_penalty/
+# image_token_budget) - see base_loader.py's text_only_supported
+# docstring for what "confirmed" means; if this config's specific
+# behavior ever needs re-verifying (e.g. its OCR-transcription system
+# prompt reacting oddly to a text-only call), don't assume this flag
+# guarantees good output, just that the code path won't crash.
+text_only_supported: true
+
 # Constrained decoding (2026-07-24, enabled 2026-07-26) - masks generation
 # to only allow expected-script characters (Latin/accented-Latin letters,
 # digits, this project's own output-format punctuation, including

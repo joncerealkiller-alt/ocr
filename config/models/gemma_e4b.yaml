@@ -56,11 +56,12 @@ prompt_version: v1
 prompt_text: ""
 
 # Same 70/140/280/560/1120 budget options apply per the model card
-# ("all models"), and image_token_budget=140 is held constant at
-# E2B's value on purpose - this comparison isolates model size, not
-# token budget.
+# ("all models"), and image_token_budget is held constant at E2B's
+# value on purpose - this comparison isolates model size, not token
+# budget. Raised 140 -> 280 alongside gemma.yaml, 2026-08-05 - see that
+# file's comment and docs/GEMMA_TOKEN_BUDGET_INVESTIGATION.md.
 extra:
-  image_token_budget: 140
+  image_token_budget: 280
   system_prompt: "You are a strict, non-interpretive archival routing classifier."
   # No load_in_8bit here - this checkpoint's quantization is already
   # baked into its own config.json (quant_method: "gemma"), applied

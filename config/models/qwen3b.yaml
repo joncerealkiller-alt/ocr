@@ -29,6 +29,14 @@ max_pixels: 1003520   # 1280*28*28
 reasoning_toggle_mechanism: unsupported
 reasoning_enabled: false
 
+# Confirmed by real generation calls, 2026-08-10 (model_console adapter
+# testing, run against qwen2b.yaml which shares this exact repo_id):
+# QwenLoader._run_generate(raw_image=None, prompt) produces correct
+# output ("PONG", "Paris"). See base_loader.py's text_only_supported
+# docstring for what "confirmed" means; does NOT extend to
+# qwen25_vl_7b.yaml (different checkpoint, not tested).
+text_only_supported: true
+
 # Constrained decoding (2026-07-24) - masks generation to only allow
 # expected-script characters (Latin/accented-Latin letters, digits, this
 # project's own output-format punctuation), preventing off-script token

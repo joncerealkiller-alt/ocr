@@ -1,0 +1,41 @@
+Dwelling House
+Family household of habitation
+Name of each person in the family
+Place of habitation
+Sex
+Relationship to head
+Marital Status
+Month of Birth
+Year of Birth
+Age at last birthday
+Country or place of Birth
+Year of Immigration to Canada
+Year of naturalization if formerly an alien
+Racial or tribal origin
+Nationality
+Religion
+Chief occupation or trade
+Employment other than chief occupation
+Employer
+Employee
+Working on own account
+Where person is employed
+Weeks Employed in 1910 at Chief Occupation
+Weeks Employed in 1910 at Other Occupations
+Hours Working on Chief Occupation
+Hours Working Other Occupations
+Earnings at chief occupation
+Earnings at Other Occupations
+Wages per hour
+Life insurance
+Accident or Sickness Insurance
+Cost of Insurance
+Months at school in 1910
+Can read
+Can write
+Language Commonly Spoken
+Cost of education
+Blind
+Deaf and Dumb
+Crazy or Lunatic
+Idiotic or Silly 

@@ -1,0 +1,34 @@
+Dwelling House
+Family Household or Institution
+Name
+Sex
+Color
+Relationship to Head
+Relationship Status
+Month and Date of Birth
+Year of Birth
+Age
+Place of Birth
+Year of Immigration
+Yea of Naturalization
+Racial or Tribal origin
+Nationality
+Religion
+Profession
+Living on own means
+Employer
+Employee
+Working on own account
+Working at trade in factory or home
+Months Employed at trade in factory
+Months Employed at trade in home
+Months Employed in other occupation
+Earnings
+Extra Earnings
+Months at School in year
+Can Read
+Can Write
+Can speak English
+Can speak French
+Mother tongue
+infirmaties

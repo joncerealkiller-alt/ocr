@@ -14,7 +14,23 @@ do_sample: false
 temperature: 0.7
 top_p: 0.8
 top_k: 20
-repetition_penalty: 1.15
+# repetition_penalty lowered from 1.15 (2026-08-13) - 1.15 was proven
+# stable for qwen3vl2b but explicitly flagged above as UNTESTED at this
+# larger size, and a live map_land_record extraction confirmed the
+# concern: 59 CONFIRMED place_names ending in "Fort Belle" repeated
+# ~56 times (classic autoregressive repetition degeneration, at greedy
+# decoding since do_sample=false). Testing whether a LOWER penalty
+# helps - counterintuitive at first glance (higher usually fights
+# repetition), but at greedy decoding an aggressive penalty can
+# paradoxically push the model away from its natural stop/next-token
+# choices and trap it cycling through whatever's left un-penalized.
+# 1.05 is a meaningful but not extreme change from 1.15, chosen to
+# isolate whether the DIRECTION helps before trying something more
+# drastic. qwen3vl2b's own 1.15 is untouched - this is scoped to the
+# 4B config only, not a blind revert of proven-good 2B tuning. Revert
+# to 1.15 (or try further down/no_repeat_ngram_size instead) if 1.05
+# doesn't measurably help.
+repetition_penalty: 1.05
 no_repeat_ngram_size: 5
 max_new_tokens: 512
 
@@ -23,6 +39,13 @@ keywords_max_new_tokens: 80
 
 min_pixels: null
 max_pixels: null
+
+# Confirmed by real generation calls, 2026-08-10 (model_console adapter
+# testing): Qwen3VLLoader._run_generate(raw_image=None, prompt)
+# produces correct output ("PONG", "Paris") - see
+# base_loader.py's text_only_supported docstring for what "confirmed"
+# means here; not a general claim about every loader.
+text_only_supported: true
 
 reasoning_toggle_mechanism: unsupported
 reasoning_enabled: false

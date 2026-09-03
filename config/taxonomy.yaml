@@ -1,0 +1,620 @@
+# Single source of truth for this project's document taxonomy - the
+# thing both the models (Gemma's classification prompt/output) and the
+# human-review tools (debug_tools/review_uncertain.py, and eventually
+# ui/classifier_validation_ui.py) consume. See core/taxonomy.py for the
+# loader and docs/TAXONOMY.md for how adding a category/subtype here
+# flows through to the review UI with no code changes.
+#
+# category.id values MUST exactly match core/schema.py's DocumentCategory
+# enum values - core/taxonomy.py's load_taxonomy() validates this at load
+# time and raises loudly on drift, rather than silently tolerating a
+# taxonomy entry with no corresponding real category (or vice versa).
+# This file does NOT define what Gemma is allowed to output - that's
+# still DocumentCategory, a pydantic-validated enum with real structural
+# parsing consequences (core/schema.py, core/loaders/gemma_loader.py).
+# This file defines how humans and review tools PRESENT and NAVIGATE
+# those same categories, plus the (not yet used in production) subtype
+# layer for a planned second classification pass.
+#
+# Field meaning:
+#   id                 - must match a DocumentCategory value exactly
+#                         (or "uncertain_review", the one non-assignable
+#                         routing sentinel - see its enabled: false below)
+#   display_name       - human-facing label
+#   enabled            - false = never offered as an assignable button
+#                         (currently only uncertain_review)
+#   sort_order         - button display order AND classifier-prompt
+#                         bullet order, ascending (2026-08-04: these two
+#                         concerns share one field deliberately - see
+#                         website_screenshot's sort_order=10 below, which
+#                         preserves the original prompt's bullet position
+#                         since its "evaluate this BEFORE the ones below"
+#                         instruction is order-sensitive prose)
+#   description        - one-line description, shown nowhere yet but
+#                         kept for a future tooltip/help panel - NOT fed
+#                         to the classifier (see classifier_guidance)
+#   classifier_guidance - the real, hand-tuned prompt text shown to Gemma
+#                         to disambiguate this category from OTHERS.
+#                         None = not currently offered as a choice in the
+#                         live classifier prompt (core/taxonomy.py's
+#                         categories_for_classifier_prompt() filters on
+#                         this being set, independent of `enabled`).
+#   color              - hex string for the review UI's button colour;
+#                         null = no colour preference (fall back to a
+#                         UI-chosen default)
+#   keyboard_shortcut   - not yet used by any tool; reserved for a future
+#                         fast-review key binding
+#   supports_subtypes  - whether this category has a defined subtype
+#                         list below (Mode 3 / Subtype Annotation reads
+#                         this to know whether it has anything to show
+#                         for an image already assigned to this category)
+#   subtypes           - list of {id, display_name, sort_order,
+#                         description, classifier_guidance}; empty list
+#                         if supports_subtypes is false. classifier_
+#                         guidance is None for every subtype today - no
+#                         subtype-classification pass exists yet to write
+#                         tuned text for (see docs/TAXONOMY.md)
+
+categories:
+  - id: website_screenshot
+    display_name: Website Screenshot
+    enabled: true
+    sort_order: 10
+    description: >-
+      A screenshot of a genealogy/archive website's UI - not a scan or
+      photo of a physical document.
+    classifier_guidance: >-
+      a screenshot of a genealogy or archive website's user interface -
+      search results, catalog/finding-aid metadata pages, database
+      record or "Hints" cards - rather than a scan or photograph of the
+      physical document itself. Often contains a small embedded
+      thumbnail of the real document, but the image as a whole is UI
+      chrome + rendered webpage text, not the document. See the FIRST
+      check above - evaluate this category before the ones below. If
+      the screenshot contains a small embedded thumbnail of a table/
+      manifest/document, classify by the SURROUNDING webpage UI (labeled
+      fields, navigation, branding), not by the thumbnail's content - a
+      genealogy record page showing "Name: ... Birth: ... Arrival: ..."
+      next to a tiny manifest thumbnail is website_screenshot, not
+      dense_tabular_rows, even though the thumbnail itself looks
+      tabular. This also covers screenshots of AI chatbot / conversational
+      assistant interfaces (chat bubbles, dark-mode messaging UI, "AI
+      Overview" answer cards) - these are software UI, not printed
+      prose, even when the visible chat text is dense and article-like.
+    color: "#b8d8d0"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: social_media
+        display_name: Social Media
+        sort_order: 10
+        description: ""
+      - id: search_engine
+        display_name: Search Engine
+        sort_order: 20
+        description: ""
+      - id: genealogy_site
+        display_name: Genealogy Site
+        sort_order: 30
+        description: ""
+      - id: forum
+        display_name: Forum
+        sort_order: 40
+        description: ""
+      - id: shopping
+        display_name: Shopping
+        sort_order: 50
+        description: ""
+      - id: ai_chat_assistant
+        display_name: AI Chat / Assistant
+        sort_order: 60
+        description: >-
+          Conversational AI interface (chat bubbles, dark-mode messaging
+          UI, "AI Overview" answer cards) - added 2026-08-09 after a
+          real review pass found 5/20 flagged misclassifications were
+          exactly this, called printed_document instead.
+
+  - id: dense_tabular_rows
+    display_name: Dense Tabular Rows
+    enabled: true
+    sort_order: 20
+    description: >-
+      Repeating rows of similar structured data (e.g. passenger
+      manifests, ledgers of records). Rule of thumb vs. map_land_record
+      (2026-08-04, Jon): if a person could navigate GEOGRAPHICALLY from
+      it, it's a map; if it's primarily a structured REGISTER of
+      records, it belongs here - even if the underlying subject is land.
+    classifier_guidance: >-
+      documents with MANY REPEATED similar rows sharing the same set of
+      columns - specifically census pages and passenger manifests
+      (confirmed as the only two document types in this project that
+      have this structure). The defining test is REPETITION: dozens of
+      rows, each a different person, filled into the same fixed column
+      layout (name/age/sex/birthplace/occupation, or similar). Do NOT
+      use this category for a document that merely has a form-like or
+      two-column layout but does NOT repeat the same row structure many
+      times - a marriage certificate, land patent, or similar
+      single-entity form with a handful of one-time labeled fields (Name
+      of Bride, Age, Residence, etc., each appearing ONCE) belongs in
+      printed_document instead, even though it has visible
+      structure/columns. Ask: "does this page repeat the same columns
+      for many different people/rows, or does it state a handful of
+      facts about one person/entity once?" Many repeats ->
+      dense_tabular_rows. One instance each -> printed_document.
+    color: "#a8e6a1"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: census
+        display_name: Census
+        sort_order: 10
+        description: ""
+      - id: passenger_manifest
+        display_name: Passenger Manifest
+        sort_order: 20
+        description: ""
+      - id: homestead_register
+        display_name: Homestead Register
+        sort_order: 30
+        description: ""
+      - id: assessment_roll
+        display_name: Assessment Roll
+        sort_order: 40
+        description: ""
+      - id: land_grid_parcel_register
+        display_name: Land Grid / Parcel Register
+        sort_order: 50
+        description: >-
+          A tabular REGISTER of land parcels (not geographically
+          navigable) - contrast with map_land_record's township_plat/
+          cadastral_map subtypes, which are.
+      - id: parish_register
+        display_name: Parish Register
+        sort_order: 60
+        description: >-
+          Baptism/marriage/burial register with many repeated rows sharing
+          the same printed column structure - contrast with handwritten_
+          ledger's parish_notes subtype, which is non-tabular parish-
+          related handwritten material.
+
+  - id: handwritten_ledger
+    display_name: Handwritten Ledger
+    enabled: true
+    sort_order: 30
+    description: >-
+      Handwritten entries, often in a tabular or list structure.
+    classifier_guidance: >-
+      dense handwritten records, registers, or ledgers without a clear
+      printed form structure.
+    color: "#d1a875"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: account_ledger
+        display_name: Account / Business Ledger
+        sort_order: 10
+        description: ""
+      - id: diary_journal
+        display_name: Diary / Journal Entry
+        sort_order: 20
+        description: ""
+      - id: estate_probate_record
+        display_name: Estate / Probate Record
+        sort_order: 30
+        description: ""
+      - id: correspondence_log
+        display_name: Correspondence Log
+        sort_order: 40
+        description: ""
+      - id: parish_notes
+        display_name: Parish Notes
+        sort_order: 50
+        description: >-
+          Non-tabular parish-related handwritten entries, marginalia, or
+          individual notes not in register-row form - contrast with
+          dense_tabular_rows's parish_register subtype.
+
+  - id: printed_document
+    display_name: Printed Document
+    enabled: true
+    sort_order: 40
+    description: >-
+      Typed or printed prose without a repeating tabular structure.
+    classifier_guidance: >-
+      typed or printed prose (letters, articles, certificates) without a
+      tabular/form layout, AND single-entity forms with a handful of
+      one-time labeled fields (see dense_tabular_rows above for the
+      exact distinction - a marriage certificate belongs here, not in
+      dense_tabular_rows, because its fields each appear once, not
+      repeated across many rows). Do NOT use this category for a
+      photograph of an engraved headstone, grave marker, or memorial
+      plaque, even though the engraved text is fully legible - that is
+      cemetery_photo, regardless of how much of the image is occupied by
+      readable text.
+    color: "#a0c8f0"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: book_page
+        display_name: Book Page
+        sort_order: 10
+        description: ""
+      - id: journal_article
+        display_name: Journal Article
+        sort_order: 20
+        description: ""
+      - id: newspaper
+        display_name: Newspaper
+        sort_order: 30
+        description: ""
+      - id: directory
+        display_name: Directory
+        sort_order: 40
+        description: ""
+      - id: typed_letter
+        display_name: Typed Letter
+        sort_order: 50
+        description: ""
+      - id: government_form
+        display_name: Government Form
+        sort_order: 60
+        description: ""
+      - id: certificate
+        display_name: Certificate
+        sort_order: 70
+        description: ""
+      - id: passport
+        display_name: Passport
+        sort_order: 80
+        description: ""
+
+  - id: portrait_photo
+    display_name: Portrait Photo
+    enabled: true
+    sort_order: 50
+    description: >-
+      A photograph of one or more people, no significant document text.
+    classifier_guidance: >-
+      a single photograph (or a small number of separate photographs,
+      not arranged as chart nodes) primarily depicting a person or
+      people, with negligible or no accompanying text. Do NOT use this
+      category if you see multiple portrait thumbnails each paired with
+      a name and date label in a grid/tree layout — that is
+      genealogy_chart, not portrait_photo, even though individual
+      thumbnails may look like plain photos. Do NOT use this category
+      for a grid or collection of multiple separate photos assembled
+      together (a phone photo gallery, an album page) — that's
+      photo_collage. Do NOT use this category if the subject is a grave
+      marker or cemetery scene with no living person present — that is
+      cemetery_photo. Do NOT use this category if MULTIPLE separate/
+      distinct photographs are visible in the frame, even if one is
+      noticeably larger or more prominent than the others — that's
+      photo_collage regardless of size disparity between the photos; the
+      presence of more than one distinct photograph is what matters, not
+      which one dominates visually. Do NOT use this category if the
+      photograph is embedded within a larger body of surrounding text
+      (e.g. a newspaper article) where the text is the dominant content
+      and the photo is one illustrative element — that's mixed_text_image,
+      not portrait_photo, regardless of how prominently a person's face
+      appears in the embedded photo.
+    color: "#f0c8a0"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: studio_portrait
+        display_name: Studio Portrait
+        sort_order: 10
+        description: ""
+      - id: family_group_portrait
+        display_name: Family Group Portrait
+        sort_order: 20
+        description: ""
+      - id: military_portrait
+        display_name: Military / Uniform Portrait
+        sort_order: 30
+        description: ""
+      - id: wedding_portrait
+        display_name: Wedding Portrait
+        sort_order: 40
+        description: ""
+      - id: school_class_photo
+        display_name: School / Class Photo
+        sort_order: 50
+        description: ""
+      - id: candid_informal_portrait
+        display_name: Candid / Informal Portrait
+        sort_order: 60
+        description: >-
+          Any setting, indoor or outdoor, formal or informal - people are
+          still the clear focus, not incidental background context (that
+          distinction, not the setting, is what makes this portrait_photo
+          rather than casual_photo).
+
+  - id: map_land_record
+    display_name: Map / Land Record
+    enabled: true
+    sort_order: 60
+    description: >-
+      Maps, plats, and land survey/ownership records. Rule of thumb vs.
+      dense_tabular_rows (2026-08-04, Jon): if a person could navigate
+      GEOGRAPHICALLY from it, it's here; if it's primarily a structured
+      register of records, it belongs there instead.
+    classifier_guidance: >-
+      maps, satellite/aerial views, land surveys, or geographic layouts.
+    color: "#f0a0a0"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: dls_township_map
+        display_name: DLS Township Map
+        sort_order: 10
+        description: >-
+          Dominion Land Survey township map - "Township No. X, Range Y
+          West of Principal Meridian" style layout, common across this
+          corpus's prairie-province content.
+      - id: township_plat
+        display_name: Township Plat
+        sort_order: 20
+        description: ""
+      - id: cadastral_map
+        display_name: Cadastral Map
+        sort_order: 30
+        description: ""
+      - id: survey_plan
+        display_name: Survey Plan
+        sort_order: 40
+        description: ""
+      - id: land_ownership_map
+        display_name: Land Ownership Map
+        sort_order: 50
+        description: ""
+
+  - id: mixed_text_image
+    display_name: Mixed Text/Image
+    enabled: true
+    sort_order: 70
+    description: >-
+      A page combining printed/handwritten text with a photo or
+      illustration.
+    classifier_guidance: >-
+      a combination of substantial text AND a photograph/illustration in
+      the same image, and the layout is NOT a genealogy chart (see
+      below). Text volume does not need to closely balance the photo's
+      visual share - a newspaper/article clipping where dense
+      surrounding text clearly outweighs a smaller embedded photograph
+      still belongs here (not portrait_photo/printed_document), as long
+      as a real embedded photograph is present, not just a small icon or
+      logo. Loosened 2026-08-09 after a real review case (a newspaper
+      clipping, mostly article text with one embedded photo) was
+      correctly identified as belonging here despite text clearly
+      dominating - the earlier "neither dominates" wording was too
+      strict for that case.
+    color: "#c9a0e0"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: newspaper_clipping_with_photo
+        display_name: Newspaper Clipping with Photo
+        sort_order: 10
+        description: ""
+      - id: obituary_with_photo
+        display_name: Obituary with Photo
+        sort_order: 20
+        description: ""
+      - id: museum_exhibit_placard
+        display_name: Museum / Exhibit Placard
+        sort_order: 30
+        description: ""
+      - id: yearbook_page
+        display_name: Yearbook Page
+        sort_order: 40
+        description: ""
+      - id: biography_page_with_photo
+        display_name: Biography Page with Photo
+        sort_order: 50
+        description: ""
+
+  - id: genealogy_chart
+    display_name: Genealogy Chart
+    enabled: true
+    sort_order: 80
+    description: Family tree / pedigree chart layouts.
+    classifier_guidance: >-
+      a family tree, pedigree chart, or lineage diagram with multiple
+      person-nodes arranged in a grid or tree structure, each typically
+      showing a name, birth/death years, and/or a small portrait
+      thumbnail. Choose this category even if individual thumbnails look
+      like plain portrait photos — the presence of multiple structured
+      name+date nodes in a chart layout means this is NOT portrait_photo.
+    color: "#f0e08a"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: pedigree_chart
+        display_name: Pedigree Chart
+        sort_order: 10
+        description: Ancestor-focused - traces backward from one person.
+      - id: descendancy_chart
+        display_name: Descendancy Chart
+        sort_order: 20
+        description: Descendant-focused - traces forward from one person.
+      - id: family_group_sheet
+        display_name: Family Group Sheet
+        sort_order: 30
+        description: ""
+      - id: fan_chart
+        display_name: Fan Chart
+        sort_order: 40
+        description: ""
+      - id: relationship_kinship_diagram
+        display_name: Relationship / Kinship Diagram
+        sort_order: 50
+        description: ""
+
+  - id: photo_collage
+    display_name: Photo Collage / Album Page
+    enabled: true
+    sort_order: 90
+    description: >-
+      Multiple photos shown together in one image - a physical
+      scrapbook/album page with mounted photos and handwritten captions,
+      or a digital screenshot of a photo gallery/grid UI. One category
+      for both, since the defining trait is "multiple photos in one
+      frame," not physical-vs-digital origin.
+    classifier_guidance: >-
+      an image containing multiple separate photographs shown together
+      in one frame - a physical scrapbook/album page with several
+      mounted photos (with or without handwritten captions), a digital
+      screenshot of a photo gallery/grid UI (e.g. a phone's camera
+      roll), or any other assembled collection of multiple photographs.
+      Covers both modern and archival material, and any mix of subject
+      matter (people, places, boats, buildings, scenery). Do NOT use
+      this category if the photos are arranged as chart nodes, each
+      labeled with a name and birth/death years in a tree or grid meant
+      to show family relationships - that is genealogy_chart instead,
+      even if individual photos look like plain snapshots. A collage
+      remains photo_collage even when the individual photos vary
+      substantially in size - do not default to the largest photo's
+      likely category (e.g. portrait_photo) just because it's visually
+      dominant.
+    color: "#e0c8e8"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: scrapbook_album_page
+        display_name: Scrapbook / Album Page
+        sort_order: 10
+        description: ""
+      - id: digital_photo_grid
+        display_name: Digital Photo Grid / Gallery Screenshot
+        sort_order: 20
+        description: ""
+      - id: memorial_tribute_collage
+        display_name: Memorial / Tribute Collage
+        sort_order: 30
+        description: ""
+      - id: contact_sheet
+        display_name: Contact Sheet
+        sort_order: 40
+        description: ""
+
+  - id: casual_photo
+    display_name: Casual Photo
+    enabled: true
+    sort_order: 100
+    description: >-
+      A personal/candid photograph that isn't a portrait (no person as
+      the primary subject) and isn't a document - food, objects, scenery.
+    classifier_guidance: >-
+      a personal, candid photograph - not a portrait, not a document,
+      not genealogy-specific material (maps, cemetery photos, charts).
+      Everyday subject matter: food, objects, buildings, scenery,
+      activities. The image is fundamentally a photograph being
+      presented - a caption or label near the photo (even a printed
+      one, even one giving names/dates/location) doesn't change this;
+      the caption is just context accompanying the photo, not a
+      document the photo happens to illustrate. Do NOT use this
+      category if a person is the dominant subject of the photo - that
+      is portrait_photo instead.
+    color: "#d8e0b8"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: building_homestead_exterior
+        display_name: Building / Homestead Exterior
+        sort_order: 10
+        description: ""
+      - id: landscape_scenery
+        display_name: Landscape / Scenery
+        sort_order: 20
+        description: ""
+      - id: food
+        display_name: Food
+        sort_order: 30
+        description: ""
+      - id: object_artifact
+        display_name: Object / Artifact
+        sort_order: 40
+        description: ""
+      - id: event_activity
+        display_name: Event / Activity
+        sort_order: 50
+        description: ""
+      - id: vehicle
+        display_name: Vehicle
+        sort_order: 60
+        description: ""
+
+  - id: cemetery_photo
+    display_name: Cemetery / Headstone Photo
+    enabled: true
+    sort_order: 15
+    # Moved from 110 to 15 (2026-08-09) - right after website_screenshot
+    # (10). This category's own guidance claims priority over
+    # printed_document/portrait_photo/casual_photo/mixed_text_image, but
+    # that claim had ZERO measurable effect while sort_order stayed at
+    # 110 (dead last in the rendered prompt) - a real re-classification
+    # test on 3 flagged grave-marker-plaque images showed identical
+    # printed_document output before and after the guidance-text edit.
+    # website_screenshot's own "evaluate before the ones below"
+    # instruction demonstrably works BECAUSE it sits at sort_order 10 -
+    # this moves cemetery_photo to the same kind of early position so
+    # its priority claim has actual positional leverage, not just wording.
+    description: >-
+      A close-up headstone/grave marker, or a wider cemetery scene with
+      grave markers - kept distinct from casual_photo since these carry
+      direct genealogical evidence (names, dates) rather than being
+      incidental personal photos.
+    classifier_guidance: >-
+      a photograph of a close-up headstone/grave marker, or a wider
+      cemetery scene containing grave markers, crosses, or memorial
+      stones - no living person is the subject. Evaluate this category
+      before portrait_photo, casual_photo, printed_document, and
+      mixed_text_image: a cemetery scene is NOT casual_photo even though
+      it may look like an incidental outdoor photo, because it carries
+      direct genealogical evidence (a specific burial location); it is
+      NOT mixed_text_image even when paired with a substantial caption
+      naming the cemetery, location, or deceased, because that caption
+      is exactly the kind of genealogically-significant identifying
+      information this category exists to capture, not general prose;
+      and it is NOT printed_document even when the engraved text on the
+      marker is fully legible - legible engraved text does NOT make this
+      a printed_document, the memorial/photographic nature takes
+      priority over text legibility. Do NOT use this category for a
+      photograph of a living person or people, even if taken outdoors in
+      a similar setting - that is portrait_photo.
+    color: "#b0b8c8"
+    keyboard_shortcut: null
+    supports_subtypes: true
+    subtypes:
+      - id: individual_headstone_closeup
+        display_name: Individual Headstone Close-up
+        sort_order: 10
+        description: ""
+      - id: family_plot_multiple_markers
+        display_name: Family Plot / Multiple Markers
+        sort_order: 20
+        description: ""
+      - id: cemetery_wide_shot
+        display_name: Cemetery Wide Shot
+        sort_order: 30
+        description: ""
+      - id: memorial_plaque_cenotaph
+        display_name: Memorial Plaque / Cenotaph
+        sort_order: 40
+        description: ""
+
+  - id: uncertain_review
+    display_name: Uncertain / Review Queue
+    enabled: false
+    sort_order: 999
+    description: >-
+      Classifier routing state, not a real document category - excluded
+      from assignable buttons in every review mode.
+    classifier_guidance: >-
+      use this if you cannot confidently place the image in any category
+      above, or if image quality prevents a reliable determination.
+    color: null
+    keyboard_shortcut: null
+    supports_subtypes: false
+    subtypes: []
