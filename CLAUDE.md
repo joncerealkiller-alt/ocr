@@ -6,6 +6,8 @@ Do not frame large tasks as reasons to stop. Do not suggest wrapping up, deferri
 
 Do not ask “want me to continue?” after completing an intermediate phase when the user has already given an ongoing implementation direction. Continue to the next logical step unless a real decision point requires input.
 
+Commit working tools and validated changes when they reach a working state; don't hold commits hostage to a larger milestone. A tool that works today belongs in history today — waiting for "all the year templates to be finished first" left 2,795 lines of calibration UI untracked for a month (discovered 2026-09-02). Commit at proven checkpoints, with the evidence in the message.
+
 ## Check docs/CODE_MAP.md before re-deriving how something already works
 
 Before exploring the codebase to find an existing helper, schema, or
