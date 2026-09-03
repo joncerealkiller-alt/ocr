@@ -1,0 +1,416 @@
+Stage 2: linear probe accuracy across 5 hook locations (A vision_encoder, B vision_projected, C decoder_early, D decoder_mid, E decoder_final).
+
+Loading the SAME held-out split as Stage 1 / gemma_flat8...
+Ground-truth classes (8): ['dense_tabular_rows', 'genealogy_chart', 'handwritten_ledger', 'map_land_record', 'mixed_text_image', 'portrait_photo', 'printed_document', 'website_screenshot']
+train=1569 val=332 test=332
+
+Extracting features via chunked subprocesses (5 locations per image, one forward pass)...
+
+  [train] extracting chunk [0:40] via subprocess (all 5 locations)...
+  [train] extracting chunk [40:80] via subprocess (all 5 locations)...
+  [train] extracting chunk [80:120] via subprocess (all 5 locations)...
+  [train] extracting chunk [120:160] via subprocess (all 5 locations)...
+  [train] extracting chunk [160:200] via subprocess (all 5 locations)...
+  [train] extracting chunk [200:240] via subprocess (all 5 locations)...
+  [train] extracting chunk [240:280] via subprocess (all 5 locations)...
+  [train] extracting chunk [280:320] via subprocess (all 5 locations)...
+  [train] extracting chunk [320:360] via subprocess (all 5 locations)...
+  [train] extracting chunk [360:400] via subprocess (all 5 locations)...
+  [train] extracting chunk [400:440] via subprocess (all 5 locations)...
+  [train] extracting chunk [440:480] via subprocess (all 5 locations)...
+  [train] extracting chunk [480:520] via subprocess (all 5 locations)...
+  [train] extracting chunk [520:560] via subprocess (all 5 locations)...
+  [train] extracting chunk [560:600] via subprocess (all 5 locations)...
+  [train] extracting chunk [600:640] via subprocess (all 5 locations)...
+  [train] extracting chunk [640:680] via subprocess (all 5 locations)...
+  [train] extracting chunk [680:720] via subprocess (all 5 locations)...
+  [train] extracting chunk [720:760] via subprocess (all 5 locations)...
+  [train] extracting chunk [760:800] via subprocess (all 5 locations)...
+  [train] extracting chunk [800:840] via subprocess (all 5 locations)...
+  [train] extracting chunk [840:880] via subprocess (all 5 locations)...
+  [train] extracting chunk [880:920] via subprocess (all 5 locations)...
+  [train] extracting chunk [920:960] via subprocess (all 5 locations)...
+  [train] extracting chunk [960:1000] via subprocess (all 5 locations)...
+  [train] extracting chunk [1000:1040] via subprocess (all 5 locations)...
+  [train] extracting chunk [1040:1080] via subprocess (all 5 locations)...
+  [train] extracting chunk [1080:1120] via subprocess (all 5 locations)...
+  [train] extracting chunk [1120:1160] via subprocess (all 5 locations)...
+  [train] extracting chunk [1160:1200] via subprocess (all 5 locations)...
+  [train] extracting chunk [1200:1240] via subprocess (all 5 locations)...
+  [train] extracting chunk [1240:1280] via subprocess (all 5 locations)...
+  [train] extracting chunk [1280:1320] via subprocess (all 5 locations)...
+  [train] extracting chunk [1320:1360] via subprocess (all 5 locations)...
+  [train] extracting chunk [1360:1400] via subprocess (all 5 locations)...
+  [train] extracting chunk [1400:1440] via subprocess (all 5 locations)...
+  [train] extracting chunk [1440:1480] via subprocess (all 5 locations)...
+  [train] extracting chunk [1480:1520] via subprocess (all 5 locations)...
+  [train] extracting chunk [1520:1560] via subprocess (all 5 locations)...
+  [train] extracting chunk [1560:1569] via subprocess (all 5 locations)...
+  [val] extracting chunk [0:40] via subprocess (all 5 locations)...
+  [val] extracting chunk [40:80] via subprocess (all 5 locations)...
+  [val] extracting chunk [80:120] via subprocess (all 5 locations)...
+  [val] extracting chunk [120:160] via subprocess (all 5 locations)...
+  [val] extracting chunk [160:200] via subprocess (all 5 locations)...
+  [val] extracting chunk [200:240] via subprocess (all 5 locations)...
+  [val] extracting chunk [240:280] via subprocess (all 5 locations)...
+  [val] extracting chunk [280:320] via subprocess (all 5 locations)...
+  [val] extracting chunk [320:332] via subprocess (all 5 locations)...
+  [test] extracting chunk [0:40] via subprocess (all 5 locations)...
+  [test] extracting chunk [40:80] via subprocess (all 5 locations)...
+  [test] extracting chunk [80:120] via subprocess (all 5 locations)...
+  [test] extracting chunk [120:160] via subprocess (all 5 locations)...
+  [test] extracting chunk [160:200] via subprocess (all 5 locations)...
+  [test] extracting chunk [200:240] via subprocess (all 5 locations)...
+  [test] extracting chunk [240:280] via subprocess (all 5 locations)...
+  [test] extracting chunk [280:320] via subprocess (all 5 locations)...
+  [test] extracting chunk [320:332] via subprocess (all 5 locations)...
+  vision_encoder: dim=768
+  vision_projected: dim=1536
+  decoder_early: dim=1536
+  decoder_mid: dim=1536
+  decoder_final: dim=1536
+Cached features to J:\Genealogy\genealogy_pipeline\data\outputs\gemma_hidden_state_probe\features_stage2.pt
+
+
+======================================================================
+Location: vision_encoder
+======================================================================
+train_x=(1568, 768) val_x=(332, 768) test_x=(332, 768)
+  epoch    1  train_loss=2.2655  val_acc=0.623
+  epoch   50  train_loss=0.0387  val_acc=0.904
+  epoch  100  train_loss=0.0154  val_acc=0.910
+  epoch  150  train_loss=0.0110  val_acc=0.907
+  epoch  200  train_loss=0.0094  val_acc=0.907
+  epoch  250  train_loss=0.0087  val_acc=0.910
+  epoch  300  train_loss=0.0083  val_acc=0.910
+  best val_acc during training: 0.913 (checkpoint selected on val, never test)
+
+=== VAL[vision_encoder] accuracy: 303/332 (91.3%) ===
+
+Per-category accuracy (VAL[vision_encoder]):
+  dense_tabular_rows   89/97 (91.8%)
+  genealogy_chart      0/1 (0.0%)
+  handwritten_ledger   0/4 (0.0%)
+  map_land_record      11/14 (78.6%)
+  mixed_text_image     1/3 (33.3%)
+  portrait_photo       12/12 (100.0%)
+  printed_document     164/175 (93.7%)
+  website_screenshot   26/26 (100.0%)
+
+Confusion matrix (VAL[vision_encoder], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    89          0           2           0           0           1           1           4           
+genealogy_chart       0           0           0           0           0           0           0           1           
+handwritten_ledger    3           0           0           0           0           0           1           0           
+map_land_record       0           0           0           11          0           1           1           1           
+mixed_text_image      0           0           0           0           1           1           1           0           
+portrait_photo        0           0           0           0           0           12          0           0           
+printed_document      2           0           3           0           1           1           164         4           
+website_screenshot    0           0           0           0           0           0           0           26          
+
+Mean softmax confidence, correct preds:  0.976
+Mean softmax confidence, wrong preds:     0.861
+
+=== TEST[vision_encoder] accuracy: 307/332 (92.5%) ===
+
+Per-category accuracy (TEST[vision_encoder]):
+  dense_tabular_rows   95/97 (97.9%)
+  genealogy_chart      1/1 (100.0%)
+  handwritten_ledger   3/4 (75.0%)
+  map_land_record      12/14 (85.7%)
+  mixed_text_image     1/3 (33.3%)
+  portrait_photo       9/12 (75.0%)
+  printed_document     161/175 (92.0%)
+  website_screenshot   25/26 (96.2%)
+
+Confusion matrix (TEST[vision_encoder], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    95          0           2           0           0           0           0           0           
+genealogy_chart       0           1           0           0           0           0           0           0           
+handwritten_ledger    0           0           3           0           0           0           1           0           
+map_land_record       2           0           0           12          0           0           0           0           
+mixed_text_image      0           0           0           0           1           2           0           0           
+portrait_photo        0           0           0           0           0           9           3           0           
+printed_document      3           0           4           1           2           2           161         2           
+website_screenshot    0           0           0           0           0           0           1           25          
+
+Mean softmax confidence, correct preds:  0.975
+Mean softmax confidence, wrong preds:     0.757
+
+======================================================================
+Location: vision_projected
+======================================================================
+train_x=(1568, 1536) val_x=(332, 1536) test_x=(332, 1536)
+  epoch    1  train_loss=2.2385  val_acc=0.566
+  epoch   50  train_loss=0.0741  val_acc=0.901
+  epoch  100  train_loss=0.0195  val_acc=0.913
+  epoch  150  train_loss=0.0128  val_acc=0.916
+  epoch  200  train_loss=0.0105  val_acc=0.910
+  epoch  250  train_loss=0.0093  val_acc=0.910
+  epoch  300  train_loss=0.0087  val_acc=0.916
+  best val_acc during training: 0.916 (checkpoint selected on val, never test)
+
+=== VAL[vision_projected] accuracy: 304/332 (91.6%) ===
+
+Per-category accuracy (VAL[vision_projected]):
+  dense_tabular_rows   93/97 (95.9%)
+  genealogy_chart      0/1 (0.0%)
+  handwritten_ledger   1/4 (25.0%)
+  map_land_record      12/14 (85.7%)
+  mixed_text_image     2/3 (66.7%)
+  portrait_photo       11/12 (91.7%)
+  printed_document     159/175 (90.9%)
+  website_screenshot   26/26 (100.0%)
+
+Confusion matrix (VAL[vision_projected], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    93          0           2           0           0           1           1           0           
+genealogy_chart       0           0           0           0           0           0           0           1           
+handwritten_ledger    3           0           1           0           0           0           0           0           
+map_land_record       1           0           0           12          0           1           0           0           
+mixed_text_image      0           0           0           0           2           0           1           0           
+portrait_photo        0           0           0           0           0           11          1           0           
+printed_document      2           0           4           0           5           1           159         4           
+website_screenshot    0           0           0           0           0           0           0           26          
+
+Mean softmax confidence, correct preds:  0.981
+Mean softmax confidence, wrong preds:     0.926
+
+=== TEST[vision_projected] accuracy: 303/332 (91.3%) ===
+
+Per-category accuracy (TEST[vision_projected]):
+  dense_tabular_rows   95/97 (97.9%)
+  genealogy_chart      1/1 (100.0%)
+  handwritten_ledger   2/4 (50.0%)
+  map_land_record      13/14 (92.9%)
+  mixed_text_image     2/3 (66.7%)
+  portrait_photo       9/12 (75.0%)
+  printed_document     156/175 (89.1%)
+  website_screenshot   25/26 (96.2%)
+
+Confusion matrix (TEST[vision_projected], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    95          0           2           0           0           0           0           0           
+genealogy_chart       0           1           0           0           0           0           0           0           
+handwritten_ledger    0           0           2           1           0           0           1           0           
+map_land_record       0           0           1           13          0           0           0           0           
+mixed_text_image      0           0           0           0           2           1           0           0           
+portrait_photo        0           0           0           0           3           9           0           0           
+printed_document      5           0           4           0           5           2           156         3           
+website_screenshot    1           0           0           0           0           0           0           25          
+
+Mean softmax confidence, correct preds:  0.980
+Mean softmax confidence, wrong preds:     0.827
+
+======================================================================
+Location: decoder_early
+======================================================================
+train_x=(1568, 1536) val_x=(332, 1536) test_x=(332, 1536)
+  epoch    1  train_loss=2.0728  val_acc=0.464
+  epoch   50  train_loss=0.1746  val_acc=0.858
+  epoch  100  train_loss=0.0674  val_acc=0.886
+  epoch  150  train_loss=0.0810  val_acc=0.886
+  epoch  200  train_loss=0.0367  val_acc=0.904
+  epoch  250  train_loss=0.0309  val_acc=0.907
+  epoch  300  train_loss=0.0273  val_acc=0.910
+  best val_acc during training: 0.910 (checkpoint selected on val, never test)
+
+=== VAL[decoder_early] accuracy: 302/332 (91.0%) ===
+
+Per-category accuracy (VAL[decoder_early]):
+  dense_tabular_rows   90/97 (92.8%)
+  genealogy_chart      0/1 (0.0%)
+  handwritten_ledger   2/4 (50.0%)
+  map_land_record      11/14 (78.6%)
+  mixed_text_image     3/3 (100.0%)
+  portrait_photo       11/12 (91.7%)
+  printed_document     160/175 (91.4%)
+  website_screenshot   25/26 (96.2%)
+
+Confusion matrix (VAL[decoder_early], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    90          0           1           0           0           0           1           5           
+genealogy_chart       1           0           0           0           0           0           0           0           
+handwritten_ledger    2           0           2           0           0           0           0           0           
+map_land_record       0           0           0           11          0           1           1           1           
+mixed_text_image      0           0           0           0           3           0           0           0           
+portrait_photo        0           0           0           1           0           11          0           0           
+printed_document      3           0           4           1           1           2           160         4           
+website_screenshot    0           0           0           0           0           0           1           25          
+
+Mean softmax confidence, correct preds:  0.951
+Mean softmax confidence, wrong preds:     0.742
+
+=== TEST[decoder_early] accuracy: 301/332 (90.7%) ===
+
+Per-category accuracy (TEST[decoder_early]):
+  dense_tabular_rows   95/97 (97.9%)
+  genealogy_chart      1/1 (100.0%)
+  handwritten_ledger   1/4 (25.0%)
+  map_land_record      12/14 (85.7%)
+  mixed_text_image     1/3 (33.3%)
+  portrait_photo       8/12 (66.7%)
+  printed_document     158/175 (90.3%)
+  website_screenshot   25/26 (96.2%)
+
+Confusion matrix (TEST[decoder_early], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    95          0           1           0           0           0           0           1           
+genealogy_chart       0           1           0           0           0           0           0           0           
+handwritten_ledger    0           0           1           1           0           0           2           0           
+map_land_record       0           0           1           12          0           1           0           0           
+mixed_text_image      0           0           0           0           1           2           0           0           
+portrait_photo        0           0           0           0           1           8           2           1           
+printed_document      3           0           6           3           1           2           158         2           
+website_screenshot    1           0           0           0           0           0           0           25          
+
+Mean softmax confidence, correct preds:  0.958
+Mean softmax confidence, wrong preds:     0.686
+
+======================================================================
+Location: decoder_mid
+======================================================================
+train_x=(1568, 1536) val_x=(332, 1536) test_x=(332, 1536)
+  epoch    1  train_loss=2.1838  val_acc=0.578
+  epoch   50  train_loss=0.0613  val_acc=0.898
+  epoch  100  train_loss=0.0150  val_acc=0.916
+  epoch  150  train_loss=0.0091  val_acc=0.922
+  epoch  200  train_loss=0.0076  val_acc=0.922
+  epoch  250  train_loss=0.0071  val_acc=0.922
+  epoch  300  train_loss=0.0069  val_acc=0.922
+  best val_acc during training: 0.925 (checkpoint selected on val, never test)
+
+=== VAL[decoder_mid] accuracy: 307/332 (92.5%) ===
+
+Per-category accuracy (VAL[decoder_mid]):
+  dense_tabular_rows   91/97 (93.8%)
+  genealogy_chart      0/1 (0.0%)
+  handwritten_ledger   3/4 (75.0%)
+  map_land_record      12/14 (85.7%)
+  mixed_text_image     2/3 (66.7%)
+  portrait_photo       11/12 (91.7%)
+  printed_document     163/175 (93.1%)
+  website_screenshot   25/26 (96.2%)
+
+Confusion matrix (VAL[decoder_mid], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    91          0           0           0           1           0           2           3           
+genealogy_chart       1           0           0           0           0           0           0           0           
+handwritten_ledger    1           0           3           0           0           0           0           0           
+map_land_record       0           0           0           12          0           0           1           1           
+mixed_text_image      0           0           0           0           2           1           0           0           
+portrait_photo        0           0           0           0           0           11          1           0           
+printed_document      2           1           3           1           1           2           163         2           
+website_screenshot    0           0           0           0           0           0           1           25          
+
+Mean softmax confidence, correct preds:  0.975
+Mean softmax confidence, wrong preds:     0.808
+
+=== TEST[decoder_mid] accuracy: 303/332 (91.3%) ===
+
+Per-category accuracy (TEST[decoder_mid]):
+  dense_tabular_rows   94/97 (96.9%)
+  genealogy_chart      1/1 (100.0%)
+  handwritten_ledger   3/4 (75.0%)
+  map_land_record      13/14 (92.9%)
+  mixed_text_image     0/3 (0.0%)
+  portrait_photo       9/12 (75.0%)
+  printed_document     158/175 (90.3%)
+  website_screenshot   25/26 (96.2%)
+
+Confusion matrix (TEST[decoder_mid], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    94          0           2           0           0           0           0           1           
+genealogy_chart       0           1           0           0           0           0           0           0           
+handwritten_ledger    0           0           3           0           0           0           1           0           
+map_land_record       0           0           1           13          0           0           0           0           
+mixed_text_image      0           0           0           0           0           1           2           0           
+portrait_photo        0           0           0           0           2           9           1           0           
+printed_document      4           1           5           0           1           2           158         4           
+website_screenshot    1           0           0           0           0           0           0           25          
+
+Mean softmax confidence, correct preds:  0.982
+Mean softmax confidence, wrong preds:     0.816
+
+======================================================================
+Location: decoder_final
+======================================================================
+train_x=(1568, 1536) val_x=(332, 1536) test_x=(332, 1536)
+  epoch    1  train_loss=2.3733  val_acc=0.602
+  epoch   50  train_loss=0.0523  val_acc=0.919
+  epoch  100  train_loss=0.0144  val_acc=0.919
+  epoch  150  train_loss=0.0081  val_acc=0.913
+  epoch  200  train_loss=0.0066  val_acc=0.913
+  epoch  250  train_loss=0.0062  val_acc=0.916
+  epoch  300  train_loss=0.0061  val_acc=0.919
+  best val_acc during training: 0.934 (checkpoint selected on val, never test)
+
+=== VAL[decoder_final] accuracy: 310/332 (93.4%) ===
+
+Per-category accuracy (VAL[decoder_final]):
+  dense_tabular_rows   94/97 (96.9%)
+  genealogy_chart      0/1 (0.0%)
+  handwritten_ledger   3/4 (75.0%)
+  map_land_record      11/14 (78.6%)
+  mixed_text_image     2/3 (66.7%)
+  portrait_photo       11/12 (91.7%)
+  printed_document     163/175 (93.1%)
+  website_screenshot   26/26 (100.0%)
+
+Confusion matrix (VAL[decoder_final], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    94          1           2           0           0           0           0           0           
+genealogy_chart       0           0           0           0           0           0           1           0           
+handwritten_ledger    1           0           3           0           0           0           0           0           
+map_land_record       1           0           0           11          0           1           0           1           
+mixed_text_image      0           0           0           0           2           1           0           0           
+portrait_photo        0           0           0           1           0           11          0           0           
+printed_document      2           1           2           0           2           2           163         3           
+website_screenshot    0           0           0           0           0           0           0           26          
+
+Mean softmax confidence, correct preds:  0.983
+Mean softmax confidence, wrong preds:     0.889
+
+=== TEST[decoder_final] accuracy: 307/332 (92.5%) ===
+
+Per-category accuracy (TEST[decoder_final]):
+  dense_tabular_rows   96/97 (99.0%)
+  genealogy_chart      1/1 (100.0%)
+  handwritten_ledger   3/4 (75.0%)
+  map_land_record      13/14 (92.9%)
+  mixed_text_image     1/3 (33.3%)
+  portrait_photo       12/12 (100.0%)
+  printed_document     157/175 (89.7%)
+  website_screenshot   24/26 (92.3%)
+
+Confusion matrix (TEST[decoder_final], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    96          0           1           0           0           0           0           0           
+genealogy_chart       0           1           0           0           0           0           0           0           
+handwritten_ledger    0           0           3           0           0           0           1           0           
+map_land_record       0           0           1           13          0           0           0           0           
+mixed_text_image      0           0           0           0           1           2           0           0           
+portrait_photo        0           0           0           0           0           12          0           0           
+printed_document      4           0           7           1           2           2           157         2           
+website_screenshot    1           0           0           0           0           0           1           24          
+
+Mean softmax confidence, correct preds:  0.979
+Mean softmax confidence, wrong preds:     0.827
+
+
+======================================================================
+=== STAGE 2 SUMMARY: linear probe accuracy by hook location ===
+======================================================================
+location                val_acc   test_acc
+vision_encoder            91.3%      92.5%
+vision_projected          91.6%      91.3%
+decoder_early             91.0%      90.7%
+decoder_mid               92.5%      91.3%
+decoder_final             93.4%      92.5%
+
+Reference points:
+  pre-generation yes/no token probabilities: ~59.5%
+  Stage 1 (decoder_final, same location as E here):          90.1% test
+  full autoregressive generation (gemma_flat8 held-out run): ~94%
+
+Report written to J:\Genealogy\genealogy_pipeline\data\logs\reviewed\gemma_hidden_state_probe_stage2_report.txt

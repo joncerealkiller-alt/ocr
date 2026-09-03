@@ -1,0 +1,38 @@
+Real per-image latency comparison: probe path (vision-only forward, no generate()) vs. full generation. n=20 images, alternating order, same loaded model.
+
+Using first 20 test-split images.
+
+Loading Gemma (real production build_classifier_loader() path)...
+Loaded.
+
+[1/20] probe=1.252s  generate=9.275s  speedup=7.4x
+[2/20] probe=0.532s  generate=7.363s  speedup=13.9x
+[3/20] probe=0.499s  generate=6.594s  speedup=13.2x
+[4/20] probe=0.525s  generate=7.220s  speedup=13.8x
+[5/20] probe=0.643s  generate=6.865s  speedup=10.7x
+[6/20] probe=0.395s  generate=6.882s  speedup=17.4x
+[7/20] probe=0.493s  generate=7.198s  speedup=14.6x
+[8/20] probe=0.440s  generate=7.208s  speedup=16.4x
+[9/20] probe=0.501s  generate=7.136s  speedup=14.2x
+[10/20] probe=0.388s  generate=6.910s  speedup=17.8x
+[11/20] probe=0.503s  generate=6.977s  speedup=13.9x
+[12/20] probe=0.516s  generate=7.106s  speedup=13.8x
+[13/20] probe=0.385s  generate=7.437s  speedup=19.3x
+[14/20] probe=0.445s  generate=7.192s  speedup=16.2x
+[15/20] probe=0.521s  generate=7.013s  speedup=13.5x
+[16/20] probe=0.509s  generate=7.226s  speedup=14.2x
+[17/20] probe=0.513s  generate=7.872s  speedup=15.4x
+[18/20] probe=0.503s  generate=6.800s  speedup=13.5x
+[19/20] probe=0.416s  generate=7.011s  speedup=16.8x
+[20/20] probe=0.396s  generate=7.128s  speedup=18.0x
+
+=== SUMMARY (n=20) ===
+probe path:    mean=0.519s  median=0.502s  min=0.385s  max=1.252s
+generate path: mean=7.221s  median=7.132s  min=6.594s  max=9.275s
+
+Mean speedup: 13.9x
+Absolute time saved per image (mean): 6.702s
+
+Projected full-corpus difference (n~2233, all images via probe vs all via generate):
+  probe:    ~19.3 min
+  generate: ~268.7 min

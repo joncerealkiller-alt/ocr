@@ -1,0 +1,33 @@
+Loaded 459 cached vision_encoder features from 12 shards.
+
+=== TEST 1: probe failures (88) - did full generation get them right? ===
+Full generation correct on probe's failures: 81/88 (92.0%)
+Full generation ALSO wrong on probe's failures: 7/88 (8.0%)
+
+Interpretation: if full generation is right on almost all of the probe's failures, the accuracy gap is REASONING, not PERCEPTION - the frozen vision features likely already contain the signal, generation's autoregressive reasoning is just reading it out better than a linear probe can. If full generation is ALSO often wrong on the same images, the gap includes genuinely hard/ambiguous images neither approach handles well, not purely a probe-vs-generation gap.
+
+Most common probe-specific confusions (gt -> probe's wrong guess), generation got these right:
+  printed_document     -> website_screenshot    x20
+  website_screenshot   -> printed_document      x16
+  dense_tabular_rows   -> printed_document      x15
+  dense_tabular_rows   -> handwritten_ledger    x7
+  website_screenshot   -> genealogy_chart       x4
+  printed_document     -> mixed_text_image      x3
+  printed_document     -> map_land_record       x3
+  printed_document     -> handwritten_ledger    x3
+  website_screenshot   -> mixed_text_image      x3
+  portrait_photo       -> printed_document      x1
+
+
+=== TEST 2: per-category accuracy, probe vs. full generation (narrow-gate check) ===
+category                n  probe_acc  gemma_acc     gap
+website_screenshot    141      78.0%      90.8%  +12.8%
+printed_document      129      76.7%     100.0%  +23.3%
+map_land_record        80      98.8%     100.0%   +1.2%  <- candidate for skip-Gemma gate
+dense_tabular_rows     61      62.3%     100.0%  +37.7%
+portrait_photo         25      96.0%     100.0%   +4.0%  <- candidate for skip-Gemma gate
+genealogy_chart        15     100.0%     100.0%   +0.0%  <- candidate for skip-Gemma gate
+mixed_text_image        4      50.0%      75.0%  +25.0%
+handwritten_ledger      4     100.0%     100.0%   +0.0%  <- candidate for skip-Gemma gate
+
+A real 'skip Gemma' candidate needs BOTH: probe accuracy already high AND full generation not meaningfully better on that category (small gap) - a category where generation is also much better even at 95%+ probe accuracy still means gating away real accuracy on that category, not a free win.

@@ -1,13 +1,26 @@
 """
-Stage 3 (human gate) of the pipeline: review uncertain_review.csv one
-image at a time, assign each to the correct bucket, and log the
+Human-review gate for Stage 5 (Document Routing) per docs/PIPELINE_
+STAGE_TERMINOLOGY.md's canonical Stage 0-6 naming. Reviews images one at
+a time and assigns each to the correct taxonomy option, logging the
 correction for later classifier improvement.
+
+TAXONOMY-DRIVEN (2026-08-04 refactor - see docs/TAXONOMY.md): this file
+contains NO hardcoded bucket list and NO hardcoded mode-specific logic.
+Every button shown is generated from core/taxonomy.py's load_taxonomy()
+via whichever core/review_modes.py ReviewMode is active; what happens on
+submit is entirely delegated to that mode object. This class only knows
+how to display an image, render whatever options the active mode hands
+it, and call back into the mode on every action - it never branches on
+a source string itself. See core/review_modes.py's own module docstring
+for the three modes (production/research/subtype) and exactly what each
+one does differently.
 
 Usage:
     python review_uncertain.py
     python review_uncertain.py --source misclassifications
+    python review_uncertain.py --source subtype
 
-Design per project discussion:
+Design per project discussion (behavior unchanged by this refactor):
   - Original uncertain entry is never silently deleted - every
     reassignment is logged to data/outputs/reviewed_uncertain.csv
     with the original bucket, assigned bucket, and a timestamp, so
@@ -20,38 +33,14 @@ Design per project discussion:
     rows unreviewed and accept they won't be extracted this pass).
     This script prints a warning count on exit if the queue isn't
     empty yet.
-
-DUAL-SOURCE MODE (added 2026-07-31, per Jon's explicit direction: "its
-core use should stay untouched, just change what it does dependant on
-its source file"). The click-a-bucket review interaction is identical
-either way - only what happens on submit changes, selected by
---source:
-
-  - --source uncertain (default, UNCHANGED behavior): reads
-    data/buckets/uncertain_review.csv, a live QUEUE. Assigning a bucket
-    WRITES the row into that bucket's CSV, REMOVES it from the queue,
-    and appends a correction record to reviewed_uncertain.csv. Error
-    rows (hard pipeline failures) are excluded from review and
-    round-tripped untouched, exactly as before.
-
-  - --source misclassifications: reads data/misclassifications.csv (the
-    flat triage log ui/classifier_validation_ui.py's "Flag
-    Misclassified" button appends to). This file is NOT a queue - it's
-    Jon's running ground-truth sample, so rows are never deleted or
-    moved to a bucket CSV. Assigning a bucket instead fills in that
-    row's own correct_category column, IN PLACE, and the row stays in
-    misclassifications.csv either way. No reviewed_uncertain.csv entry
-    is written in this mode - the label lives on the row itself.
 """
 
 from __future__ import annotations
 
 import argparse
-import csv
-import shutil
-import subprocess
 import platform
-from datetime import datetime, timezone
+import subprocess
+import sys
 from pathlib import Path
 
 from tkinter import Tk, Frame, Label, Button, StringVar, messagebox
@@ -59,85 +48,37 @@ from PIL import Image, ImageTk
 
 # Moved into debug_tools/ (2026-07-25) - one directory deeper than repo root.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-BUCKET_DIR = PROJECT_ROOT / "data" / "buckets"
-OUTPUT_DIR = PROJECT_ROOT / "data" / "outputs"
+sys.path.insert(0, str(PROJECT_ROOT))
 
-UNCERTAIN_CSV = BUCKET_DIR / "uncertain_review.csv"
-REVIEWED_LOG = OUTPUT_DIR / "reviewed_uncertain.csv"
+from core.pipeline_db import DEFAULT_DB_PATH
+from core.taxonomy import load_taxonomy
+from core.review_modes import ReviewMode, build_mode, MODE_REGISTRY
 
-# Kept in sync with ui/classifier_validation_ui.py's MISCLASSIFICATION_LOG/
-# MISCLASSIFICATION_FIELDS (the "Flag Misclassified" button writes this
-# file) - not imported from there since that module builds a full Tk app
-# at import time and this script has no need for it beyond these two
-# constants, plus the one extra column this tool adds on top.
-MISCLASSIFICATIONS_CSV = PROJECT_ROOT / "data" / "misclassifications.csv"
-MISCLASSIFICATION_FIELDS = [
-    "bucket", "file_path", "category", "confidence", "reason",
-    "model", "prompt_version", "correct_category",
-]
-
-ASSIGNABLE_BUCKETS = [
-    "dense_tabular_rows",
-    "genealogy_chart",
-    "handwritten_ledger",
-    "map_land_record",
-    "printed_document",
-    "mixed_text_image",
-    "portrait_photo",
-]
-
-# Distinct hue per bucket, paired with the text label (never colour-only -
-# a colorblind reviewer, or anyone doing a quick pass without full
-# attention, still needs the label to read correctly). This is a speed
-# aid for the common case, not the sole signal.
-BUCKET_COLOURS = {
-    "dense_tabular_rows": "#a8e6a1",
-    "genealogy_chart": "#f0e08a",
-    "handwritten_ledger": "#d1a875",
-    "map_land_record": "#f0a0a0",
-    "printed_document": "#a0c8f0",
-    "mixed_text_image": "#c9a0e0",
-    "portrait_photo": "#f0c8a0",
-}
-ACCEPT_COLOUR = "#4caf50"  # distinct "agree" green, independent of bucket
-                           # identity colours above - this button's colour
-                           # signals the action (accept), not which bucket
-
-BUCKET_CSV_FIELDS = [
-    "file_path", "category", "confidence", "text_density",
-    "handwriting", "table_layout", "faces", "map_like",
-    "reason", "model", "prompt_version",
-]
-
-REVIEWED_LOG_FIELDS = [
-    "file_path", "original_bucket", "assigned_bucket",
-    "reviewer", "timestamp", "note",
-]
+ACCEPT_COLOUR = "#4caf50"  # distinct "agree" green, independent of option
+                           # identity colours - this button's colour
+                           # signals the action (accept), not which option
+DEFAULT_OPTION_COLOUR = "#ddd"
 
 MAX_PREVIEW_SIZE = (500, 650)
 
 
 class ReviewApp:
-    def __init__(self, root: Tk, rows: list[dict], error_rows: list[dict] | None = None,
-                 source: str = "uncertain"):
+    def __init__(self, root: Tk, mode: ReviewMode, rows: list[dict], error_rows: list[dict] | None = None):
         self.root = root
+        self.mode = mode
         self.rows = rows
         # Hard pipeline-failure rows (e.g. classifier parse errors) -
         # never shown in this review UI and never mutated by accept/
-        # skip/ignore, but must round-trip back into uncertain_review.
-        # csv unchanged via save_remaining() - see load_uncertain_rows()'s
+        # skip/ignore, but must round-trip back into their source file
+        # unchanged via mode.save() - see ProductionReviewMode.load()'s
         # docstring for the real data-loss bug this fixes. Always empty
-        # in "misclassifications" source mode - that file has no
-        # equivalent hard-error concept.
+        # for research/subtype modes - neither has an equivalent
+        # hard-error concept.
         self.error_rows = error_rows or []
         self.index = 0
         self.reviewer_name = StringVar(value="jonny")
-        # "uncertain" (default, original behavior) or "misclassifications"
-        # - see module docstring's DUAL-SOURCE MODE section for exactly
-        # what differs between the two.
-        self.source = source
 
-        root.title("Uncertain Review" if source == "uncertain" else "Uncertain Review — Misclassification Labeling")
+        root.title(mode.label)
         root.geometry("1150x820")
 
         # -- top strip: status/path/prediction/reason, full width --------
@@ -174,35 +115,52 @@ class ReviewApp:
         controls.pack_propagate(False)  # keep a stable button-column width
         # regardless of image size, rather than stretching to fit content
 
-        # -- accept Gemma's prediction: own block, own colour, separate
-        # from the override list below - common/fast path, styled
-        # distinctly from "I disagree, pick a different bucket".
+        # -- accept the mode's predicted option: own block, own colour,
+        # separate from the override list below - common/fast path,
+        # styled distinctly from "I disagree, pick something else".
         self.accept_button = Button(
             controls, text="", bg=ACCEPT_COLOUR, fg="white", wraplength=290,
             font=("Segoe UI", 10, "bold"), command=self.accept_prediction,
         )
         self.accept_button.pack(fill="x", pady=(0, 14))
 
-        Label(controls, text="Disagree? Pick the correct bucket:",
-              font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 6))
+        self.options_label_widget = Label(controls, text=mode.options_label, font=("Segoe UI", 9))
+        self.options_label_widget.pack(anchor="w", pady=(0, 6))
 
-        # Single column of bucket assignment buttons, colour-keyed per
-        # BUCKET_COLOURS - text label always present alongside colour.
-        for bucket in ASSIGNABLE_BUCKETS:
-            Button(
-                controls, text=f"Assign: {bucket}",
-                bg=BUCKET_COLOURS.get(bucket, "#ddd"),
-                command=lambda b=bucket: self.assign(b),
-            ).pack(fill="x", pady=3)
+        # Taxonomy-driven option buttons live in their own frame, rebuilt
+        # on every load_current() call - the option set can differ per
+        # ROW (Subtype mode: different rows have different primary
+        # buckets, so different valid subtypes), not just per mode, so
+        # these can't be built once in __init__ the way a hardcoded list
+        # could be.
+        self.options_frame = Frame(controls)
+        self.options_frame.pack(fill="x")
 
         Frame(controls, height=16).pack()  # spacer
 
+        self.needs_new_button = Button(
+            controls, text=mode.needs_new_button_text(),
+            command=self.mark_needs_new, fg="#a33",
+        )
+        self.needs_new_button.pack(fill="x", pady=(0, 4))
+        Button(controls, text="Bad deskew (preprocessing made it worse)",
+               command=self.mark_bad_deskew, fg="#a33").pack(fill="x", pady=(0, 4))
         Button(controls, text="Mark ignore / not useful",
                command=self.mark_ignore, fg="#a33").pack(fill="x", pady=(0, 4))
         Button(controls, text="Skip for now",
                command=self.skip).pack(fill="x")
 
         self.load_current()
+
+    def _rebuild_option_buttons(self, row: dict) -> None:
+        for child in self.options_frame.winfo_children():
+            child.destroy()
+        for option in self.mode.get_options(row):
+            Button(
+                self.options_frame, text=f"Assign: {option.display_name}",
+                bg=option.color or DEFAULT_OPTION_COLOUR,
+                command=lambda oid=option.id: self.assign(oid),
+            ).pack(fill="x", pady=3)
 
     def load_current(self):
         if self.index >= len(self.rows):
@@ -213,45 +171,39 @@ class ReviewApp:
             self.image_label.config(image="")
             self.accept_button.config(text="", state="disabled")
             self.open_image_button.config(state="disabled")
+            for child in self.options_frame.winfo_children():
+                child.destroy()
             return
 
         row = self.rows[self.index]
-        remaining = len(self.rows) - self.index
-        if self.source == "uncertain":
-            self.status_label.config(text=f"{remaining} remaining in uncertain_review")
-        else:
-            already = sum(1 for r in self.rows if (r.get("correct_category") or "").strip())
-            self.status_label.config(
-                text=f"{remaining} remaining to label   |   {already}/{len(self.rows)} labeled so far")
+        self.status_label.config(text=self.mode.status_text(self.rows, self.index))
         self.path_label.config(text=row["file_path"])
         self.reason_label.config(text=f"Classifier reason: {row.get('reason', '')}")
         self.open_image_button.config(state="normal")
 
-        predicted = (row.get("category") or "").strip()
-        confidence = row.get("confidence", "")
-        if predicted and predicted in ASSIGNABLE_BUCKETS:
+        self._rebuild_option_buttons(row)
+
+        options = self.mode.get_options(row)
+        options_by_id = {o.id: o for o in options}
+        predicted_id = self.mode.predicted_id(row)
+        if predicted_id is not None and predicted_id in options_by_id:
+            predicted = options_by_id[predicted_id]
+            confidence = row.get("confidence", "")
             self.prediction_label.config(
-                text=f"Gemma predicted: {predicted}   (confidence: {confidence})"
+                text=f"Predicted: {predicted.display_name}   (confidence: {confidence})"
             )
-            accept_text = (
-                f"\u2713 Accept: {predicted}" if self.source == "uncertain"
-                # Rows in misclassifications.csv were flagged BECAUSE they
-                # looked wrong - this button still exists for the case
-                # where a second look says Gemma's original call was
-                # actually fine after all, just phrased to not imply
-                # "accept" is the expected outcome here the way it is for
-                # a genuinely uncertain (not yet judged) row.
-                else f"Gemma's original call was actually correct: {predicted}"
+            self.accept_button.config(
+                text=self.mode.accept_button_text(predicted.display_name), state="normal",
             )
-            self.accept_button.config(text=accept_text, state="normal")
         else:
-            # Defensive - per core/loaders/gemma_loader.py, category should
-            # always be a real DocumentCategory value, never empty or
-            # literally "uncertain_review". If this fires, something
-            # upstream changed; don't offer a one-click accept onto a
-            # bucket we can't confirm is real.
+            # Defensive - a genuinely invalid/missing prediction (or, for
+            # Subtype mode, a bucket with zero defined subtypes) offers
+            # nothing to one-click accept, rather than accepting onto an
+            # option that isn't actually valid right now.
+            raw_predicted = row.get("category") or row.get("bucket") or row.get("subtype") or ""
             self.prediction_label.config(
-                text=f"Gemma predicted: (missing/invalid category: {predicted!r})"
+                text=f"Predicted: (missing/invalid: {raw_predicted!r})" if raw_predicted
+                else "Predicted: (none)"
             )
             self.accept_button.config(text="(no valid prediction to accept)", state="disabled")
 
@@ -284,49 +236,23 @@ class ReviewApp:
             messagebox.showerror("Could not open image", str(e))
 
     def accept_prediction(self):
-        """One-click accept of Gemma's original predicted category - routes
+        """One-click accept of the mode's predicted option - routes
         through the same assign() method (and therefore the same
-        confirmation dialog) as the override buttons, so the safety gate
-        applies uniformly regardless of which path committed the bucket."""
+        confirmation gate) as the override buttons, so the safety
+        behavior applies uniformly regardless of which path committed
+        the choice."""
         row = self.rows[self.index]
-        predicted = (row.get("category") or "").strip()
-        if predicted not in ASSIGNABLE_BUCKETS:
+        predicted_id = self.mode.predicted_id(row)
+        if predicted_id is None:
             return  # button should be disabled in this case, but guard anyway
-        self.assign(predicted)
+        self.assign(predicted_id)
 
-    def _write_bucket_row(self, bucket: str, row: dict):
-        path = BUCKET_DIR / f"{bucket}.csv"
-        is_new = not path.exists() or path.stat().st_size == 0
-        with open(path, "a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=BUCKET_CSV_FIELDS)
-            if is_new:
-                writer.writeheader()
-            out_row = {k: row.get(k, "") for k in BUCKET_CSV_FIELDS}
-            out_row["category"] = bucket
-            writer.writerow(out_row)
-
-    def _log_review(self, row: dict, assigned_bucket: str, note: str = ""):
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        is_new = not REVIEWED_LOG.exists() or REVIEWED_LOG.stat().st_size == 0
-        with open(REVIEWED_LOG, "a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=REVIEWED_LOG_FIELDS)
-            if is_new:
-                writer.writeheader()
-            writer.writerow({
-                "file_path": row["file_path"],
-                "original_bucket": "uncertain_review",
-                "assigned_bucket": assigned_bucket,
-                "reviewer": self.reviewer_name.get(),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "note": note,
-            })
-
-    def assign(self, bucket: str):
+    def assign(self, choice_id: str):
         row = self.rows[self.index]
-        if self.source == "uncertain":
+        if self.mode.requires_confirmation:
             confirmed = messagebox.askyesno(
-                "Confirm bucket assignment",
-                f"Move this image to:\n\n{bucket}\n\n"
+                "Confirm assignment",
+                f"Assign this image to:\n\n{choice_id}\n\n"
                 f"File: {Path(row['file_path']).name}\n\n"
                 "This will add it to that bucket's CSV and remove it from "
                 "the review queue. This cannot be undone from this screen.",
@@ -334,160 +260,79 @@ class ReviewApp:
             )
             if not confirmed:
                 return  # stays on the same image, no state change
-            self._write_bucket_row(bucket, row)
-            self._log_review(row, assigned_bucket=bucket)
-            self._advance()
-        else:
-            # misclassifications.csv is a ground-truth log, not a queue -
-            # no move, no confirmation dialog (labeling is a lightweight,
-            # freely-correctable action, not a destructive one). Just fill
-            # in this row's correct_category and step forward; the row
-            # stays in the file either way, updated in place on save.
-            row["correct_category"] = bucket
-            self.index += 1
-            self.load_current()
+        self.mode.assign(self, row, choice_id)
 
     def mark_ignore(self):
         row = self.rows[self.index]
-        if self.source == "uncertain":
-            self._log_review(row, assigned_bucket="ignored", note="Marked not useful during review")
-            self._advance()
-        else:
-            row["correct_category"] = "ignored"
-            self.index += 1
-            self.load_current()
+        self.mode.mark_ignore(self, row)
+
+    def mark_needs_new(self):
+        row = self.rows[self.index]
+        self.mode.mark_needs_new(self, row)
+
+    def mark_bad_deskew(self):
+        row = self.rows[self.index]
+        self.mode.mark_bad_deskew(self, row)
 
     def skip(self):
-        # Leaves the row in the queue for next session - just advance
-        # the in-memory pointer without removing/logging it.
+        # Leaves the row in place for next session - just advance the
+        # in-memory pointer without removing/logging it.
         self.index += 1
         self.load_current()
 
     def _advance(self):
         # Row handled - remove it from the in-memory list so it won't
-        # be rewritten back to uncertain_review.csv on save. Only used in
-        # "uncertain" source mode - misclassifications.csv rows are never
-        # removed, just labeled in place (see assign()/mark_ignore()).
+        # be rewritten back to its source file on save(). Only ever
+        # called by modes whose semantics are "row leaves the queue"
+        # (ProductionReviewMode) - research/subtype modes relabel rows
+        # in place instead and never call this.
         del self.rows[self.index]
         self.load_current()
 
-    def save_remaining(self):
-        """
-        "uncertain" source: rewrites uncertain_review.csv with whatever's
-        left (assigned/ignored rows removed, skipped rows retained) PLUS
-        every error_rows entry, unchanged - error rows are never shown or
-        mutated by this review UI, but must still round-trip back into
-        the file rather than being dropped (real bug, fixed 2026-07-25 -
-        see load_uncertain_rows()'s docstring).
-
-        "misclassifications" source: rewrites misclassifications.csv with
-        every row (nothing is ever removed in this mode), carrying
-        forward each row's own correct_category value - labeled or still
-        blank, so a partially-worked session is never lost.
-        """
-        if self.source == "uncertain":
-            with open(UNCERTAIN_CSV, "w", newline="", encoding="utf-8") as f:
-                fieldnames = BUCKET_CSV_FIELDS + ["error"]
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                for row in self.error_rows + self.rows:
-                    out_row = {k: row.get(k, "") for k in fieldnames}
-                    writer.writerow(out_row)
-        else:
-            with open(MISCLASSIFICATIONS_CSV, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=MISCLASSIFICATION_FIELDS)
-                writer.writeheader()
-                for row in self.rows:
-                    out_row = {k: row.get(k, "") for k in MISCLASSIFICATION_FIELDS}
-                    writer.writerow(out_row)
-
-
-def load_uncertain_rows() -> tuple[list[dict], list[dict]]:
-    """
-    Returns (reviewable_rows, error_rows) - split, not filtered down to
-    one list. error_rows (hard pipeline failures, e.g. a classifier
-    parse error - see core/loaders/gemma_loader.py's _parse_kv_block)
-    aren't classification-ambiguity calls for a human to adjudicate
-    here (core/extractor.py's own gate check applies the identical
-    `not row.get("error")` split and deliberately does NOT block
-    extraction on them, for the same reason), so they're excluded from
-    the accept/reject review UI.
-
-    REAL BUG FIXED HERE (2026-07-25, found via a live run): this used
-    to return ONLY the reviewable rows, discarding error_rows outright
-    at load time. save_remaining() rewrites uncertain_review.csv from
-    the in-memory row list on every close - since error rows were never
-    loaded into that list, simply opening this tool, doing anything at
-    all (even just Skip on an unrelated row), and closing it silently
-    and permanently deleted every hard-error row from the CSV, with no
-    logging and no recovery path - confirmed by reproducing exactly
-    this against a real run's uncertain_review.csv. error_rows must be
-    carried through untouched and written back by save_remaining(),
-    not just excluded from the reviewable list.
-    """
-    if not UNCERTAIN_CSV.exists():
-        return [], []
-    with open(UNCERTAIN_CSV, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        all_rows = [row for row in reader if row.get("file_path")]
-    reviewable = [row for row in all_rows if not row.get("error")]
-    error_rows = [row for row in all_rows if row.get("error")]
-    return reviewable, error_rows
-
-
-def load_misclassification_rows() -> list[dict]:
-    """
-    All rows of data/misclassifications.csv, in file order - the file
-    ui/classifier_validation_ui.py's "Flag Misclassified" button appends
-    to. No error_rows split (this file has no hard-pipeline-error
-    concept, unlike uncertain_review.csv); rows already labeled
-    (correct_category set) are still returned - session.index just
-    starts wherever load_current() naturally lands, and the "N/M labeled
-    so far" status line makes it obvious progress already exists.
-    """
-    if not MISCLASSIFICATIONS_CSV.exists():
-        return []
-    with open(MISCLASSIFICATIONS_CSV, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        return [row for row in reader if row.get("file_path")]
+    def save(self):
+        self.mode.save(self)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
-        "--source", choices=["uncertain", "misclassifications"], default="uncertain",
+        "--source", choices=list(MODE_REGISTRY.keys()), default="uncertain",
         help="uncertain (default): review the live uncertain_review.csv queue, moving each "
              "image into its assigned bucket. misclassifications: label "
              "data/misclassifications.csv's correct_category column in place, without "
-             "moving anything - see this file's module docstring for the full distinction.",
+             "moving anything. subtype: label data/subtype_review_queue.csv's subtype "
+             "column in place, using the row's already-assigned bucket to determine which "
+             "subtype options apply (core/taxonomy.py's subtypes_for()) - see "
+             "core/review_modes.py's module docstring for the full distinction between modes.",
+    )
+    parser.add_argument(
+        "--db-path", default=str(DEFAULT_DB_PATH),
+        help=f"core/pipeline_db.py database path (default: {DEFAULT_DB_PATH})",
     )
     args = parser.parse_args()
 
-    if args.source == "uncertain":
-        rows, error_rows = load_uncertain_rows()
-        source_label = "uncertain_review.csv"
-    else:
-        rows, error_rows = load_misclassification_rows(), []
-        source_label = "misclassifications.csv"
+    taxonomy = load_taxonomy()
+    mode = build_mode(args.source, db_path=Path(args.db_path), taxonomy=taxonomy)
+    rows, error_rows = mode.load()
 
     if error_rows:
-        print(f"\n{len(error_rows)} row(s) in uncertain_review.csv recorded a hard "
-              f"pipeline error (not reviewable here - these need the underlying bug "
-              f"fixed, not a bucket reassignment; left untouched, not extraction-"
-              f"gate-blocking either, matching core/extractor.py's own gate check):")
+        print(f"\n{len(error_rows)} row(s) recorded a hard pipeline error (not reviewable "
+              f"here - these need the underlying bug fixed, not a bucket reassignment; left "
+              f"untouched, not extraction-gate-blocking either, matching core/extractor.py's "
+              f"own gate check):")
         for row in error_rows:
             print(f"  - {row.get('file_path')}: {row.get('error', '')[:150]}")
 
     if not rows:
         if not error_rows:
-            print(f"{source_label} is empty or contains no reviewable rows. Nothing to do.")
+            print(f"Nothing to review for --source {args.source}.")
         return
 
     root = Tk()
-    app = ReviewApp(root, rows, error_rows, source=args.source)
+    app = ReviewApp(root, mode, rows, error_rows)
 
     def on_close():
-        app.save_remaining()
+        app.save()
         if args.source == "uncertain":
             remaining = len(app.rows)
             if remaining > 0:
@@ -496,9 +341,9 @@ def main():
             else:
                 print("\nuncertain_review.csv is now empty - extraction gate clear.")
         else:
-            labeled = sum(1 for r in app.rows if (r.get("correct_category") or "").strip())
-            print(f"\n{labeled}/{len(app.rows)} row(s) in misclassifications.csv now have a "
-                  f"correct_category label.")
+            label_field = "correct_category" if args.source == "misclassifications" else "subtype"
+            labeled = sum(1 for r in app.rows if (r.get(label_field) or "").strip())
+            print(f"\n{labeled}/{len(app.rows)} row(s) now have a {label_field} label.")
         root.destroy()
 
     root.protocol("WM_DELETE_WINDOW", on_close)

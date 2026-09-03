@@ -676,13 +676,25 @@ zero-effect-when-unchecked behavior as the CLI flag — the checkbox
 state is included in `workflow_gui.py`'s saved tab state, so it
 persists across sessions like every other option there.
 
-Writes to `data/debug_model_inputs/<run_id>/` (timestamped — never
-overwrites a prior run; override the base directory with `--debug-dir`).
-One subdirectory per model call:
+Writes into a real per-run diagnostic run (2026-08-08, updated for
+the repo/workspace split — see `docs/RUN_ARCHITECTURE.md`):
+`genealogy_workspace/runs/<run_id>/diagnostics/debug_model_inputs/`,
+where `<run_id>` comes from a genuine `RunContext.create(run_type=
+"diagnostic", source_input=<sidecar path>)` — `"diagnostic"` is
+already one of the enumerated valid run types for exactly this. This
+replaced an earlier flat `data/debug_model_inputs/<timestamp>/`
+directory precisely because that flat layout was the kind of thing the
+whole repo/workspace migration exists to fix: a real capture from an
+earlier session drifted into being swept up as part of a "research
+baseline" snapshot rather than staying with the run it was actually
+diagnosing, since it had no relationship to any run at all. `--debug-dir
+<path>` overrides back to the old flat-directory behavior (a plain
+timestamped subdirectory under `<path>`, no `RunContext` involved) —
+useful for standalone/test use without a full workspace. Either way,
+never overwrites a prior run. One subdirectory per model call:
 
 ```
-data/debug_model_inputs/
-└── 20260724T151203123456Z/
+genealogy_workspace/runs/20260808T151203123456_a1b2c3d4/diagnostics/debug_model_inputs/
     ├── run_metadata.json         # list of every item captured this run
     └── row_0001/
         │  # scripts/run_row_extraction.py: one item, "row_0001" itself.
@@ -740,6 +752,32 @@ documents rather than `crop_region_from_source()`'s row/column crops.
 
 Keep brief entries here when dependencies or major structure change,
 so it's clear why a version was pinned/changed later.
+
+- **`--debug-model-inputs` output is now per-run** (2026-08-08, follow-up
+  to the repo/workspace split in `docs/RUN_ARCHITECTURE.md`):
+  `DebugModelInputRecorder` (`core/debug_dump.py`) now creates a real
+  `RunContext` (`run_type="diagnostic"` — already an enumerated valid
+  type for exactly this) by default and writes to
+  `genealogy_workspace/runs/<run_id>/diagnostics/debug_model_inputs/`
+  instead of a flat `data/debug_model_inputs/<timestamp>/` directory.
+  Prompted by a real find: an earlier session's flat-directory captures
+  had drifted into being swept up as part of a "research baseline"
+  snapshot during the workspace migration, rather than staying with the
+  run they were actually diagnosing — the flat layout had no
+  relationship to any run at all, exactly what the migration exists to
+  fix. New `close()` method marks the diagnostic run's `metadata.json`
+  `"completed"` once the CLI's extraction call returns.
+  `scripts/run_row_extraction.py`/`scripts/run_two_stage_extraction.py`'s
+  `--debug-dir` default changed from a fixed path to `None`, so omitting
+  it now goes through `RunContext`; passing it explicitly still gets the
+  old flat behavior (no workspace needed - useful standalone/for tests).
+  `ui/row_segmentation_ui.py`'s in-process recorder updated to match
+  (`source_input=`/`close()`). Verified end-to-end with a real sidecar
+  and a stub loader (no GPU needed for this check): confirms a genuine
+  `RunContext` gets created (`run_type="diagnostic"`, status
+  `in_progress`), the captured item lands under the expected
+  `diagnostics/debug_model_inputs/row_NNNN/` path, and `close()`
+  correctly flips status to `"completed"`.
 
 - **Repo-root reorganization** (2026-07-25, per Jon's direction, done
   proactively while the architecture is still small rather than

@@ -1,0 +1,37 @@
+Targeted-config re-validation: table_confidence/layout_detector added to dense_tabular_rows's class_specific_authority rule ONLY - gemma_primary and weighted_fusion never receive this evidence at all in this test.
+
+Held-out test set: 332 images
+
+No cache found - computing classical-CV evidence live (analyze_image() + DocLayout-YOLO)...
+  [50/332] processed
+  [100/332] processed
+  [150/332] processed
+  [200/332] processed
+  [250/332] processed
+  [300/332] processed
+Cached to J:\Genealogy\genealogy_pipeline\data\outputs\classical_cv_evidence_cache.json
+==========================================================================================
+gemma_primary and weighted_fusion - MUST match the original 'WITHOUT classical_cv' numbers exactly (94.0% / 111 auto_accept, 92.8% / 305 auto_accept), since this evidence is never included for these policies now.
+==========================================================================================
+
+  policy=gemma_primary        acc=312/332 (94.0%)  trust_states={'quarantine': 63, 'accept_with_caution': 158, 'auto_accept': 111}
+
+  policy=weighted_fusion      acc=308/332 (92.8%)  trust_states={'auto_accept': 305, 'quarantine': 6, 'accept_with_caution': 21}
+
+
+==========================================================================================
+class_specific_authority - should reproduce the earlier 'WITH classical_cv' result (310/332, dense_tabular_rows 95/97), since the new supporting sensors are now real config for this category's rule.
+==========================================================================================
+
+  policy=class_specific_authority acc=310/332 (93.4%)  trust_states={'accept_with_caution': 163, 'auto_accept': 158, 'quarantine': 11}
+  dense_tabular_rows-specific: 95/97 correctly routed
+
+  Per-category accuracy under class_specific_authority (confirms other categories' rules are unaffected by this change):
+    dense_tabular_rows   95/97
+    genealogy_chart      1/1
+    handwritten_ledger   3/4
+    map_land_record      14/14
+    mixed_text_image     2/3
+    portrait_photo       8/12
+    printed_document     161/175
+    website_screenshot   26/26

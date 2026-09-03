@@ -1,0 +1,127 @@
+Device: cuda
+Classes (8): ['dense_tabular_rows', 'genealogy_chart', 'handwritten_ledger', 'map_land_record', 'mixed_text_image', 'portrait_photo', 'printed_document', 'website_screenshot']
+
+Train: 1569  Val: 332  Test (held out): 332
+  dense_tabular_rows   train=458   val=97   test=97  
+  genealogy_chart      train=4     val=1    test=1   
+  handwritten_ledger   train=20    val=4    test=4   
+  map_land_record      train=67    val=14   test=14  
+  mixed_text_image     train=15    val=3    test=3   
+  portrait_photo       train=62    val=12   test=12  
+  printed_document     train=819   val=175  test=175 
+  website_screenshot   train=124   val=26   test=26  
+
+Building vit_base_patch16_224.orig_in21k, unfreezing last 2 blocks + norm + head...
+
+Epoch 1/8  train_loss=1.3726  train_acc=0.753  val_acc=0.822
+    val/dense_tabular_rows   84/97 (86.6%)
+    val/genealogy_chart      0/1 (0.0%)
+    val/handwritten_ledger   4/4 (100.0%)
+    val/map_land_record      11/14 (78.6%)
+    val/mixed_text_image     0/3 (0.0%)
+    val/portrait_photo       10/12 (83.3%)
+    val/printed_document     138/175 (78.9%)
+    val/website_screenshot   26/26 (100.0%)
+    -> new best (by val), epoch 1
+
+Epoch 2/8  train_loss=0.7349  train_acc=0.822  val_acc=0.846
+    val/dense_tabular_rows   83/97 (85.6%)
+    val/genealogy_chart      0/1 (0.0%)
+    val/handwritten_ledger   4/4 (100.0%)
+    val/map_land_record      12/14 (85.7%)
+    val/mixed_text_image     1/3 (33.3%)
+    val/portrait_photo       11/12 (91.7%)
+    val/printed_document     144/175 (82.3%)
+    val/website_screenshot   26/26 (100.0%)
+    -> new best (by val), epoch 2
+
+Epoch 3/8  train_loss=0.4906  train_acc=0.848  val_acc=0.843
+    val/dense_tabular_rows   83/97 (85.6%)
+    val/genealogy_chart      0/1 (0.0%)
+    val/handwritten_ledger   4/4 (100.0%)
+    val/map_land_record      12/14 (85.7%)
+    val/mixed_text_image     1/3 (33.3%)
+    val/portrait_photo       12/12 (100.0%)
+    val/printed_document     142/175 (81.1%)
+    val/website_screenshot   26/26 (100.0%)
+
+Epoch 4/8  train_loss=0.3817  train_acc=0.860  val_acc=0.867
+    val/dense_tabular_rows   84/97 (86.6%)
+    val/genealogy_chart      0/1 (0.0%)
+    val/handwritten_ledger   4/4 (100.0%)
+    val/map_land_record      12/14 (85.7%)
+    val/mixed_text_image     2/3 (66.7%)
+    val/portrait_photo       12/12 (100.0%)
+    val/printed_document     148/175 (84.6%)
+    val/website_screenshot   26/26 (100.0%)
+    -> new best (by val), epoch 4
+
+Epoch 5/8  train_loss=0.3199  train_acc=0.877  val_acc=0.883
+    val/dense_tabular_rows   88/97 (90.7%)
+    val/genealogy_chart      0/1 (0.0%)
+    val/handwritten_ledger   4/4 (100.0%)
+    val/map_land_record      12/14 (85.7%)
+    val/mixed_text_image     1/3 (33.3%)
+    val/portrait_photo       12/12 (100.0%)
+    val/printed_document     150/175 (85.7%)
+    val/website_screenshot   26/26 (100.0%)
+    -> new best (by val), epoch 5
+
+Epoch 6/8  train_loss=0.2437  train_acc=0.888  val_acc=0.880
+    val/dense_tabular_rows   86/97 (88.7%)
+    val/genealogy_chart      0/1 (0.0%)
+    val/handwritten_ledger   4/4 (100.0%)
+    val/map_land_record      12/14 (85.7%)
+    val/mixed_text_image     1/3 (33.3%)
+    val/portrait_photo       12/12 (100.0%)
+    val/printed_document     151/175 (86.3%)
+    val/website_screenshot   26/26 (100.0%)
+
+Epoch 7/8  train_loss=0.2161  train_acc=0.894  val_acc=0.880
+    val/dense_tabular_rows   86/97 (88.7%)
+    val/genealogy_chart      0/1 (0.0%)
+    val/handwritten_ledger   4/4 (100.0%)
+    val/map_land_record      12/14 (85.7%)
+    val/mixed_text_image     2/3 (66.7%)
+    val/portrait_photo       12/12 (100.0%)
+    val/printed_document     150/175 (85.7%)
+    val/website_screenshot   26/26 (100.0%)
+
+Epoch 8/8  train_loss=0.1891  train_acc=0.902  val_acc=0.901
+    val/dense_tabular_rows   87/97 (89.7%)
+    val/genealogy_chart      0/1 (0.0%)
+    val/handwritten_ledger   4/4 (100.0%)
+    val/map_land_record      12/14 (85.7%)
+    val/mixed_text_image     2/3 (66.7%)
+    val/portrait_photo       11/12 (91.7%)
+    val/printed_document     157/175 (89.7%)
+    val/website_screenshot   26/26 (100.0%)
+    -> new best (by val), epoch 8
+
+=== Training done. Best val_acc=0.901 at epoch 8 ===
+Loading best-by-val checkpoint and running the ONE-TIME held-out test evaluation...
+
+=== HELD-OUT TEST ACCURACY (never touched during training/selection): 0.898 (298/332) ===
+
+Per-category held-out test accuracy:
+  dense_tabular_rows   90/97 (92.8%)
+  genealogy_chart      1/1 (100.0%)  (n<=2, noise not a real measurement)
+  handwritten_ledger   3/4 (75.0%)
+  map_land_record      14/14 (100.0%)
+  mixed_text_image     2/3 (66.7%)
+  portrait_photo       9/12 (75.0%)
+  printed_document     153/175 (87.4%)
+  website_screenshot   26/26 (100.0%)
+
+Confusion matrix (rows=ground truth, cols=predicted) on held-out test set:
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    90          0           0           1           0           0           2           4           
+genealogy_chart       0           1           0           0           0           0           0           0           
+handwritten_ledger    0           0           3           0           0           0           1           0           
+map_land_record       0           0           0           14          0           0           0           0           
+mixed_text_image      0           0           0           0           2           1           0           0           
+portrait_photo        0           0           0           0           3           9           0           0           
+printed_document      4           0           4           2           5           1           153         6           
+website_screenshot    0           0           0           0           0           0           0           26          
+
+Checkpoint (selected by val, evaluated on held-out test): J:\Genealogy\genealogy_pipeline\data\outputs\vit21k_doc_classifier_checkpoints\best_holdout_eval.pt

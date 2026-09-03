@@ -1,0 +1,81 @@
+Multi-seed linear probe comparison (10 seeds per location), reusing cached features from J:\Genealogy\genealogy_pipeline\data\outputs\gemma_hidden_state_probe\features_stage2.pt.
+
+  vision_encoder       seed= 0  val=91.6%  test=92.5%
+  vision_encoder       seed= 1  val=91.0%  test=92.2%
+  vision_encoder       seed= 2  val=91.3%  test=91.3%
+  vision_encoder       seed= 3  val=91.9%  test=92.5%
+  vision_encoder       seed= 4  val=91.9%  test=92.5%
+  vision_encoder       seed= 5  val=91.0%  test=92.5%
+  vision_encoder       seed= 6  val=91.3%  test=91.6%
+  vision_encoder       seed= 7  val=91.9%  test=91.6%
+  vision_encoder       seed= 8  val=91.6%  test=92.5%
+  vision_encoder       seed= 9  val=91.3%  test=91.3%
+
+  vision_projected     seed= 0  val=91.3%  test=92.2%
+  vision_projected     seed= 1  val=91.6%  test=91.9%
+  vision_projected     seed= 2  val=91.3%  test=91.6%
+  vision_projected     seed= 3  val=91.6%  test=91.9%
+  vision_projected     seed= 4  val=91.6%  test=91.3%
+  vision_projected     seed= 5  val=91.6%  test=92.2%
+  vision_projected     seed= 6  val=91.0%  test=92.2%
+  vision_projected     seed= 7  val=91.3%  test=91.0%
+  vision_projected     seed= 8  val=91.3%  test=91.3%
+  vision_projected     seed= 9  val=91.6%  test=92.2%
+
+  decoder_early        seed= 0  val=91.0%  test=91.0%
+  decoder_early        seed= 1  val=91.3%  test=90.7%
+  decoder_early        seed= 2  val=90.7%  test=91.0%
+  decoder_early        seed= 3  val=91.3%  test=90.7%
+  decoder_early        seed= 4  val=91.3%  test=90.4%
+  decoder_early        seed= 5  val=91.3%  test=90.7%
+  decoder_early        seed= 6  val=91.3%  test=91.0%
+  decoder_early        seed= 7  val=90.7%  test=91.6%
+  decoder_early        seed= 8  val=90.7%  test=90.7%
+  decoder_early        seed= 9  val=91.6%  test=91.0%
+
+  decoder_mid          seed= 0  val=92.2%  test=91.6%
+  decoder_mid          seed= 1  val=92.5%  test=92.2%
+  decoder_mid          seed= 2  val=92.5%  test=90.7%
+  decoder_mid          seed= 3  val=92.5%  test=92.2%
+  decoder_mid          seed= 4  val=92.2%  test=92.2%
+  decoder_mid          seed= 5  val=91.9%  test=91.3%
+  decoder_mid          seed= 6  val=92.5%  test=91.9%
+  decoder_mid          seed= 7  val=92.5%  test=90.4%
+  decoder_mid          seed= 8  val=92.2%  test=91.9%
+  decoder_mid          seed= 9  val=91.9%  test=91.6%
+
+  decoder_final        seed= 0  val=92.5%  test=90.4%
+  decoder_final        seed= 1  val=92.8%  test=90.1%
+  decoder_final        seed= 2  val=92.8%  test=91.0%
+  decoder_final        seed= 3  val=93.1%  test=92.2%
+  decoder_final        seed= 4  val=93.1%  test=92.2%
+  decoder_final        seed= 5  val=93.1%  test=90.4%
+  decoder_final        seed= 6  val=93.4%  test=89.8%
+  decoder_final        seed= 7  val=93.4%  test=91.0%
+  decoder_final        seed= 8  val=93.7%  test=91.9%
+  decoder_final        seed= 9  val=93.1%  test=91.0%
+
+
+======================================================================
+=== MULTI-SEED SUMMARY (n=10 seeds/location) ===
+======================================================================
+location                 val (mean±std)    test (mean±std)
+vision_encoder          91.4 ± 0.3       92.0 ± 0.5   
+vision_projected        91.4 ± 0.2       91.7 ± 0.4   
+decoder_early           91.1 ± 0.3       90.8 ± 0.3   
+decoder_mid             92.3 ± 0.2       91.6 ± 0.6   
+decoder_final           93.1 ± 0.3       91.0 ± 0.8   
+
+Pairwise test-accuracy separation (location A's mean vs. location B's mean ± std band):
+  vision_encoder     vs vision_projected    gap=  0.3pt  max_std= 0.5pt  overlaps
+  decoder_early      vs vision_encoder      gap=  1.2pt  max_std= 0.5pt  SEPARATED
+  decoder_early      vs vision_projected    gap=  0.9pt  max_std= 0.4pt  SEPARATED
+  decoder_early      vs decoder_mid         gap=  0.7pt  max_std= 0.6pt  SEPARATED
+  decoder_early      vs decoder_final       gap=  0.1pt  max_std= 0.8pt  overlaps
+  decoder_mid        vs vision_encoder      gap=  0.5pt  max_std= 0.6pt  overlaps
+  decoder_mid        vs vision_projected    gap=  0.2pt  max_std= 0.6pt  overlaps
+  decoder_final      vs vision_encoder      gap=  1.1pt  max_std= 0.8pt  SEPARATED
+  decoder_final      vs vision_projected    gap=  0.8pt  max_std= 0.8pt  overlaps
+  decoder_final      vs decoder_mid         gap=  0.6pt  max_std= 0.8pt  overlaps
+
+Reference: Stage 1 single-seed decoder_final = 90.1% test; Stage 2 single-seed decoder_final = 92.5% test; full autoregressive generation ~94%.

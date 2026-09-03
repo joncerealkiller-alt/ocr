@@ -1,0 +1,55 @@
+
+======================================================================
+convnext  (convnext_tiny.fb_in22k, family=convnext)
+======================================================================
+
+-- Zero-shot frozen-embedding baseline --
+Zero-shot held-out accuracy: 0.678
+  dense_tabular_rows   83/97 (85.6%)
+  genealogy_chart      1/1 (100.0%)
+  handwritten_ledger   4/4 (100.0%)
+  map_land_record      3/14 (21.4%)
+  mixed_text_image     2/3 (66.7%)
+  portrait_photo       0/12 (0.0%)
+  printed_document     106/175 (60.6%)
+  website_screenshot   26/26 (100.0%)
+
+-- Fine-tuning convnext_tiny.fb_in22k --
+Total params: 27.8M  Trainable (unfrozen): 15.5M
+Epoch 1/8  train_loss=0.9748  train_acc=0.779  val_acc=0.834
+Epoch 2/8  train_loss=0.4062  train_acc=0.859  val_acc=0.883
+Epoch 3/8  train_loss=0.2631  train_acc=0.883  val_acc=0.864
+Epoch 4/8  train_loss=0.2279  train_acc=0.889  val_acc=0.873
+Epoch 5/8  train_loss=0.1606  train_acc=0.908  val_acc=0.886
+Epoch 6/8  train_loss=0.1321  train_acc=0.929  val_acc=0.867
+Epoch 7/8  train_loss=0.1100  train_acc=0.935  val_acc=0.877
+Epoch 8/8  train_loss=0.0969  train_acc=0.938  val_acc=0.898
+
+Best val_acc=0.898 at epoch 8. Training time: 1776.9s
+
+=== HELD-OUT TEST ACCURACY: 0.907 ===
+  dense_tabular_rows   92/97 (94.8%)
+  genealogy_chart      1/1 (100.0%)
+  handwritten_ledger   2/4 (50.0%)
+  map_land_record      12/14 (85.7%)
+  mixed_text_image     2/3 (66.7%)
+  portrait_photo       7/12 (58.3%)
+  printed_document     161/175 (92.0%)
+  website_screenshot   24/26 (92.3%)
+
+Confusion matrix (rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    92          0           1           0           0           0           1           3           
+genealogy_chart       0           1           0           0           0           0           0           0           
+handwritten_ledger    0           0           2           1           0           0           1           0           
+map_land_record       1           0           1           12          0           0           0           0           
+mixed_text_image      0           0           0           0           2           1           0           0           
+portrait_photo        0           0           0           1           3           7           1           0           
+printed_document      2           0           5           2           1           1           161         3           
+website_screenshot    0           0           0           0           0           0           2           24          
+
+-- Inference speed / memory profiling (batch=1, real project images) --
+Inference speed: 98.5 images/sec (batch=1, cuda)
+Peak GPU memory during inference: 366 MB
+
+Checkpoint: J:\Genealogy\genealogy_pipeline\data\outputs\vit_family_benchmark\convnext\convnext_best_holdout_eval.pt

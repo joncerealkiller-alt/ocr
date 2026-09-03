@@ -1,0 +1,93 @@
+Live validation: core/sensor_adapters.py's table_confidence + layout_detector adapters, fed into the Decision Engine alongside already-recorded Gemma + 7-tower evidence.
+
+Held-out test set: 332 images
+
+Loading DocLayout-YOLO layout model (real inference, once)...
+Loaded.
+
+Running classical-CV sensors on every test image (real analyze_image() + real YOLO forward pass)...
+  [50/332] processed (table_confidence fired 27x, layout_detector fired 19x so far)
+  [100/332] processed (table_confidence fired 53x, layout_detector fired 33x so far)
+  [150/332] processed (table_confidence fired 63x, layout_detector fired 56x so far)
+  [200/332] processed (table_confidence fired 67x, layout_detector fired 72x so far)
+  [250/332] processed (table_confidence fired 72x, layout_detector fired 84x so far)
+  [300/332] processed (table_confidence fired 75x, layout_detector fired 98x so far)
+
+Processed 332/332 images.
+table_confidence produced usable evidence on 76/332 (22.9%)
+layout_detector produced usable evidence on 114/332 (34.3%)
+
+==========================================================================================
+BEFORE vs. AFTER comparison, per policy
+==========================================================================================
+
+  policy=gemma_primary             WITHOUT classical_cv   acc=312/332 (94.0%)  trust_states={'quarantine': 63, 'accept_with_caution': 158, 'auto_accept': 111}
+
+  policy=gemma_primary             WITH classical_cv      acc=312/332 (94.0%)  trust_states={'quarantine': 73, 'accept_with_caution': 150, 'auto_accept': 109}
+
+  policy=weighted_fusion           WITHOUT classical_cv   acc=308/332 (92.8%)  trust_states={'auto_accept': 305, 'quarantine': 6, 'accept_with_caution': 21}
+
+  policy=weighted_fusion           WITH classical_cv      acc=309/332 (93.1%)  trust_states={'auto_accept': 278, 'quarantine': 4, 'accept_with_caution': 50}
+
+  policy=class_specific_authority  WITHOUT classical_cv   acc=309/332 (93.1%)  trust_states={'accept_with_caution': 160, 'quarantine': 12, 'auto_accept': 160}
+
+  policy=class_specific_authority  WITH classical_cv      acc=310/332 (93.4%)  trust_states={'accept_with_caution': 163, 'auto_accept': 158, 'quarantine': 11}
+
+
+==========================================================================================
+dense_tabular_rows-SPECIFIC: did the new sensors change anything for this category?
+==========================================================================================
+97 dense_tabular_rows images in the test set.
+
+  policy=gemma_primary             WITHOUT  classical_cv: 96/97 correctly routed to dense_tabular_rows
+  policy=gemma_primary             WITH     classical_cv: 96/97 correctly routed to dense_tabular_rows
+  policy=weighted_fusion           WITHOUT  classical_cv: 93/97 correctly routed to dense_tabular_rows
+  policy=weighted_fusion           WITH     classical_cv: 94/97 correctly routed to dense_tabular_rows
+  policy=class_specific_authority  WITHOUT  classical_cv: 94/97 correctly routed to dense_tabular_rows
+  policy=class_specific_authority  WITH     classical_cv: 95/97 correctly routed to dense_tabular_rows
+
+
+Example audit trails where classical_cv evidence fired:
+
+Image: J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-06 120651.png
+Ground truth: dense_tabular_rows
+  Policy: gemma_primary
+  Primary [gemma]: dense_tabular_rows, score=18.1 (auto_accept>=20.0, quarantine<7.0)
+    Supporting [mobilenetv2] AGREES: dense_tabular_rows
+    Supporting [dinov2] AGREES: dense_tabular_rows
+    Supporting [beit] AGREES: dense_tabular_rows
+    Supporting [swin] AGREES: dense_tabular_rows
+    Supporting [siglip] AGREES: dense_tabular_rows
+    Supporting [layout_detector] AGREES: dense_tabular_rows
+    Supporting [convnext] DISAGREES (weak/unscored): website_screenshot
+    Supporting [vit21k] DISAGREES (confident): website_screenshot
+  Result: primary in the uncalibrated mid-range with a confident contradiction -> QUARANTINE
+
+Image: J:\Genealogy\genealogy_pipeline\data\outputs\lac_pull_batch2\deskewed_images\e001946745.png
+Ground truth: dense_tabular_rows
+  Policy: gemma_primary
+  Primary [gemma]: dense_tabular_rows, score=17 (auto_accept>=20.0, quarantine<7.0)
+    Supporting [convnext] AGREES: dense_tabular_rows
+    Supporting [mobilenetv2] AGREES: dense_tabular_rows
+    Supporting [dinov2] AGREES: dense_tabular_rows
+    Supporting [beit] AGREES: dense_tabular_rows
+    Supporting [swin] AGREES: dense_tabular_rows
+    Supporting [siglip] AGREES: dense_tabular_rows
+    Supporting [vit21k] AGREES: dense_tabular_rows
+    Supporting [table_confidence] AGREES: dense_tabular_rows
+  Result: primary in the uncalibrated mid-range, no strong contradiction -> ACCEPT_WITH_CAUTION
+
+Image: J:\Genealogy\genealogy_pipeline\data\outputs\lac_pull_1921_batch1\deskewed_images\e002869218.png
+Ground truth: dense_tabular_rows
+  Policy: gemma_primary
+  Primary [gemma]: dense_tabular_rows, score=19 (auto_accept>=20.0, quarantine<7.0)
+    Supporting [convnext] AGREES: dense_tabular_rows
+    Supporting [mobilenetv2] AGREES: dense_tabular_rows
+    Supporting [dinov2] AGREES: dense_tabular_rows
+    Supporting [beit] AGREES: dense_tabular_rows
+    Supporting [swin] AGREES: dense_tabular_rows
+    Supporting [siglip] AGREES: dense_tabular_rows
+    Supporting [vit21k] AGREES: dense_tabular_rows
+    Supporting [table_confidence] AGREES: dense_tabular_rows
+    Supporting [layout_detector] DISAGREES (weak/unscored): mixed_text_image
+  Result: primary in the uncalibrated mid-range, no strong contradiction -> ACCEPT_WITH_CAUTION

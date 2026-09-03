@@ -1,0 +1,65 @@
+Running gate_manifest against 48 images, all ground_truth is_manifest=False
+
+[1/48] OK   Handwritten Ledger           gate= no  P=0.996406  gap=  5.625
+[2/48] WRONG Printed Document             gate=yes  P=0.998754  gap=  6.688
+[3/48] OK   Printed Document             gate= no  P=0.999981  gap= 10.875
+[4/48] OK   Handwritten Ledger           gate= no  P=1.000000  gap= 18.812
+[5/48] OK   Handwritten Ledger           gate= no  P=1.000000  gap= 14.750
+[6/48] OK   Website Screenshot           gate= no  P=1.000000  gap= 28.750
+[7/48] OK   Website Screenshot           gate= no  P=1.000000  gap= 28.812
+[8/48] OK   Casual Photo                 gate= no  P=1.000000  gap= 22.250
+[9/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 26.625
+[10/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 25.156
+[11/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 24.203
+[12/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 24.656
+[13/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 24.781
+[14/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 24.125
+[15/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 24.188
+[16/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 25.469
+[17/48] OK   Map / Land Record            gate= no  P=1.000000  gap= 23.922
+[18/48] OK   Genealogy Chart              gate= no  P=1.000000  gap= 26.219
+[19/48] OK   Casual Photo                 gate= no  P=1.000000  gap= 24.906
+[20/48] OK   Photo Collage / Album Page   gate= no  P=1.000000  gap= 28.406
+[21/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 26.812
+[22/48] OK   Website Screenshot           gate= no  P=1.000000  gap= 24.266
+[23/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 29.312
+[24/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 27.594
+[25/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 24.016
+[26/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 26.375
+[27/48] OK   Casual Photo                 gate= no  P=1.000000  gap= 27.062
+[28/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 27.750
+[29/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 26.125
+[30/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 26.297
+[31/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 24.672
+[32/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 25.906
+[33/48] OK   Portrait Photo               gate= no  P=1.000000  gap= 26.812
+[34/48] OK   Photo Collage / Album Page   gate= no  P=1.000000  gap= 26.906
+[35/48] OK   Website Screenshot           gate= no  P=1.000000  gap= 28.062
+[36/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 27.531
+[37/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 28.375
+[38/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 27.969
+[39/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 27.938
+[40/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 27.375
+[41/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 27.906
+[42/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 27.969
+[43/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 28.000
+[44/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 26.875
+[45/48] OK   Mixed Text/Image             gate= no  P=1.000000  gap= 27.406
+[46/48] OK   Website Screenshot           gate= no  P=1.000000  gap= 30.875
+[47/48] OK   Printed Document             gate= no  P=1.000000  gap= 28.000
+[48/48] OK   Casual Photo                 gate= no  P=1.000000  gap= 24.453
+
+
+=== SUMMARY (48/48 decision tokens found) ===
+gate_manifest correct (said 'no'): 47/48
+gate_manifest WRONG (said 'yes'):  1/48
+
+Correct cases: mean P=0.999923  mean logit_gap=25.344
+WRONG cases:   mean P=0.998754  mean logit_gap=6.688
+
+Wrong-case detail:
+  Printed Document: P=0.998754 gap=6.688
+
+Logit gap ratio (correct/wrong): 3.79x
+Min correct-case gap: 5.625   Max wrong-case gap: 6.688
+Clean separation (no overlap): False

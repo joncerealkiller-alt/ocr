@@ -1,0 +1,51 @@
+timestamp,bucket,file_path,category_id,category_display,subtype_id,subtype_display,verdict
+2026-08-06T19:11:35,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c10264.767.jpg,handwritten_ledger,Handwritten Ledger,,,classified
+2026-08-06T19:12:56,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c10414.126.jpg,,,,,needs_bucket
+2026-08-06T19:13:24,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c7299.1060.jpg,,,,,needs_bucket
+2026-08-06T19:13:50,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c7319.121.jpg,printed_document,Printed Document,government_form,Government Form,classified
+2026-08-06T19:13:57,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c7319.122.jpg,printed_document,Printed Document,government_form,Government Form,classified
+2026-08-06T19:14:03,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_t2185.796.jpg,handwritten_ledger,Handwritten Ledger,,,classified
+2026-08-06T19:14:06,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_t2185.797.jpg,handwritten_ledger,Handwritten Ledger,,,classified
+2026-08-06T19:15:04,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 233029.png,website_screenshot,Website Screenshot,genealogy_site,Genealogy Site,classified
+2026-08-06T19:15:10,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 233419.png,website_screenshot,Website Screenshot,genealogy_site,Genealogy Site,classified
+2026-08-06T19:16:12,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c10414.129.jpg,casual_photo,Casual Photo,,,classified
+2026-08-06T19:16:28,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 212920.png,map_land_record,Map / Land Record,cadastral_map,Cadastral Map,classified
+2026-08-06T19:16:32,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\R21W-044.jpg,map_land_record,Map / Land Record,dls_township_map,DLS Township Map,classified
+2026-08-06T19:16:37,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\R21W-046.jpg,map_land_record,Map / Land Record,dls_township_map,DLS Township Map,classified
+2026-08-06T19:16:41,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\R21W-048.jpg,map_land_record,Map / Land Record,dls_township_map,DLS Township Map,classified
+2026-08-06T19:16:44,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\R21W-051.jpg,map_land_record,Map / Land Record,dls_township_map,DLS Township Map,classified
+2026-08-06T19:16:47,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\R21W-052.jpg,map_land_record,Map / Land Record,dls_township_map,DLS Township Map,classified
+2026-08-06T19:16:50,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\R22W-055.jpg,map_land_record,Map / Land Record,dls_township_map,DLS Township Map,classified
+2026-08-06T19:16:53,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\R22W-057.jpg,map_land_record,Map / Land Record,dls_township_map,DLS Township Map,classified
+2026-08-06T19:16:56,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\R22W-060.jpg,map_land_record,Map / Land Record,dls_township_map,DLS Township Map,classified
+2026-08-06T19:17:04,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-06 215955.png,genealogy_chart,Genealogy Chart,,,classified
+2026-08-06T19:17:26,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c10301.601.jpg,casual_photo,Casual Photo,,,classified
+2026-08-06T19:17:36,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-27 020142.png,photo_collage,Photo Collage / Album Page,,,classified
+2026-08-06T19:17:42,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 190255.png,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:17:47,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-06 074156.png,website_screenshot,Website Screenshot,genealogy_site,Genealogy Site,classified
+2026-08-06T19:18:08,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 081149.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:18:20,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\GP Log Cabin 1909.jpg,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:18:23,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\368789125_10160658788790791_7078330527904056894_n.jpg,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:18:24,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\peggy knott.jpg,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:18:36,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\SchPL002303534f.jpg,casual_photo,Casual Photo,,,classified
+2026-08-06T19:18:39,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-03 194533.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:18:41,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 190439.png,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:18:42,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 192135.png,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:18:44,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-08 080601.png,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:18:45,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-08 201011.png,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:18:47,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-09 113427.png,portrait_photo,Portrait Photo,,,classified
+2026-08-06T19:18:50,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-09 113627.png,photo_collage,Photo Collage / Album Page,,,classified
+2026-08-06T19:18:54,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-20 235849.png,website_screenshot,Website Screenshot,genealogy_site,Genealogy Site,classified
+2026-08-06T19:18:58,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-27 020118.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:19:00,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-03 194506.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:19:02,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-26 230214.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:19:05,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-27 195649.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:20:55,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-28 031910.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:20:58,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-29 012451.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:21:00,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 125121.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:21:03,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 155250.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:21:05,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 155324.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:21:06,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-02 181442.png,mixed_text_image,Mixed Text/Image,,,classified
+2026-08-06T19:21:17,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-09 022738.png,website_screenshot,Website Screenshot,genealogy_site,Genealogy Site,classified
+2026-08-06T19:21:35,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-27 001720.png,printed_document,Printed Document,book_page,Book Page,classified
+2026-08-06T19:21:40,tower_consensus_disagreements,J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 224650.png,casual_photo,Casual Photo,,,classified

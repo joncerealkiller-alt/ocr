@@ -1,0 +1,393 @@
+Gate prompt:
+Is this image a "dense tabular rows" document? Definition: documents with MANY REPEATED similar rows sharing the same set of columns - specifically census pages and passenger manifests (confirmed as the only two document types in this project that have this structure). The defining test is REPETITION: dozens of rows, each a different person, filled into the same fixed column layout (name/age/sex/birthplace/occupation, or similar). Do NOT use this category for a document that merely has a form-like or two-column layout but does NOT repeat the same row structure many times - a marriage certificate, land patent, or similar single-entity form with a handful of one-time labeled fields (Name of Bride, Age, Residence, etc., each appearing ONCE) belongs in printed_document instead, even though it has visible structure/columns. Ask: "does this page repeat the same columns for many different people/rows, or does it state a handful of facts about one person/entity once?" Many repeats -> dense_tabular_rows. One instance each -> printed_document.
+
+Respond with ONLY the single word yes or no - no punctuation, no label, no other text, nothing else. Your response must start with that word.
+
+Sample: 368 images (168 positives, 200 negatives) - SAME sample as test_gemma_logit_confidence_old_taxonomy.py
+
+[1/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.375
+[2/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.625
+[3/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.997251  gap=  5.906
+[4/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.250
+[5/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.997672  gap=  6.062
+[6/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 14.625
+[7/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 17.750
+[8/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.062
+[9/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.991905  gap=  4.812
+[10/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999980  gap= 11.188
+[11/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.000
+[12/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.991894  gap=  4.812
+[13/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.281
+[14/368] WRONG website_screenshot   gt= no pred=yes  P=0.968540  gap=  3.484
+[15/368] OK   mixed_text_image     gt= no pred= no  P=0.999999  gap= 14.156
+[16/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 14.781
+[17/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 14.062
+[18/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.982942  gap=  4.062
+[19/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.219
+[20/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999964  gap= 10.500
+[21/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.705718  gap=  0.875
+[22/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.625
+[23/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999987  gap= 11.387
+[24/368] OK   printed_document     gt= no pred= no  P=0.999986  gap= 11.438
+[25/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999742  gap=  8.875
+[26/368] OK   printed_document     gt= no pred= no  P=0.999998  gap= 13.125
+[27/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.952524  gap=  3.000
+[28/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 15.656
+[29/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 20.562
+[30/368] OK   website_screenshot   gt= no pred= no  P=0.999999  gap= 13.750
+[31/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.031
+[32/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.312
+[33/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.730477  gap=  1.000
+[34/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.562
+[35/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.250
+[36/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.781
+[37/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.987493  gap=  4.375
+[38/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999912  gap=  9.375
+[39/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.438
+[40/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.559
+[41/368] WRONG dense_tabular_rows   gt=yes pred= no  P=1.000000  gap= 18.125
+[42/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.812
+[43/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.904641  gap=  2.250
+[44/368] OK   printed_document     gt= no pred= no  P=0.999998  gap= 13.281
+[45/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.998341  gap=  6.750
+[46/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 20.031
+[47/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 14.953
+[48/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999941  gap= 10.125
+[49/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.250
+[50/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.998058  gap=  6.250
+[51/368] OK   printed_document     gt= no pred= no  P=0.999997  gap= 12.828
+[52/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999342  gap=  7.344
+[53/368] OK   printed_document     gt= no pred= no  P=0.999998  gap= 13.406
+[54/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.531041  gap=  0.125
+[55/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999692  gap=  8.156
+[56/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999908  gap=  9.344
+[57/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.750
+[58/368] WRONG dense_tabular_rows   gt=yes pred= no  P=1.000000  gap= 17.594
+[59/368] OK   mixed_text_image     gt= no pred= no  P=1.000000  gap= 16.844
+[60/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 18.156
+[61/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.959132  gap=  3.188
+[62/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 14.969
+[63/368] OK   website_screenshot   gt= no pred= no  P=0.999999  gap= 14.406
+[64/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999914  gap=  9.438
+[65/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.062
+[66/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.469
+[67/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.998115  gap=  6.281
+[68/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.812
+[69/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.562
+[70/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.592617  gap=  0.375
+[71/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 14.688
+[72/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.984090  gap=  4.125
+[73/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999855  gap=  8.875
+[74/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999987  gap= 11.875
+[75/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.094
+[76/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.031
+[77/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.656
+[78/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999894  gap=  9.188
+[79/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 18.250
+[80/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999987  gap= 11.625
+[81/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.622951  gap=  0.562
+[82/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999959  gap= 10.156
+[83/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999940  gap=  9.805
+[84/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999978  gap= 11.203
+[85/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.983723  gap=  4.125
+[86/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.995337  gap=  5.375
+[87/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.904060  gap=  2.250
+[88/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.875
+[89/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.904271  gap=  2.250
+[90/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999992  gap= 11.820
+[91/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 14.016
+[92/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999931  gap=  9.625
+[93/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.906
+[94/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 14.438
+[95/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.994777  gap=  5.250
+[96/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.679022  gap=  0.750
+[97/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.997570  gap=  6.125
+[98/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 16.062
+[99/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.375
+[100/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.781
+[101/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999362  gap=  7.375
+[102/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.688
+[103/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999635  gap=  8.375
+[104/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.312
+[105/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.957908  gap=  3.125
+[106/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.375
+[107/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 15.047
+[108/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.156
+[109/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999116  gap=  7.031
+[110/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.866999  gap=  1.875
+[111/368] OK   genealogy_chart      gt= no pred= no  P=1.000000  gap= 16.281
+[112/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.817566  gap=  1.500
+[113/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999933  gap=  9.617
+[114/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.651342  gap=  0.625
+[115/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.679062  gap=  0.750
+[116/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.994432  gap=  5.188
+[117/368] WRONG dense_tabular_rows   gt=yes pred= no  P=1.000000  gap= 17.594
+[118/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.500
+[119/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.000
+[120/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.031
+[121/368] OK   printed_document     gt= no pred= no  P=0.999996  gap= 12.820
+[122/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999705  gap=  8.141
+[123/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.594
+[124/368] OK   printed_document     gt= no pred= no  P=0.999994  gap= 11.969
+[125/368] OK   handwritten_ledger   gt= no pred= no  P=0.999940  gap=  9.781
+[126/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 16.625
+[127/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999852  gap=  8.836
+[128/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 14.812
+[129/368] OK   printed_document     gt= no pred= no  P=0.999998  gap= 13.125
+[130/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999997  gap= 12.875
+[131/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.997251  gap=  5.938
+[132/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.812
+[133/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.906
+[134/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 18.250
+[135/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.989098  gap=  4.562
+[136/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999975  gap= 10.602
+[137/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.875
+[138/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999990  gap= 11.580
+[139/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 15.625
+[140/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.797
+[141/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.996825  gap=  5.750
+[142/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.997351  gap=  5.938
+[143/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 14.375
+[144/368] OK   website_screenshot   gt= no pred= no  P=0.999988  gap= 11.469
+[145/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.987437  gap=  4.375
+[146/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 17.000
+[147/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.188
+[148/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.946588  gap=  2.875
+[149/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.969647  gap=  3.500
+[150/368] OK   portrait_photo       gt= no pred= no  P=0.999999  gap= 14.250
+[151/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999563  gap=  7.750
+[152/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.375
+[153/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 16.375
+[154/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.952572  gap=  3.000
+[155/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.989597  gap=  4.562
+[156/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.562
+[157/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.312
+[158/368] OK   printed_document     gt= no pred= no  P=0.999998  gap= 13.281
+[159/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.955179  gap=  3.062
+[160/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999300  gap=  7.281
+[161/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.978361  gap=  3.812
+[162/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.625
+[163/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.924132  gap=  2.500
+[164/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.991919  gap=  4.812
+[165/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999934  gap= 10.125
+[166/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999997  gap= 12.633
+[167/368] OK   handwritten_ledger   gt= no pred= no  P=0.999999  gap= 13.688
+[168/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 15.469
+[169/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.777273  gap=  1.250
+[170/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 15.281
+[171/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.651147  gap=  0.625
+[172/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999993  gap= 12.297
+[173/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.592471  gap=  0.375
+[174/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.531
+[175/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.946544  gap=  2.875
+[176/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999795  gap=  8.531
+[177/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 14.812
+[178/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.781
+[179/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 15.031
+[180/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.688
+[181/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 16.438
+[182/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.997853  gap=  6.156
+[183/368] OK   handwritten_ledger   gt= no pred= no  P=1.000000  gap= 17.188
+[184/368] OK   printed_document     gt= no pred= no  P=0.999997  gap= 13.062
+[185/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999995  gap= 12.141
+[186/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 15.656
+[187/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.312
+[188/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.562
+[189/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.530552  gap=  0.125
+[190/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.665390  gap=  0.688
+[191/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999990  gap= 11.580
+[192/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.562
+[193/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999998  gap= 13.359
+[194/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 15.344
+[195/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999411  gap=  7.469
+[196/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999998  gap= 13.883
+[197/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999978  gap= 11.203
+[198/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999956  gap= 10.062
+[199/368] OK   website_screenshot   gt= no pred= no  P=0.999982  gap= 11.188
+[200/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.995266  gap=  5.375
+[201/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.906
+[202/368] OK   printed_document     gt= no pred= no  P=0.999775  gap=  8.562
+[203/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.777285  gap=  1.250
+[204/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999923  gap=  9.625
+[205/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999993  gap= 11.926
+[206/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.250
+[207/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.812
+[208/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.812
+[209/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 17.500
+[210/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 18.500
+[211/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.986720  gap=  4.312
+[212/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999403  gap=  7.562
+[213/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.625
+[214/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.938
+[215/368] OK   printed_document     gt= no pred= no  P=0.999910  gap=  9.375
+[216/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.957897  gap=  3.125
+[217/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.797663  gap=  1.375
+[218/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 16.219
+[219/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.986684  gap=  4.312
+[220/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999999  gap= 13.609
+[221/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.656
+[222/368] OK   printed_document     gt= no pred= no  P=0.999997  gap= 12.883
+[223/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 16.000
+[224/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.938
+[225/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 18.125
+[226/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999892  gap=  9.625
+[227/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.903496  gap=  2.250
+[228/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.531
+[229/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999712  gap=  8.156
+[230/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.991934  gap=  4.812
+[231/368] WRONG dense_tabular_rows   gt=yes pred= no  P=1.000000  gap= 17.156
+[232/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 20.094
+[233/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999999  gap= 14.188
+[234/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.875
+[235/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.817550  gap=  1.500
+[236/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.000
+[237/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.500
+[238/368] WRONG dense_tabular_rows   gt=yes pred= no  P=1.000000  gap= 17.969
+[239/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.997317  gap=  6.250
+[240/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999895  gap=  9.375
+[241/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.750
+[242/368] OK   mixed_text_image     gt= no pred= no  P=1.000000  gap= 19.750
+[243/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999999  gap= 14.594
+[244/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999716  gap=  8.438
+[245/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.438
+[246/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.188
+[247/368] OK   printed_document     gt= no pred= no  P=0.999988  gap= 11.500
+[248/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.798104  gap=  1.375
+[249/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999989  gap= 11.812
+[250/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 21.938
+[251/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.344
+[252/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.893304  gap=  2.125
+[253/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999328  gap=  7.312
+[254/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 20.000
+[255/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.998824  gap=  6.750
+[256/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999742  gap=  8.328
+[257/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.656
+[258/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.781
+[259/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 20.094
+[260/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999794  gap=  8.500
+[261/368] OK   printed_document     gt= no pred= no  P=0.999997  gap= 12.625
+[262/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.998782  gap=  6.719
+[263/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.562168  gap=  0.250
+[264/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.998947  gap=  6.875
+[265/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.188
+[266/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.998802  gap=  6.750
+[267/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.438
+[268/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 14.484
+[269/368] WRONG dense_tabular_rows   gt=yes pred= no  P=1.000000  gap= 17.344
+[270/368] OK   printed_document     gt= no pred= no  P=0.999990  gap= 12.162
+[271/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 18.000
+[272/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.656
+[273/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.995909  gap=  5.500
+[274/368] OK   website_screenshot   gt= no pred= no  P=0.999999  gap= 14.406
+[275/368] OK   printed_document     gt= no pred= no  P=0.999998  gap= 13.656
+[276/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 20.875
+[277/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 18.031
+[278/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 17.250
+[279/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.156
+[280/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.375
+[281/368] OK   printed_document     gt= no pred= no  P=0.999995  gap= 12.641
+[282/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.590492  gap=  0.375
+[283/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.750
+[284/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999996  gap= 12.910
+[285/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999237  gap=  7.188
+[286/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 15.406
+[287/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999980  gap= 10.842
+[288/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.156
+[289/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.719
+[290/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.125
+[291/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.996256  gap=  5.625
+[292/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.312
+[293/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 16.688
+[294/368] OK   printed_document     gt= no pred= no  P=0.999998  gap= 13.406
+[295/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999774  gap=  8.695
+[296/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 16.812
+[297/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999999  gap= 14.250
+[298/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.062
+[299/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.500
+[300/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.906
+[301/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.962645  gap=  3.250
+[302/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999980  gap= 10.843
+[303/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999995  gap= 12.180
+[304/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.781
+[305/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.688
+[306/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999938  gap=  9.758
+[307/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999879  gap=  9.375
+[308/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.826593  gap=  1.562
+[309/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 15.656
+[310/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 17.375
+[311/368] OK   mixed_text_image     gt= no pred= no  P=1.000000  gap= 15.344
+[312/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 17.094
+[313/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 14.750
+[314/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.998381  gap=  6.500
+[315/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999982  gap= 11.406
+[316/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.891200  gap=  2.125
+[317/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 14.531
+[318/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 15.656
+[319/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999976  gap= 10.680
+[320/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.000
+[321/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.812
+[322/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 17.625
+[323/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999953  gap= 10.688
+[324/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 15.031
+[325/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.991420  gap=  4.750
+[326/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.750
+[327/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999807  gap=  8.562
+[328/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.995088  gap=  5.312
+[329/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.406
+[330/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.562
+[331/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 15.531
+[332/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999613  gap=  7.938
+[333/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.928213  gap=  2.562
+[334/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.906
+[335/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.998790  gap=  6.781
+[336/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 15.812
+[337/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.996915  gap=  5.812
+[338/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.990212  gap=  4.625
+[339/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.705780  gap=  0.875
+[340/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 13.906
+[341/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999858  gap=  8.875
+[342/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.312
+[343/368] OK   portrait_photo       gt= no pred= no  P=1.000000  gap= 15.227
+[344/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.998883  gap=  6.812
+[345/368] OK   printed_document     gt= no pred= no  P=0.999998  gap= 13.328
+[346/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999775  gap=  8.406
+[347/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.990273  gap=  4.625
+[348/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999931  gap=  9.594
+[349/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.999991  gap= 12.031
+[350/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.531
+[351/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 16.062
+[352/368] OK   printed_document     gt= no pred= no  P=0.999999  gap= 14.250
+[353/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 15.875
+[354/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 16.656
+[355/368] OK   website_screenshot   gt= no pred= no  P=1.000000  gap= 17.281
+[356/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 19.000
+[357/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.904618  gap=  2.250
+[358/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.986678  gap=  4.312
+[359/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 14.594
+[360/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 17.906
+[361/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999909  gap=  9.324
+[362/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 15.312
+[363/368] OK   mixed_text_image     gt= no pred= no  P=1.000000  gap= 17.812
+[364/368] OK   map_land_record      gt= no pred= no  P=1.000000  gap= 15.031
+[365/368] OK   dense_tabular_rows   gt=yes pred=yes  P=0.999998  gap= 13.062
+[366/368] WRONG dense_tabular_rows   gt=yes pred= no  P=0.926941  gap=  2.625
+[367/368] OK   printed_document     gt= no pred= no  P=0.509428  gap=  0.117
+[368/368] OK   printed_document     gt= no pred= no  P=1.000000  gap= 18.562
+
+
+=== SUMMARY (368/368 decision tokens found) ===
+Decision token at index 0 for 368/368 images (non-zero for 0)
+Overall accuracy: 294/368 (79.9%)
+True positives: 95  False negatives: 73  True negatives: 199  False positives: 1
+
+Correct cases (n=294): mean P=0.982571  mean logit_gap=12.922
+WRONG cases (n=74): mean P=0.944812  mean logit_gap=7.948
+
+Min correct-case gap: 0.117   Max wrong-case gap: 18.125
+Clean separation (no overlap): False
+Correct-case gap median: 14.797
+Wrong-case gap median: 8.469
+
+--- Comparison point: the earlier (index-4, label-echo format) run got ---
+Overall accuracy: 326/368 (88.6%), TP=126 FN=42 TN=200 FP=0
+Correct median gap=30.406, Wrong median gap=13.562, overlap: min_correct=0.125 max_wrong=30.625

@@ -1,0 +1,73 @@
+Probe vs. full-generation on the FRESH Kemper_Ancestry holdout (459 images, never seen by any probe/threshold/split before).
+
+Holdout set: 459 images
+
+Extracting vision_encoder features via chunked subprocesses...
+  extracting chunk [0:40] via subprocess...
+  extracting chunk [40:80] via subprocess...
+  extracting chunk [80:120] via subprocess...
+  extracting chunk [120:160] via subprocess...
+  extracting chunk [160:200] via subprocess...
+  extracting chunk [200:240] via subprocess...
+  extracting chunk [240:280] via subprocess...
+  extracting chunk [280:320] via subprocess...
+  extracting chunk [320:360] via subprocess...
+  extracting chunk [360:400] via subprocess...
+  extracting chunk [400:440] via subprocess...
+  extracting chunk [440:459] via subprocess...
+Extracted 459/459 features (dim=768)
+
+Loading ORIGINAL cached train-split features (never re-derived, never touches holdout data)...
+train_x=(1568, 768)
+
+Training linear probe on original train split (seed=0)...
+  epoch    1  train_loss=2.2862  val_acc=0.551
+  epoch   50  train_loss=0.0376  val_acc=0.907
+  epoch  100  train_loss=0.0153  val_acc=0.907
+  epoch  150  train_loss=0.0110  val_acc=0.907
+  epoch  200  train_loss=0.0095  val_acc=0.907
+  epoch  250  train_loss=0.0088  val_acc=0.910
+  epoch  300  train_loss=0.0084  val_acc=0.910
+  best val_acc during training: 0.916 (checkpoint selected on val, never test)
+
+=== KEMPER_HOLDOUT[vision_encoder] accuracy: 371/459 (80.8%) ===
+
+Per-category accuracy (KEMPER_HOLDOUT[vision_encoder]):
+  dense_tabular_rows   38/61 (62.3%)
+  genealogy_chart      15/15 (100.0%)
+  handwritten_ledger   4/4 (100.0%)
+  map_land_record      79/80 (98.8%)
+  mixed_text_image     2/4 (50.0%)
+  portrait_photo       24/25 (96.0%)
+  printed_document     99/129 (76.7%)
+  website_screenshot   110/141 (78.0%)
+
+Confusion matrix (KEMPER_HOLDOUT[vision_encoder], rows=gt, cols=pred):
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    38          0           7           0           0           0           15          1           
+genealogy_chart       0           15          0           0           0           0           0           0           
+handwritten_ledger    0           0           4           0           0           0           0           0           
+map_land_record       0           1           0           79          0           0           0           0           
+mixed_text_image      0           0           0           0           2           0           2           0           
+portrait_photo        0           0           0           0           0           24          1           0           
+printed_document      1           0           3           3           3           0           99          20          
+website_screenshot    1           4           1           0           3           0           22          110         
+
+Mean softmax confidence, correct preds:  0.946
+Mean softmax confidence, wrong preds:     0.779
+
+=== HEAD-TO-HEAD ON FRESH HOLDOUT (n=459) ===
+Full generation (original Kemper classification run): 445/459 (96.9%)
+Linear probe (vision_encoder, trained on ORIGINAL split only): 370/459 (80.8%)
+
+=== CONFIDENCE-THRESHOLD HYBRID SWEEP (fresh data) ===
+ threshold  fast-path %  hybrid acc
+      0.00       100.0%       80.8%
+      0.50        97.4%       81.7%
+      0.70        86.7%       87.1%
+      0.80        82.1%       89.1%
+      0.85        78.2%       90.2%
+      0.90        74.7%       91.5%
+      0.95        69.1%       91.9%
+      0.97        64.7%       92.4%
+      0.99        56.6%       94.8%

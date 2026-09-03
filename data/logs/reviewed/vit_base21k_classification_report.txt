@@ -1,0 +1,45 @@
+Categories: ['dense_tabular_rows', 'genealogy_chart', 'handwritten_ledger', 'map_land_record', 'mixed_text_image', 'portrait_photo', 'printed_document', 'website_screenshot']
+  dense_tabular_rows: 15 reference, 30 test
+  genealogy_chart: 6 reference, 0 test
+  handwritten_ledger: 15 reference, 13 test
+  map_land_record: 15 reference, 30 test
+  mixed_text_image: 15 reference, 6 test
+  portrait_photo: 15 reference, 30 test
+  printed_document: 15 reference, 30 test
+  website_screenshot: 15 reference, 30 test
+
+Embedding reference set...
+  dense_tabular_rows: 15 embedded
+  genealogy_chart: 6 embedded
+  handwritten_ledger: 15 embedded
+  map_land_record: 15 embedded
+  mixed_text_image: 15 embedded
+  portrait_photo: 15 embedded
+  printed_document: 15 embedded
+  website_screenshot: 15 embedded
+
+Classifying test set...
+
+Classified 169 test images.
+
+=== OVERALL ACCURACY: 92/169 (54.4%) ===
+
+=== Per-category accuracy ===
+  dense_tabular_rows   11/30 (36.7%)
+  handwritten_ledger   11/13 (84.6%)
+  map_land_record      11/30 (36.7%)
+  mixed_text_image     4/6 (66.7%)
+  portrait_photo       4/30 (13.3%)
+  printed_document     21/30 (70.0%)
+  website_screenshot   30/30 (100.0%)
+
+=== Confusion matrix (rows=ground truth, cols=predicted) ===
+gt\pred               dense_tabu  genealogy_  handwritte  map_land_r  mixed_text  portrait_p  printed_do  website_sc  
+dense_tabular_rows    11          0           8           1           0           0           1           9           
+genealogy_chart       0           0           0           0           0           0           0           0           
+handwritten_ledger    2           0           11          0           0           0           0           0           
+map_land_record       2           2           4           11          1           0           3           7           
+mixed_text_image      0           0           0           0           4           0           0           2           
+portrait_photo        0           1           0           0           15          4           0           10          
+printed_document      2           0           3           0           1           0           21          3           
+website_screenshot    0           0           0           0           0           0           0           30          

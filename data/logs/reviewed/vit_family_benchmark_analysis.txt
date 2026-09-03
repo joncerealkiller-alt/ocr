@@ -1,0 +1,83 @@
+Loaded 7 model results: ['convnext', 'mobilenetv2', 'dinov2', 'beit', 'swin', 'siglip', 'vit21k']
+
+====================================================================================================
+COMPARISON TABLE - zero-shot vs. fine-tuned, per architecture
+====================================================================================================
+Model           ZeroShot  FineTuned  AbsImprove   DTR_imp  PrintDoc_imp  Params(M)  Speed(img/s)  TrainTime(s)
+convnext           0.678      0.907      +0.229    +0.093        +0.314       27.8          98.5        1776.9
+mobilenetv2        0.596      0.765      +0.169    +0.062        +0.257        2.2         128.1        1897.0
+dinov2             0.645      0.910      +0.265    +0.093        +0.366       22.1          57.3        2202.8
+beit               0.657      0.913      +0.256    +0.093        +0.383       85.8         106.5        1930.8
+swin               0.684      0.898      +0.214    +0.082        +0.269       86.8          34.1        1956.6
+siglip             0.642      0.925      +0.283    +0.062        +0.429       92.9          91.7        1936.9
+vit21k             0.544      0.898      +0.354    +0.561        +0.174        nan           nan           nan
+
+Note: vit21k's zero-shot number (54.4%) is from an earlier standalone test with a DIFFERENT train/test partition than this benchmark's shared split - not perfectly apples-to-apples with the other 6 models' zero-shot numbers (which all share this benchmark's exact partition), though the magnitude/direction is consistent with the other ImageNet-style zero-shot results. vit21k's fine-tuned number (89.8%) DOES use the same partition.
+
+
+Other notable per-class deltas (categories with n>=10 in test, excluding dense_tabular_rows/printed_document already shown above):
+  convnext       map_land_record=+0.643  portrait_photo=+0.583  website_screenshot=-0.077
+  mobilenetv2    map_land_record=+0.429  portrait_photo=+0.500  website_screenshot=-0.269
+  dinov2         map_land_record=+0.786  portrait_photo=+0.500  website_screenshot=+0.038
+  beit           map_land_record=+0.357  portrait_photo=+0.583  website_screenshot=+0.000
+  swin           map_land_record=+0.643  portrait_photo=+0.500  website_screenshot=+0.000
+  siglip         map_land_record=+0.429  portrait_photo=+0.917  website_screenshot=-0.038
+  vit21k         map_land_record=+0.633  portrait_photo=+0.617  website_screenshot=+0.000
+
+
+====================================================================================================
+PAIRWISE AGREEMENT / ERROR OVERLAP  (n=332 common held-out images, models: ['convnext', 'mobilenetv2', 'dinov2', 'beit', 'swin', 'siglip'])
+====================================================================================================
+
+-- Prediction AGREEMENT matrix (fraction of images both models predicted the SAME label, right or wrong) --
+              convnext      mobilenetv2   dinov2        beit          swin          siglip        
+convnext      -             0.777         0.922         0.937         0.931         0.922         
+mobilenetv2   0.777         -             0.771         0.774         0.771         0.765         
+dinov2        0.922         0.771         -             0.931         0.922         0.910         
+beit          0.937         0.774         0.931         -             0.928         0.916         
+swin          0.931         0.771         0.922         0.928         -             0.919         
+siglip        0.922         0.765         0.910         0.916         0.919         -             
+
+-- ERROR OVERLAP matrix: of images where model A (row) was WRONG, fraction where model B (col) was ALSO wrong (any error, not necessarily the same wrong label) --
+              convnext      mobilenetv2   dinov2        beit          swin          siglip        
+convnext      -             0.742         0.613         0.710         0.677         0.516         
+mobilenetv2   0.295         -             0.282         0.269         0.308         0.218         
+dinov2        0.633         0.733         -             0.667         0.733         0.500         
+beit          0.759         0.724         0.690         -             0.759         0.517         
+swin          0.618         0.706         0.647         0.647         -             0.500         
+siglip        0.640         0.680         0.600         0.600         0.680         -             
+(Low values = when this model is wrong, others are usually still right - COMPLEMENTARY. High values = models fail together - REDUNDANT.)
+
+-- SAME-WRONG-LABEL overlap: of images where model A (row) was wrong, fraction where model B (col) predicted the EXACT SAME (also wrong) label --
+              convnext      mobilenetv2   dinov2        beit          swin          siglip        
+convnext      -             0.387         0.516         0.548         0.677         0.452         
+mobilenetv2   0.154         -             0.128         0.141         0.154         0.103         
+dinov2        0.533         0.333         -             0.533         0.533         0.333         
+beit          0.586         0.379         0.552         -             0.586         0.379         
+swin          0.618         0.353         0.471         0.500         -             0.441         
+siglip        0.560         0.320         0.400         0.440         0.600         -             
+
+-- Per-model UNIQUE-CORRECT count: held-out images this model got right that EVERY other available model got wrong (a modest-accuracy model with many unique-correct cases is more valuable to a fusion ensemble than raw accuracy alone suggests) --
+  convnext       0
+  mobilenetv2    3
+  dinov2         1
+  beit           0
+  swin           1
+  siglip         4
+
+-- Full agreement/error-overlap disagreement set size per pair (images where predictions differ) --
+  convnext vs mobilenetv2: 74/332 disagree (22.3%)
+  convnext vs dinov2: 26/332 disagree (7.8%)
+  convnext vs beit: 21/332 disagree (6.3%)
+  convnext vs swin: 23/332 disagree (6.9%)
+  convnext vs siglip: 26/332 disagree (7.8%)
+  mobilenetv2 vs dinov2: 76/332 disagree (22.9%)
+  mobilenetv2 vs beit: 75/332 disagree (22.6%)
+  mobilenetv2 vs swin: 76/332 disagree (22.9%)
+  mobilenetv2 vs siglip: 78/332 disagree (23.5%)
+  dinov2 vs beit: 23/332 disagree (6.9%)
+  dinov2 vs swin: 26/332 disagree (7.8%)
+  dinov2 vs siglip: 30/332 disagree (9.0%)
+  beit vs swin: 24/332 disagree (7.2%)
+  beit vs siglip: 28/332 disagree (8.4%)
+  swin vs siglip: 27/332 disagree (8.1%)

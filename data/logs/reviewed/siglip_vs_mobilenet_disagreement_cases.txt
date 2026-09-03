@@ -1,0 +1,279 @@
+=== MobileNet CORRECT, SigLIP WRONG ===
+  J:\Genealogy\genealogy_pipeline\data\working\4292058_00284.jpg
+    gt=printed_document
+    mobilenetv2: pred=printed_document (correct)  margin=6.736  softmax=0.998  entropy=0.017
+    siglip:      pred=handwritten_ledger (WRONG)  margin=0.430  softmax=0.586  entropy=0.843
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-03 131559.png
+    gt=dense_tabular_rows
+    mobilenetv2: pred=dense_tabular_rows (correct)  margin=2.069  softmax=0.839  entropy=0.608
+    siglip:      pred=printed_document (WRONG)  margin=0.135  softmax=0.533  entropy=0.705
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 233419.png
+    gt=dense_tabular_rows
+    mobilenetv2: pred=dense_tabular_rows (correct)  margin=3.540  softmax=0.947  entropy=0.285
+    siglip:      pred=website_screenshot (WRONG)  margin=0.335  softmax=0.574  entropy=0.767
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 124919.png
+    gt=mixed_text_image
+    mobilenetv2: pred=mixed_text_image (correct)  margin=0.184  softmax=0.501  entropy=0.991
+    siglip:      pred=portrait_photo (WRONG)  margin=2.562  softmax=0.920  entropy=0.321
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 134608.png
+    gt=handwritten_ledger
+    mobilenetv2: pred=handwritten_ledger (correct)  margin=1.534  softmax=0.741  entropy=0.856
+    siglip:      pred=map_land_record (WRONG)  margin=0.186  softmax=0.447  entropy=1.087
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-07 200323.png
+    gt=printed_document
+    mobilenetv2: pred=printed_document (correct)  margin=0.146  softmax=0.519  entropy=0.840
+    siglip:      pred=website_screenshot (WRONG)  margin=4.846  softmax=0.991  entropy=0.054
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-08 234811.png
+    gt=website_screenshot
+    mobilenetv2: pred=website_screenshot (correct)  margin=2.060  softmax=0.867  entropy=0.472
+    siglip:      pred=printed_document (WRONG)  margin=1.044  softmax=0.597  entropy=0.984
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c7299.1238.jpg
+    gt=printed_document
+    mobilenetv2: pred=printed_document (correct)  margin=3.437  softmax=0.959  entropy=0.210
+    siglip:      pred=dense_tabular_rows (WRONG)  margin=3.013  softmax=0.951  entropy=0.206
+
+=== SigLIP CORRECT, MobileNet WRONG ===
+  J:\Genealogy\genealogy_pipeline\data\working\Glen_Campbell_Free_Press_Prairie_Farmer_Oct_24_1917.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=1.348  softmax=0.766  entropy=0.659
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.866  softmax=0.588  entropy=1.144
+  J:\Genealogy\genealogy_pipeline\data\working\IMCANQC1865_T4821-00622.jpg
+    gt=dense_tabular_rows
+    siglip:      pred=dense_tabular_rows (correct)  margin=7.872  softmax=1.000  entropy=0.004
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.583  softmax=0.432  entropy=1.526
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-03 182722.png
+    gt=genealogy_chart
+    siglip:      pred=genealogy_chart (correct)  margin=6.217  softmax=0.996  entropy=0.036
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=1.014  softmax=0.559  entropy=1.153
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 233029.png
+    gt=dense_tabular_rows
+    siglip:      pred=dense_tabular_rows (correct)  margin=2.517  softmax=0.924  entropy=0.280
+    mobilenetv2: pred=printed_document (WRONG)  margin=0.321  softmax=0.434  entropy=1.305
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-06 012227.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=7.207  softmax=0.999  entropy=0.007
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=0.415  softmax=0.451  entropy=1.086
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-06 012336.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=3.720  softmax=0.976  entropy=0.114
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=0.158  softmax=0.535  entropy=0.742
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-06 074156.png
+    gt=website_screenshot
+    siglip:      pred=website_screenshot (correct)  margin=0.434  softmax=0.518  entropy=1.125
+    mobilenetv2: pred=printed_document (WRONG)  margin=0.939  softmax=0.548  entropy=1.335
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-09 020237.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=3.407  softmax=0.962  entropy=0.184
+    mobilenetv2: pred=website_screenshot (WRONG)  margin=2.293  softmax=0.903  entropy=0.349
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-10 190444.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=8.312  softmax=1.000  entropy=0.004
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=0.627  softmax=0.557  entropy=1.125
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-10 191054.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=8.605  softmax=1.000  entropy=0.003
+    mobilenetv2: pred=portrait_photo (WRONG)  margin=0.133  softmax=0.366  entropy=1.375
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-14 011801.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=4.434  softmax=0.979  entropy=0.133
+    mobilenetv2: pred=map_land_record (WRONG)  margin=1.108  softmax=0.672  entropy=0.972
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-26 222225.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=5.909  softmax=0.997  entropy=0.025
+    mobilenetv2: pred=website_screenshot (WRONG)  margin=2.645  softmax=0.917  entropy=0.359
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-27 081254.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=9.635  softmax=1.000  entropy=0.001
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.241  softmax=0.439  entropy=1.123
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-27 193130.png
+    gt=website_screenshot
+    siglip:      pred=website_screenshot (correct)  margin=4.940  softmax=0.991  entropy=0.056
+    mobilenetv2: pred=printed_document (WRONG)  margin=1.873  softmax=0.819  entropy=0.652
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-29 035055.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=0.306  softmax=0.464  entropy=1.077
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=2.540  softmax=0.909  entropy=0.364
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-29 035906.png
+    gt=map_land_record
+    siglip:      pred=map_land_record (correct)  margin=4.720  softmax=0.981  entropy=0.123
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.575  softmax=0.394  entropy=1.496
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 155217.png
+    gt=portrait_photo
+    siglip:      pred=portrait_photo (correct)  margin=2.923  softmax=0.919  entropy=0.351
+    mobilenetv2: pred=printed_document (WRONG)  margin=0.563  softmax=0.635  entropy=0.680
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 164358.png
+    gt=portrait_photo
+    siglip:      pred=portrait_photo (correct)  margin=0.155  softmax=0.452  entropy=1.036
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.610  softmax=0.625  entropy=0.825
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 213043.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=9.909  softmax=1.000  entropy=0.001
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=1.869  softmax=0.857  entropy=0.453
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 230548.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=2.726  softmax=0.937  entropy=0.242
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=2.078  softmax=0.882  entropy=0.398
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 013148.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=0.412  softmax=0.464  entropy=1.101
+    mobilenetv2: pred=website_screenshot (WRONG)  margin=2.837  softmax=0.909  entropy=0.379
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 025929.png
+    gt=map_land_record
+    siglip:      pred=map_land_record (correct)  margin=4.860  softmax=0.986  entropy=0.089
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=0.799  softmax=0.649  entropy=0.876
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 142750.png
+    gt=map_land_record
+    siglip:      pred=map_land_record (correct)  margin=1.239  softmax=0.609  entropy=1.070
+    mobilenetv2: pred=printed_document (WRONG)  margin=1.891  softmax=0.844  entropy=0.547
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 202545.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=4.820  softmax=0.982  entropy=0.116
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=0.117  softmax=0.430  entropy=1.285
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-02 183812.png
+    gt=map_land_record
+    siglip:      pred=map_land_record (correct)  margin=5.784  softmax=0.993  entropy=0.049
+    mobilenetv2: pred=printed_document (WRONG)  margin=1.753  softmax=0.625  entropy=1.308
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-03 011023.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=7.160  softmax=0.998  entropy=0.020
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=2.065  softmax=0.863  entropy=0.495
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-04 184155.png
+    gt=dense_tabular_rows
+    siglip:      pred=dense_tabular_rows (correct)  margin=4.211  softmax=0.972  entropy=0.159
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=2.089  softmax=0.831  entropy=0.601
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-04 205202.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=3.218  softmax=0.922  entropy=0.368
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=4.061  softmax=0.953  entropy=0.265
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-05 214029.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=5.034  softmax=0.977  entropy=0.149
+    mobilenetv2: pred=website_screenshot (WRONG)  margin=0.273  softmax=0.400  entropy=1.387
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-05 220110.png
+    gt=portrait_photo
+    siglip:      pred=portrait_photo (correct)  margin=0.753  softmax=0.618  entropy=0.942
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.161  softmax=0.378  entropy=1.363
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-06 120630.png
+    gt=dense_tabular_rows
+    siglip:      pred=dense_tabular_rows (correct)  margin=8.606  softmax=1.000  entropy=0.003
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=2.256  softmax=0.886  entropy=0.442
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-06 120959.png
+    gt=dense_tabular_rows
+    siglip:      pred=dense_tabular_rows (correct)  margin=8.089  softmax=0.999  entropy=0.006
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=2.622  softmax=0.853  entropy=0.588
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-07 001311.png
+    gt=map_land_record
+    siglip:      pred=map_land_record (correct)  margin=1.391  softmax=0.716  entropy=0.913
+    mobilenetv2: pred=portrait_photo (WRONG)  margin=0.555  softmax=0.513  entropy=1.089
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-07 195805.png
+    gt=website_screenshot
+    siglip:      pred=website_screenshot (correct)  margin=4.723  softmax=0.990  entropy=0.057
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=0.629  softmax=0.572  entropy=1.068
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-07 200902.png
+    gt=website_screenshot
+    siglip:      pred=website_screenshot (correct)  margin=7.947  softmax=0.999  entropy=0.005
+    mobilenetv2: pred=printed_document (WRONG)  margin=1.903  softmax=0.857  entropy=0.481
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-07 203841.png
+    gt=website_screenshot
+    siglip:      pred=website_screenshot (correct)  margin=6.684  softmax=0.998  entropy=0.013
+    mobilenetv2: pred=printed_document (WRONG)  margin=3.685  softmax=0.964  entropy=0.181
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-08 141350.png
+    gt=portrait_photo
+    siglip:      pred=portrait_photo (correct)  margin=3.704  softmax=0.963  entropy=0.190
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=0.747  softmax=0.553  entropy=1.229
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-10 015234.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=9.983  softmax=1.000  entropy=0.001
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.289  softmax=0.557  entropy=0.810
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-11 144148.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=4.952  softmax=0.991  entropy=0.061
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=2.179  softmax=0.883  entropy=0.419
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-11 171803.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=8.889  softmax=1.000  entropy=0.004
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=0.296  softmax=0.472  entropy=1.160
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-12 165838.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=9.417  softmax=1.000  entropy=0.003
+    mobilenetv2: pred=website_screenshot (WRONG)  margin=0.122  softmax=0.390  entropy=1.379
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-13 225048.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=9.573  softmax=1.000  entropy=0.001
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.426  softmax=0.432  entropy=1.341
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-14 165325.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=8.996  softmax=1.000  entropy=0.002
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=1.944  softmax=0.872  entropy=0.397
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-14 165513.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=9.516  softmax=1.000  entropy=0.002
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=1.229  softmax=0.770  entropy=0.565
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-15 213446.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=3.171  softmax=0.958  entropy=0.184
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=2.737  softmax=0.912  entropy=0.376
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-15 213840.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=5.251  softmax=0.988  entropy=0.081
+    mobilenetv2: pred=map_land_record (WRONG)  margin=0.223  softmax=0.459  entropy=1.220
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-17 191858.png
+    gt=dense_tabular_rows
+    siglip:      pred=dense_tabular_rows (correct)  margin=0.271  softmax=0.564  entropy=0.719
+    mobilenetv2: pred=printed_document (WRONG)  margin=0.833  softmax=0.456  entropy=1.309
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-17 225522.png
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=0.301  softmax=0.499  entropy=1.208
+    mobilenetv2: pred=map_land_record (WRONG)  margin=1.630  softmax=0.621  entropy=1.280
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-18 185421.png
+    gt=website_screenshot
+    siglip:      pred=website_screenshot (correct)  margin=4.244  softmax=0.985  entropy=0.079
+    mobilenetv2: pred=printed_document (WRONG)  margin=1.095  softmax=0.711  entropy=0.788
+  J:\Genealogy\genealogy_pipeline\data\working\b1434-s026-032.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=5.322  softmax=0.993  entropy=0.046
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=0.179  softmax=0.385  entropy=1.407
+  J:\Genealogy\genealogy_pipeline\data\working\b7493-s040-0031.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=8.716  softmax=0.999  entropy=0.005
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=0.722  softmax=0.637  entropy=0.863
+  J:\Genealogy\genealogy_pipeline\data\working\d13p_1133d0260.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=5.213  softmax=0.994  entropy=0.035
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=1.144  softmax=0.505  entropy=1.556
+  J:\Genealogy\genealogy_pipeline\data\working\e003667909.jpg
+    gt=dense_tabular_rows
+    siglip:      pred=dense_tabular_rows (correct)  margin=8.063  softmax=0.999  entropy=0.005
+    mobilenetv2: pred=printed_document (WRONG)  margin=0.491  softmax=0.613  entropy=0.740
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c10295.597.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=12.504  softmax=1.000  entropy=0.000
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.643  softmax=0.639  entropy=0.766
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c10296.517.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=3.098  softmax=0.950  entropy=0.222
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=0.272  softmax=0.442  entropy=1.318
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c10639.938.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=9.870  softmax=1.000  entropy=0.002
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=0.957  softmax=0.498  entropy=1.396
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c4771.1511.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=9.836  softmax=1.000  entropy=0.002
+    mobilenetv2: pred=mixed_text_image (WRONG)  margin=2.483  softmax=0.891  entropy=0.426
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c7300.209.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=10.125  softmax=1.000  entropy=0.001
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=0.933  softmax=0.611  entropy=1.065
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c7308.1365.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=11.050  softmax=1.000  entropy=0.000
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=1.895  softmax=0.715  entropy=0.946
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c7311.1255.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=8.074  softmax=1.000  entropy=0.004
+    mobilenetv2: pred=dense_tabular_rows (WRONG)  margin=0.804  softmax=0.417  entropy=1.632
+  J:\Genealogy\genealogy_pipeline\data\working\ooe.b1603413E_001.26.jpg
+    gt=printed_document
+    siglip:      pred=printed_document (correct)  margin=11.557  softmax=1.000  entropy=0.000
+    mobilenetv2: pred=handwritten_ledger (WRONG)  margin=0.320  softmax=0.392  entropy=1.382

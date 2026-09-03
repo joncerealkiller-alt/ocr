@@ -1,0 +1,68 @@
+Loading real recorded evidence (no new inference)...
+Held-out test set: 332 images
+
+Loaded config/decision_engine.yaml - default_policy='gemma_primary'
+
+==========================================================================================
+REPLAY RESULTS - policy='gemma_primary' (from config, unmodified)
+==========================================================================================
+
+Trust-state distribution across 332 images:
+  auto_accept          0 (0.0%)
+  accept_with_caution  231 (69.6%)
+  quarantine           101 (30.4%)
+  no_decision          0 (0.0%)
+
+Accuracy conditional on trust state (selected_class == ground truth):
+  accept_with_caution  231/231 (100.0%)
+  quarantine           81/101 (80.2%)
+
+Overall (all trust states, selected_class == gt): 312/332 (94.0%)
+
+
+==========================================================================================
+SAMPLE AUDIT TRAILS
+==========================================================================================
+
+-- Example AUTO_ACCEPT: none found --
+
+-- Example QUARANTINE --
+Image: J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-06 120651.png
+Ground truth: dense_tabular_rows
+  Policy: gemma_primary
+  Primary [gemma]: dense_tabular_rows, no scored confidence available
+    Supporting [mobilenetv2] AGREES: dense_tabular_rows
+    Supporting [dinov2] AGREES: dense_tabular_rows
+    Supporting [beit] AGREES: dense_tabular_rows
+    Supporting [swin] AGREES: dense_tabular_rows
+    Supporting [siglip] AGREES: dense_tabular_rows
+    Supporting [convnext] DISAGREES (weak/unscored): website_screenshot
+    Supporting [vit21k] DISAGREES (confident): website_screenshot
+  Result: primary weak/unscored and supporting evidence is absent, contradictory, or itself weak -> QUARANTINE
+
+-- Example where selected_class != ground truth (any trust state) --
+Image: J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 233419.png
+Ground truth: dense_tabular_rows
+  Policy: gemma_primary
+  Primary [gemma]: website_screenshot, no scored confidence available
+    Supporting [convnext] AGREES: website_screenshot
+    Supporting [dinov2] AGREES: website_screenshot
+    Supporting [beit] AGREES: website_screenshot
+    Supporting [swin] AGREES: website_screenshot
+    Supporting [siglip] AGREES: website_screenshot
+    Supporting [vit21k] AGREES: website_screenshot
+    Supporting [mobilenetv2] DISAGREES (confident): dense_tabular_rows
+  Result: primary weak/unscored and supporting evidence is absent, contradictory, or itself weak -> QUARANTINE
+
+
+==========================================================================================
+POLICY COMPARISON ON REAL DATA (same evidence, policy overridden per call - no config file edited, no code changed)
+==========================================================================================
+
+  policy=gemma_primary             overall_acc=312/332 (94.0%)  trust_states={'quarantine': 101, 'accept_with_caution': 231}
+
+  policy=vision_primary            overall_acc=302/332 (91.0%)  trust_states={'accept_with_caution': 76, 'auto_accept': 245, 'quarantine': 11}
+    AUTO_ACCEPT-only accuracy: 239/245 (97.6%)
+
+  policy=weighted_fusion           overall_acc=308/332 (92.8%)  trust_states={'auto_accept': 305, 'quarantine': 6, 'accept_with_caution': 21}
+    AUTO_ACCEPT-only accuracy: 295/305 (96.7%)

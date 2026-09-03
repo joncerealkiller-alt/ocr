@@ -1,0 +1,341 @@
+Common images across Gemma + all 7 towers: 332
+
+Gemma errors on this set: 21
+
+==========================================================================================
+1. Are Gemma's errors concentrated or spread across categories?
+==========================================================================================
+  dense_tabular_rows   0/97 errors (0.0% error rate within category)
+  genealogy_chart      0/1 errors (0.0% error rate within category)
+  handwritten_ledger   0/4 errors (0.0% error rate within category)
+  map_land_record      0/14 errors (0.0% error rate within category)
+  mixed_text_image     1/3 errors (33.3% error rate within category)
+  portrait_photo       6/12 errors (50.0% error rate within category)
+  printed_document     9/175 errors (5.1% error rate within category)
+  website_screenshot   5/26 errors (19.2% error rate within category)
+
+  Error distribution across categories: {'portrait_photo': 6, 'printed_document': 9, 'mixed_text_image': 1, 'website_screenshot': 5}
+  Errors fall in 4/8 categories - SPREAD (portrait_photo + website_screenshot alone account for 11/21)
+
+
+==========================================================================================
+2. For each of Gemma's 21 errors: which towers were correct? MobileNet? SigLIP? Consensus?
+==========================================================================================
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-07 005754.png
+    gt=portrait_photo  gemma_pred=casual_photo (conf=0.98)
+    towers correct: 5/7
+      convnext     wrong    pred=map_land_record      margin=0.89  entropy=1.34  softmax=0.544
+      mobilenetv2  CORRECT  pred=portrait_photo       margin=3.16  entropy=0.32  softmax=0.933
+      dinov2       CORRECT  pred=portrait_photo       margin=4.25  entropy=0.16  softmax=0.973
+      beit         wrong    pred=printed_document     margin=1.41  entropy=1.12  softmax=0.652
+      swin         CORRECT  pred=portrait_photo       margin=1.84  entropy=0.90  softmax=0.759
+      siglip       CORRECT  pred=portrait_photo       margin=0.23  entropy=1.38  softmax=0.383
+      vit21k       CORRECT  pred=portrait_photo       margin=0.61  entropy=1.77  softmax=0.372
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-27 020118.png
+    gt=printed_document  gemma_pred=mixed_text_image (conf=0.95)
+    towers correct: 0/7
+      convnext     wrong    pred=mixed_text_image     margin=3.24  entropy=0.47  softmax=0.900
+      mobilenetv2  wrong    pred=portrait_photo       margin=3.97  entropy=0.17  softmax=0.969
+      dinov2       wrong    pred=mixed_text_image     margin=1.05  entropy=0.91  softmax=0.683
+      beit         wrong    pred=portrait_photo       margin=1.74  entropy=0.86  softmax=0.754
+      swin         wrong    pred=mixed_text_image     margin=1.64  entropy=0.85  softmax=0.739
+      siglip       wrong    pred=mixed_text_image     margin=2.16  entropy=0.78  softmax=0.789
+      vit21k       wrong    pred=mixed_text_image     margin=0.83  entropy=0.92  softmax=0.645
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-29 035055.png
+    gt=printed_document  gemma_pred=dense_tabular_rows (conf=0.95)
+    towers correct: 2/7
+      convnext     CORRECT  pred=printed_document     margin=1.18  entropy=0.78  softmax=0.707
+      mobilenetv2  wrong    pred=dense_tabular_rows   margin=2.54  entropy=0.36  softmax=0.909
+      dinov2       wrong    pred=website_screenshot   margin=0.61  entropy=0.79  softmax=0.624
+      beit         wrong    pred=website_screenshot   margin=0.11  entropy=1.08  softmax=0.410
+      swin         wrong    pred=website_screenshot   margin=0.25  entropy=0.95  softmax=0.507
+      siglip       CORRECT  pred=printed_document     margin=0.31  entropy=1.08  softmax=0.464
+      vit21k       wrong    pred=website_screenshot   margin=1.62  entropy=0.76  softmax=0.752
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 124919.png
+    gt=mixed_text_image  gemma_pred=printed_document (conf=0.98)
+    towers correct: 5/7
+      convnext     CORRECT  pred=mixed_text_image     margin=3.15  entropy=0.27  softmax=0.943
+      mobilenetv2  CORRECT  pred=mixed_text_image     margin=0.18  entropy=0.99  softmax=0.501
+      dinov2       wrong    pred=printed_document     margin=1.26  entropy=0.65  softmax=0.760
+      beit         CORRECT  pred=mixed_text_image     margin=3.98  entropy=0.16  softmax=0.971
+      swin         CORRECT  pred=mixed_text_image     margin=5.10  entropy=0.07  softmax=0.990
+      siglip       wrong    pred=portrait_photo       margin=2.56  entropy=0.32  softmax=0.920
+      vit21k       CORRECT  pred=mixed_text_image     margin=1.50  entropy=1.09  softmax=0.663
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 155324.png
+    gt=portrait_photo  gemma_pred=casual_photo (conf=0.95)
+    towers correct: 6/7
+      convnext     CORRECT  pred=portrait_photo       margin=2.04  entropy=0.49  softmax=0.860
+      mobilenetv2  CORRECT  pred=portrait_photo       margin=0.12  entropy=1.06  softmax=0.474
+      dinov2       CORRECT  pred=portrait_photo       margin=3.41  entropy=0.24  softmax=0.949
+      beit         CORRECT  pred=portrait_photo       margin=0.99  entropy=0.89  softmax=0.651
+      swin         wrong    pred=mixed_text_image     margin=1.74  entropy=0.52  softmax=0.833
+      siglip       CORRECT  pred=portrait_photo       margin=0.21  entropy=0.94  softmax=0.503
+      vit21k       CORRECT  pred=portrait_photo       margin=1.80  entropy=0.69  softmax=0.811
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 194646.png
+    gt=printed_document  gemma_pred=map_land_record (conf=0.95)
+    towers correct: 0/7
+      convnext     wrong    pred=map_land_record      margin=1.52  entropy=0.61  softmax=0.799
+      mobilenetv2  wrong    pred=handwritten_ledger   margin=0.79  entropy=1.10  softmax=0.607
+      dinov2       wrong    pred=map_land_record      margin=0.37  entropy=0.92  softmax=0.552
+      beit         wrong    pred=map_land_record      margin=4.14  entropy=0.10  softmax=0.982
+      swin         wrong    pred=map_land_record      margin=3.72  entropy=0.14  softmax=0.973
+      siglip       wrong    pred=map_land_record      margin=5.54  entropy=0.04  softmax=0.994
+      vit21k       wrong    pred=map_land_record      margin=3.94  entropy=0.27  softmax=0.950
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 013148.png
+    gt=printed_document  gemma_pred=dense_tabular_rows (conf=0.95)
+    towers correct: 3/7
+      convnext     CORRECT  pred=printed_document     margin=1.39  entropy=0.79  softmax=0.720
+      mobilenetv2  wrong    pred=website_screenshot   margin=2.84  entropy=0.38  softmax=0.909
+      dinov2       wrong    pred=website_screenshot   margin=1.15  entropy=0.65  softmax=0.744
+      beit         CORRECT  pred=printed_document     margin=0.54  entropy=1.07  softmax=0.468
+      swin         wrong    pred=dense_tabular_rows   margin=0.51  entropy=0.88  softmax=0.582
+      siglip       CORRECT  pred=printed_document     margin=0.41  entropy=1.10  softmax=0.464
+      vit21k       wrong    pred=website_screenshot   margin=1.34  entropy=0.88  softmax=0.684
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 014237.png
+    gt=website_screenshot  gemma_pred=dense_tabular_rows (conf=0.95)
+    towers correct: 7/7
+      convnext     CORRECT  pred=website_screenshot   margin=1.41  entropy=0.76  softmax=0.732
+      mobilenetv2  CORRECT  pred=website_screenshot   margin=1.63  entropy=0.66  softmax=0.800
+      dinov2       CORRECT  pred=website_screenshot   margin=3.14  entropy=0.31  softmax=0.932
+      beit         CORRECT  pred=website_screenshot   margin=2.95  entropy=0.34  softmax=0.920
+      swin         CORRECT  pred=website_screenshot   margin=1.73  entropy=0.57  softmax=0.818
+      siglip       CORRECT  pred=website_screenshot   margin=0.11  entropy=0.81  softmax=0.513
+      vit21k       CORRECT  pred=website_screenshot   margin=1.84  entropy=0.71  softmax=0.777
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-02 190313.png
+    gt=portrait_photo  gemma_pred=casual_photo (conf=0.95)
+    towers correct: 7/7
+      convnext     CORRECT  pred=portrait_photo       margin=3.82  entropy=0.17  softmax=0.968
+      mobilenetv2  CORRECT  pred=portrait_photo       margin=1.06  entropy=0.75  softmax=0.713
+      dinov2       CORRECT  pred=portrait_photo       margin=4.97  entropy=0.07  softmax=0.989
+      beit         CORRECT  pred=portrait_photo       margin=3.24  entropy=0.20  softmax=0.957
+      swin         CORRECT  pred=portrait_photo       margin=1.96  entropy=0.42  softmax=0.870
+      siglip       CORRECT  pred=portrait_photo       margin=5.99  entropy=0.04  softmax=0.995
+      vit21k       CORRECT  pred=portrait_photo       margin=0.30  entropy=0.74  softmax=0.569
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-02 190707.png
+    gt=portrait_photo  gemma_pred=casual_photo (conf=0.95)
+    towers correct: 7/7
+      convnext     CORRECT  pred=portrait_photo       margin=4.24  entropy=0.12  softmax=0.979
+      mobilenetv2  CORRECT  pred=portrait_photo       margin=4.64  entropy=0.08  softmax=0.988
+      dinov2       CORRECT  pred=portrait_photo       margin=1.81  entropy=0.65  softmax=0.810
+      beit         CORRECT  pred=portrait_photo       margin=1.76  entropy=0.57  softmax=0.824
+      swin         CORRECT  pred=portrait_photo       margin=4.42  entropy=0.11  softmax=0.981
+      siglip       CORRECT  pred=portrait_photo       margin=3.01  entropy=0.32  softmax=0.933
+      vit21k       CORRECT  pred=portrait_photo       margin=1.42  entropy=0.84  softmax=0.718
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-05 202807.png
+    gt=printed_document  gemma_pred=casual_photo (conf=0.95)
+    towers correct: 2/7
+      convnext     CORRECT  pred=printed_document     margin=0.34  entropy=1.04  softmax=0.500
+      mobilenetv2  wrong    pred=mixed_text_image     margin=4.63  entropy=0.06  softmax=0.990
+      dinov2       wrong    pred=portrait_photo       margin=0.35  entropy=1.18  softmax=0.499
+      beit         CORRECT  pred=printed_document     margin=0.00  entropy=1.03  softmax=0.433
+      swin         wrong    pred=mixed_text_image     margin=2.20  entropy=0.61  softmax=0.820
+      siglip       wrong    pred=mixed_text_image     margin=2.64  entropy=0.37  softmax=0.907
+      vit21k       wrong    pred=mixed_text_image     margin=1.63  entropy=0.75  softmax=0.765
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-05 220110.png
+    gt=portrait_photo  gemma_pred=mixed_text_image (conf=0.95)
+    towers correct: 1/7
+      convnext     wrong    pred=mixed_text_image     margin=1.70  entropy=0.49  softmax=0.837
+      mobilenetv2  wrong    pred=mixed_text_image     margin=0.16  entropy=1.36  softmax=0.378
+      dinov2       wrong    pred=printed_document     margin=1.07  entropy=0.77  softmax=0.706
+      beit         wrong    pred=mixed_text_image     margin=3.45  entropy=0.17  softmax=0.965
+      swin         wrong    pred=mixed_text_image     margin=3.29  entropy=0.23  softmax=0.951
+      siglip       CORRECT  pred=portrait_photo       margin=0.75  entropy=0.94  softmax=0.618
+      vit21k       wrong    pred=mixed_text_image     margin=2.80  entropy=0.53  softmax=0.878
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-08 141350.png
+    gt=portrait_photo  gemma_pred=casual_photo (conf=0.95)
+    towers correct: 2/7
+      convnext     wrong    pred=printed_document     margin=0.90  entropy=1.22  softmax=0.561
+      mobilenetv2  wrong    pred=dense_tabular_rows   margin=0.75  entropy=1.23  softmax=0.553
+      dinov2       wrong    pred=printed_document     margin=1.97  entropy=0.88  softmax=0.757
+      beit         wrong    pred=printed_document     margin=1.03  entropy=0.94  softmax=0.668
+      swin         wrong    pred=printed_document     margin=1.42  entropy=0.85  softmax=0.727
+      siglip       CORRECT  pred=portrait_photo       margin=3.70  entropy=0.19  softmax=0.963
+      vit21k       CORRECT  pred=portrait_photo       margin=1.54  entropy=1.29  softmax=0.617
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-09 000214.png
+    gt=website_screenshot  gemma_pred=dense_tabular_rows (conf=0.95)
+    towers correct: 7/7
+      convnext     CORRECT  pred=website_screenshot   margin=2.48  entropy=0.39  softmax=0.897
+      mobilenetv2  CORRECT  pred=website_screenshot   margin=0.61  entropy=0.78  softmax=0.633
+      dinov2       CORRECT  pred=website_screenshot   margin=3.76  entropy=0.18  softmax=0.966
+      beit         CORRECT  pred=website_screenshot   margin=2.77  entropy=0.40  softmax=0.900
+      swin         CORRECT  pred=website_screenshot   margin=1.45  entropy=0.63  softmax=0.781
+      siglip       CORRECT  pred=website_screenshot   margin=0.39  entropy=1.10  softmax=0.455
+      vit21k       CORRECT  pred=website_screenshot   margin=2.82  entropy=0.43  softmax=0.893
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-09 002532.png
+    gt=printed_document  gemma_pred=dense_tabular_rows (conf=0.95)
+    towers correct: 0/7
+      convnext     wrong    pred=website_screenshot   margin=2.07  entropy=0.60  softmax=0.817
+      mobilenetv2  wrong    pred=website_screenshot   margin=0.84  entropy=1.06  softmax=0.565
+      dinov2       wrong    pred=website_screenshot   margin=3.22  entropy=0.26  softmax=0.944
+      beit         wrong    pred=website_screenshot   margin=2.87  entropy=0.34  softmax=0.918
+      swin         wrong    pred=website_screenshot   margin=1.50  entropy=0.66  softmax=0.775
+      siglip       wrong    pred=website_screenshot   margin=0.04  entropy=1.14  softmax=0.345
+      vit21k       wrong    pred=website_screenshot   margin=2.20  entropy=0.55  softmax=0.846
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-10 005518.png
+    gt=printed_document  gemma_pred=dense_tabular_rows (conf=0.95)
+    towers correct: 7/7
+      convnext     CORRECT  pred=printed_document     margin=7.52  entropy=0.01  softmax=0.999
+      mobilenetv2  CORRECT  pred=printed_document     margin=3.13  entropy=0.46  softmax=0.904
+      dinov2       CORRECT  pred=printed_document     margin=9.18  entropy=0.00  softmax=1.000
+      beit         CORRECT  pred=printed_document     margin=6.66  entropy=0.01  softmax=0.998
+      swin         CORRECT  pred=printed_document     margin=6.97  entropy=0.01  softmax=0.999
+      siglip       CORRECT  pred=printed_document     margin=7.38  entropy=0.01  softmax=0.999
+      vit21k       CORRECT  pred=printed_document     margin=3.82  entropy=0.25  softmax=0.953
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-17 193138.png
+    gt=website_screenshot  gemma_pred=printed_document (conf=0.98)
+    towers correct: 7/7
+      convnext     CORRECT  pred=website_screenshot   margin=2.09  entropy=0.37  softmax=0.887
+      mobilenetv2  CORRECT  pred=website_screenshot   margin=1.54  entropy=0.55  softmax=0.810
+      dinov2       CORRECT  pred=website_screenshot   margin=5.18  entropy=0.04  softmax=0.994
+      beit         CORRECT  pred=website_screenshot   margin=3.13  entropy=0.19  softmax=0.956
+      swin         CORRECT  pred=website_screenshot   margin=3.26  entropy=0.18  softmax=0.960
+      siglip       CORRECT  pred=website_screenshot   margin=4.18  entropy=0.09  softmax=0.984
+      vit21k       CORRECT  pred=website_screenshot   margin=3.08  entropy=0.23  softmax=0.950
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-18 190228.png
+    gt=website_screenshot  gemma_pred=printed_document (conf=0.95)
+    towers correct: 7/7
+      convnext     CORRECT  pred=website_screenshot   margin=3.26  entropy=0.17  softmax=0.962
+      mobilenetv2  CORRECT  pred=website_screenshot   margin=3.14  entropy=0.23  softmax=0.951
+      dinov2       CORRECT  pred=website_screenshot   margin=7.28  entropy=0.01  softmax=0.999
+      beit         CORRECT  pred=website_screenshot   margin=4.43  entropy=0.07  softmax=0.987
+      swin         CORRECT  pred=website_screenshot   margin=4.00  entropy=0.11  softmax=0.979
+      siglip       CORRECT  pred=website_screenshot   margin=4.13  entropy=0.08  softmax=0.984
+      vit21k       CORRECT  pred=website_screenshot   margin=3.06  entropy=0.23  softmax=0.949
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-18 190525.png
+    gt=website_screenshot  gemma_pred=printed_document (conf=0.98)
+    towers correct: 7/7
+      convnext     CORRECT  pred=website_screenshot   margin=2.56  entropy=0.27  softmax=0.928
+      mobilenetv2  CORRECT  pred=website_screenshot   margin=2.25  entropy=0.64  softmax=0.830
+      dinov2       CORRECT  pred=website_screenshot   margin=6.95  entropy=0.01  softmax=0.999
+      beit         CORRECT  pred=website_screenshot   margin=4.93  entropy=0.05  softmax=0.992
+      swin         CORRECT  pred=website_screenshot   margin=3.48  entropy=0.15  softmax=0.968
+      siglip       CORRECT  pred=website_screenshot   margin=2.88  entropy=0.21  softmax=0.946
+      vit21k       CORRECT  pred=website_screenshot   margin=3.99  entropy=0.14  softmax=0.975
+
+  J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-19 233335.png
+    gt=printed_document  gemma_pred=casual_photo (conf=0.95)
+    towers correct: 4/7
+      convnext     CORRECT  pred=printed_document     margin=0.86  entropy=1.27  softmax=0.544
+      mobilenetv2  wrong    pred=dense_tabular_rows   margin=0.70  entropy=1.34  softmax=0.462
+      dinov2       CORRECT  pred=printed_document     margin=1.83  entropy=0.96  softmax=0.725
+      beit         CORRECT  pred=printed_document     margin=1.01  entropy=0.89  softmax=0.681
+      swin         CORRECT  pred=printed_document     margin=0.47  entropy=1.07  softmax=0.541
+      siglip       wrong    pred=portrait_photo       margin=3.45  entropy=0.21  softmax=0.958
+      vit21k       wrong    pred=portrait_photo       margin=1.35  entropy=1.29  softmax=0.599
+
+  J:\Genealogy\genealogy_pipeline\data\working\oocihm.lac_reel_c7299.1238.jpg
+    gt=printed_document  gemma_pred=dense_tabular_rows (conf=0.95)
+    towers correct: 1/7
+      convnext     wrong    pred=dense_tabular_rows   margin=1.38  entropy=0.53  softmax=0.796
+      mobilenetv2  CORRECT  pred=printed_document     margin=3.44  entropy=0.21  softmax=0.959
+      dinov2       wrong    pred=dense_tabular_rows   margin=2.21  entropy=0.34  softmax=0.899
+      beit         wrong    pred=dense_tabular_rows   margin=1.59  entropy=0.54  softmax=0.820
+      swin         wrong    pred=dense_tabular_rows   margin=3.10  entropy=0.33  softmax=0.930
+      siglip       wrong    pred=dense_tabular_rows   margin=3.01  entropy=0.21  softmax=0.951
+      vit21k       wrong    pred=dense_tabular_rows   margin=2.36  entropy=0.83  softmax=0.795
+
+
+  -- Summary: how many of the 21 errors did each tower independently get right? --
+    convnext     14/21
+    mobilenetv2  12/21
+    dinov2       11/21
+    beit         13/21
+    swin         11/21
+    siglip       14/21
+    vit21k       12/21
+
+  MobileNet correct on 12/21 of Gemma's errors
+  SigLIP correct on 14/21 of Gemma's errors
+
+  Distribution of 'how many of 7 towers were correct' across the 21 errors: {0: 3, 1: 2, 2: 3, 3: 1, 4: 1, 5: 2, 6: 1, 7: 8}
+  3/21 errors: EVERY tower also wrong (no tower-based dissent signal possible on these at all, by construction)
+
+
+==========================================================================================
+3. Tower margin/entropy on these 21 disagreement cases vs. their normal correct/incorrect baseline
+==========================================================================================
+
+  convnext: margin on Gemma's-21 mean=2.29 median=2.04  entropy mean=0.58
+
+  mobilenetv2: margin on Gemma's-21 mean=2.01 median=1.63  entropy mean=0.66
+
+  dinov2: margin on Gemma's-21 mean=3.10 median=2.21  entropy mean=0.48
+
+  beit: margin on Gemma's-21 mean=2.51 median=2.77  entropy mean=0.53
+
+  swin: margin on Gemma's-21 mean=2.57 median=1.96  entropy mean=0.49
+
+  siglip: margin on Gemma's-21 mean=2.53 median=2.64  entropy mean=0.54
+
+  vit21k: margin on Gemma's-21 mean=2.09 median=1.80  entropy mean=0.72
+
+
+==========================================================================================
+4. Gemma's own confidence characteristics on these same 21 errors
+==========================================================================================
+  mean=0.956  median=0.950
+  (LIMITATION: Gemma's production classify() path only exposes this self-reported confidence field, not a raw decision-token logit margin - this project's earlier experiments found the raw logit gap is the more reliable signal, but extracting it here would require custom instrumentation inside the classify() call, not done in this pass. Confidence field alone, per the earlier gemma_vs_towers analysis, only weakly separates correct/incorrect (0.981 vs 0.956 mean) - the same weak separation shows up here: mean confidence on these 21 errors is barely below Gemma's overall correct-case mean, meaning Gemma does NOT reliably 'know' it's wrong on these specific cases via this field.)
+
+
+==========================================================================================
+5. Testing the proposed rule: Gemma predicts X, SigLIP disagrees, MobileNet independently agrees with SigLIP's alternative - checked against ALL 332 images (catch rate AND false-positive rate)
+==========================================================================================
+
+  Rule flags 18/332 images total
+  Of those, 12/21 are ACTUAL Gemma errors caught (57.1% catch rate)
+  Of those, 6/311 are Gemma predictions that were actually CORRECT - unnecessary flags (1.9% false-positive rate on Gemma's correct predictions)
+
+  Caught error cases:
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-07 005754.png  gt=portrait_photo  gemma=casual_photo  siglip=mobilenet=portrait_photo
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-30 155324.png  gt=portrait_photo  gemma=casual_photo  siglip=mobilenet=portrait_photo
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-31 014237.png  gt=website_screenshot  gemma=dense_tabular_rows  siglip=mobilenet=website_screenshot
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-02 190313.png  gt=portrait_photo  gemma=casual_photo  siglip=mobilenet=portrait_photo
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-02 190707.png  gt=portrait_photo  gemma=casual_photo  siglip=mobilenet=portrait_photo
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-05 202807.png  gt=printed_document  gemma=casual_photo  siglip=mobilenet=mixed_text_image
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-09 000214.png  gt=website_screenshot  gemma=dense_tabular_rows  siglip=mobilenet=website_screenshot
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-09 002532.png  gt=printed_document  gemma=dense_tabular_rows  siglip=mobilenet=website_screenshot
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-10 005518.png  gt=printed_document  gemma=dense_tabular_rows  siglip=mobilenet=printed_document
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-17 193138.png  gt=website_screenshot  gemma=printed_document  siglip=mobilenet=website_screenshot
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-18 190228.png  gt=website_screenshot  gemma=printed_document  siglip=mobilenet=website_screenshot
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-18 190525.png  gt=website_screenshot  gemma=printed_document  siglip=mobilenet=website_screenshot
+
+  Unnecessarily flagged (Gemma was right, rule still fired) - first 10 of 6:
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-05 081149.png  gt=portrait_photo  gemma(correct)=portrait_photo  siglip=mobilenet=mixed_text_image
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-05-28 210741.png  gt=website_screenshot  gemma(correct)=website_screenshot  siglip=mobilenet=dense_tabular_rows
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-11 214526.png  gt=printed_document  gemma(correct)=printed_document  siglip=mobilenet=website_screenshot
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-13 200432.png  gt=printed_document  gemma(correct)=printed_document  siglip=mobilenet=dense_tabular_rows
+    J:\Genealogy\genealogy_pipeline\data\working\Screenshot 2026-06-13 222157.png  gt=map_land_record  gemma(correct)=map_land_record  siglip=mobilenet=dense_tabular_rows
+    J:\Genealogy\genealogy_pipeline\data\working\b7493-s040-0023.jpg  gt=printed_document  gemma(correct)=printed_document  siglip=mobilenet=dense_tabular_rows
+
+
+  -- Variant: relaxed rule using margin threshold on SigLIP's dissent (only counts if siglip's OWN margin is above its median, i.e. a 'confident' dissent) --
+  siglip median margin (overall) = 8.89
+  Rule flags 0/332 images
+  Catches 0/21 real errors (0.0%)
+  False-positives: 0/311 (0.0%)
+
+
+==========================================================================================
+VERDICT
+==========================================================================================
+  Base rule: catches 57.1% of Gemma's errors at a 1.9% false-positive rate on Gemma's correct predictions.
+  [B] Looks like a genuinely useful arbitration signal - worth prototyping further.

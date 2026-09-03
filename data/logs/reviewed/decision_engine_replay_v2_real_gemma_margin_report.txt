@@ -1,0 +1,59 @@
+Loading real recorded evidence, including the NEW live Gemma logit-margin run...
+Held-out test set: 332 images
+Gemma real logit margin available for: 332/332 images
+
+Loaded config/decision_engine.yaml - default_policy='gemma_primary'
+
+==========================================================================================
+PART 1: gemma_primary WITH real logit margin (vs. the first replay's unscored version)
+==========================================================================================
+
+Trust-state distribution across 332 images (gemma_primary, real margin):
+  auto_accept          111 (33.4%)
+  accept_with_caution  158 (47.6%)
+  quarantine           63 (19.0%)
+  no_decision          0 (0.0%)
+
+Accuracy conditional on trust state:
+  auto_accept          111/111 (100.0%)
+  accept_with_caution  158/158 (100.0%)
+  quarantine           43/63 (68.3%)
+
+Overall: 312/332 (94.0%)
+
+*** KEY COMPARISON: gemma_primary reached AUTO_ACCEPT on 111 images this time (0 in the first replay, since Gemma's evidence was unscored there) ***
+
+Example AUTO_ACCEPT (real margin):
+Image: J:\Genealogy\genealogy_pipeline\data\outputs\lac_pull_1926_batch1\raw_jpgs\e011252673.jpg
+Ground truth: dense_tabular_rows
+  Policy: gemma_primary
+  Primary [gemma]: dense_tabular_rows, score=20 (auto_accept>=20.0, quarantine<7.0)
+    Supporting [convnext] AGREES: dense_tabular_rows
+    Supporting [mobilenetv2] AGREES: dense_tabular_rows
+    Supporting [dinov2] AGREES: dense_tabular_rows
+    Supporting [beit] AGREES: dense_tabular_rows
+    Supporting [swin] AGREES: dense_tabular_rows
+    Supporting [siglip] AGREES: dense_tabular_rows
+    Supporting [vit21k] AGREES: dense_tabular_rows
+  Result: primary confident, no strong contradiction -> AUTO_ACCEPT
+
+
+==========================================================================================
+PART 2: fair 3-way policy comparison, real uncertainty on both sides now
+==========================================================================================
+
+  policy=gemma_primary             overall_acc=312/332 (94.0%)  trust_states={'quarantine': 63, 'accept_with_caution': 158, 'auto_accept': 111}
+    AUTO_ACCEPT-only accuracy: 111/111 (100.0%)
+
+  policy=vision_primary            overall_acc=302/332 (91.0%)  trust_states={'accept_with_caution': 76, 'auto_accept': 245, 'quarantine': 11}
+    AUTO_ACCEPT-only accuracy: 239/245 (97.6%)
+
+  policy=weighted_fusion           overall_acc=308/332 (92.8%)  trust_states={'auto_accept': 305, 'quarantine': 6, 'accept_with_caution': 21}
+    AUTO_ACCEPT-only accuracy: 295/305 (96.7%)
+
+
+==========================================================================================
+PART 3: margin-vs-correctness sanity check on the real Gemma data (does the live adapter's margin actually track correctness, same as the earlier standalone experiments?)
+==========================================================================================
+Margin when Gemma correct (n=312): mean=18.11  median=19.12
+Margin when Gemma WRONG (n=20): mean=2.32  median=1.75

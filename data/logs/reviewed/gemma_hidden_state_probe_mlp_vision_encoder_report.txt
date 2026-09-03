@@ -1,0 +1,25 @@
+Shallow MLP probe on 'vision_encoder' only (hidden_dim=256, 10 seeds), reusing cached Stage 2 features - no Gemma inference.
+
+train_x=(1568, 768) val_x=(332, 768) test_x=(332, 768)
+
+  seed= 0  val=92.8%  test=92.2%
+  seed= 1  val=92.8%  test=92.8%
+  seed= 2  val=92.8%  test=93.4%
+  seed= 3  val=92.5%  test=92.5%
+  seed= 4  val=92.5%  test=92.5%
+  seed= 5  val=92.5%  test=92.8%
+  seed= 6  val=92.5%  test=91.9%
+  seed= 7  val=92.5%  test=93.4%
+  seed= 8  val=92.8%  test=92.2%
+  seed= 9  val=93.1%  test=92.2%
+
+=== MLP(vision_encoder) SUMMARY ===
+val:  92.7 ± 0.2
+test: 92.6 ± 0.5
+
+Reference points:
+  linear probe, vision_encoder, Stage 2 single-seed: 92.5% test
+  full autoregressive generation (gemma_flat8 held-out run): ~94%
+
+Gap closed vs. linear-probe single-seed baseline (92.5%): +0.1pt
+Remaining gap to generation ceiling (~94%): +1.4pt

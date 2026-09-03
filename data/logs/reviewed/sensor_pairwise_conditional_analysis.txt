@@ -1,0 +1,369 @@
+Loading per-model logit extractions...
+Loaded models: ['convnext', 'mobilenetv2', 'dinov2', 'beit', 'swin', 'siglip', 'vit21k']
+Common held-out test images across all loaded models: 332
+
+====================================================================================================
+GENERIC PAIRWISE CONDITIONAL-DISAGREEMENT ANALYSIS (n=332 common held-out images across all 7 sensors)
+====================================================================================================
+
+-- convnext vs mobilenetv2 (n=332) --
+  both_correct=246  convnext_correct/mobilenetv2_wrong=55  convnext_wrong/mobilenetv2_correct=8  both_wrong=23 (same_label=12, diff_label=11)
+  disagreement_rate=0.223 (n=74)  convnext_acc_given_disagree=0.743  mobilenetv2_acc_given_disagree=0.108
+    dense_tabular_rows   n=97   disagree_rate=0.103
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.357
+    mixed_text_image     n=3    disagree_rate=0.333  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.250
+    printed_document     n=175  disagree_rate=0.263
+    website_screenshot   n=26   disagree_rate=0.231
+
+-- convnext vs dinov2 (n=332) --
+  both_correct=290  convnext_correct/dinov2_wrong=11  convnext_wrong/dinov2_correct=12  both_wrong=19 (same_label=16, diff_label=3)
+  disagreement_rate=0.078 (n=26)  convnext_acc_given_disagree=0.423  dinov2_acc_given_disagree=0.462
+    dense_tabular_rows   n=97   disagree_rate=0.031
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.000  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.143
+    mixed_text_image     n=3    disagree_rate=1.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.074
+    website_screenshot   n=26   disagree_rate=0.077
+
+-- convnext vs beit (n=332) --
+  both_correct=294  convnext_correct/beit_wrong=7  convnext_wrong/beit_correct=9  both_wrong=22 (same_label=17, diff_label=5)
+  disagreement_rate=0.063 (n=21)  convnext_acc_given_disagree=0.333  beit_acc_given_disagree=0.429
+    dense_tabular_rows   n=97   disagree_rate=0.031
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.286
+    mixed_text_image     n=3    disagree_rate=0.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.083
+    printed_document     n=175  disagree_rate=0.051
+    website_screenshot   n=26   disagree_rate=0.077
+
+-- convnext vs swin (n=332) --
+  both_correct=288  convnext_correct/swin_wrong=13  convnext_wrong/swin_correct=10  both_wrong=21 (same_label=21, diff_label=0)
+  disagreement_rate=0.069 (n=23)  convnext_acc_given_disagree=0.565  swin_acc_given_disagree=0.435
+    dense_tabular_rows   n=97   disagree_rate=0.031
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.071
+    mixed_text_image     n=3    disagree_rate=0.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.074
+    website_screenshot   n=26   disagree_rate=0.077
+
+-- convnext vs siglip (n=332) --
+  both_correct=292  convnext_correct/siglip_wrong=9  convnext_wrong/siglip_correct=15  both_wrong=16 (same_label=14, diff_label=2)
+  disagreement_rate=0.078 (n=26)  convnext_acc_given_disagree=0.346  siglip_acc_given_disagree=0.577
+    dense_tabular_rows   n=97   disagree_rate=0.031
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.071
+    mixed_text_image     n=3    disagree_rate=0.333  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.333
+    printed_document     n=175  disagree_rate=0.069
+    website_screenshot   n=26   disagree_rate=0.115
+
+-- convnext vs vit21k (n=332) --
+  both_correct=287  convnext_correct/vit21k_wrong=14  convnext_wrong/vit21k_correct=11  both_wrong=20 (same_label=17, diff_label=3)
+  disagreement_rate=0.084 (n=28)  convnext_acc_given_disagree=0.500  vit21k_acc_given_disagree=0.393
+    dense_tabular_rows   n=97   disagree_rate=0.052
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.250  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.143
+    mixed_text_image     n=3    disagree_rate=0.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.091
+    website_screenshot   n=26   disagree_rate=0.077
+
+-- mobilenetv2 vs dinov2 (n=332) --
+  both_correct=246  mobilenetv2_correct/dinov2_wrong=8  mobilenetv2_wrong/dinov2_correct=56  both_wrong=22 (same_label=10, diff_label=12)
+  disagreement_rate=0.229 (n=76)  mobilenetv2_acc_given_disagree=0.105  dinov2_acc_given_disagree=0.737
+    dense_tabular_rows   n=97   disagree_rate=0.103
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.429
+    mixed_text_image     n=3    disagree_rate=1.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.250
+    printed_document     n=175  disagree_rate=0.251
+    website_screenshot   n=26   disagree_rate=0.269
+
+-- mobilenetv2 vs beit (n=332) --
+  both_correct=246  mobilenetv2_correct/beit_wrong=8  mobilenetv2_wrong/beit_correct=57  both_wrong=21 (same_label=11, diff_label=10)
+  disagreement_rate=0.226 (n=75)  mobilenetv2_acc_given_disagree=0.107  beit_acc_given_disagree=0.760
+    dense_tabular_rows   n=97   disagree_rate=0.103
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=1.000  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.286
+    mixed_text_image     n=3    disagree_rate=0.333  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.250
+    printed_document     n=175  disagree_rate=0.257
+    website_screenshot   n=26   disagree_rate=0.269
+
+-- mobilenetv2 vs swin (n=332) --
+  both_correct=244  mobilenetv2_correct/swin_wrong=10  mobilenetv2_wrong/swin_correct=54  both_wrong=24 (same_label=12, diff_label=12)
+  disagreement_rate=0.229 (n=76)  mobilenetv2_acc_given_disagree=0.132  swin_acc_given_disagree=0.711
+    dense_tabular_rows   n=97   disagree_rate=0.113
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.250  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.429
+    mixed_text_image     n=3    disagree_rate=0.333  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.250
+    printed_document     n=175  disagree_rate=0.263
+    website_screenshot   n=26   disagree_rate=0.269
+
+-- mobilenetv2 vs siglip (n=332) --
+  both_correct=246  mobilenetv2_correct/siglip_wrong=8  mobilenetv2_wrong/siglip_correct=61  both_wrong=17 (same_label=8, diff_label=9)
+  disagreement_rate=0.235 (n=78)  mobilenetv2_acc_given_disagree=0.103  siglip_acc_given_disagree=0.782
+    dense_tabular_rows   n=97   disagree_rate=0.113
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.357
+    mixed_text_image     n=3    disagree_rate=0.667  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.333
+    printed_document     n=175  disagree_rate=0.263
+    website_screenshot   n=26   disagree_rate=0.269
+
+-- mobilenetv2 vs vit21k (n=332) --
+  both_correct=245  mobilenetv2_correct/vit21k_wrong=9  mobilenetv2_wrong/vit21k_correct=53  both_wrong=25 (same_label=11, diff_label=14)
+  disagreement_rate=0.229 (n=76)  mobilenetv2_acc_given_disagree=0.118  vit21k_acc_given_disagree=0.697
+    dense_tabular_rows   n=97   disagree_rate=0.134
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.250  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.429
+    mixed_text_image     n=3    disagree_rate=0.333  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.257
+    website_screenshot   n=26   disagree_rate=0.269
+
+-- dinov2 vs beit (n=332) --
+  both_correct=293  dinov2_correct/beit_wrong=9  dinov2_wrong/beit_correct=10  both_wrong=20 (same_label=16, diff_label=4)
+  disagreement_rate=0.069 (n=23)  dinov2_acc_given_disagree=0.391  beit_acc_given_disagree=0.435
+    dense_tabular_rows   n=97   disagree_rate=0.031
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.286
+    mixed_text_image     n=3    disagree_rate=1.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.046
+    website_screenshot   n=26   disagree_rate=0.000
+
+-- dinov2 vs swin (n=332) --
+  both_correct=290  dinov2_correct/swin_wrong=12  dinov2_wrong/swin_correct=8  both_wrong=22 (same_label=16, diff_label=6)
+  disagreement_rate=0.078 (n=26)  dinov2_acc_given_disagree=0.462  swin_acc_given_disagree=0.308
+    dense_tabular_rows   n=97   disagree_rate=0.041
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.214
+    mixed_text_image     n=3    disagree_rate=1.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.063
+    website_screenshot   n=26   disagree_rate=0.000
+
+-- dinov2 vs siglip (n=332) --
+  both_correct=292  dinov2_correct/siglip_wrong=10  dinov2_wrong/siglip_correct=15  both_wrong=15 (same_label=10, diff_label=5)
+  disagreement_rate=0.090 (n=30)  dinov2_acc_given_disagree=0.333  siglip_acc_given_disagree=0.500
+    dense_tabular_rows   n=97   disagree_rate=0.021
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.071
+    mixed_text_image     n=3    disagree_rate=1.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.250
+    printed_document     n=175  disagree_rate=0.091
+    website_screenshot   n=26   disagree_rate=0.077
+
+-- dinov2 vs vit21k (n=332) --
+  both_correct=289  dinov2_correct/vit21k_wrong=13  dinov2_wrong/vit21k_correct=9  both_wrong=21 (same_label=17, diff_label=4)
+  disagreement_rate=0.078 (n=26)  dinov2_acc_given_disagree=0.500  vit21k_acc_given_disagree=0.346
+    dense_tabular_rows   n=97   disagree_rate=0.041
+    genealogy_chart      n=1    disagree_rate=1.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.250  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.000
+    mixed_text_image     n=3    disagree_rate=1.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.086
+    website_screenshot   n=26   disagree_rate=0.000
+
+-- beit vs swin (n=332) --
+  both_correct=291  beit_correct/swin_wrong=12  beit_wrong/swin_correct=7  both_wrong=22 (same_label=17, diff_label=5)
+  disagreement_rate=0.072 (n=24)  beit_acc_given_disagree=0.500  swin_acc_given_disagree=0.292
+    dense_tabular_rows   n=97   disagree_rate=0.021
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=1.000  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.357
+    mixed_text_image     n=3    disagree_rate=0.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.063
+    website_screenshot   n=26   disagree_rate=0.000
+
+-- beit vs siglip (n=332) --
+  both_correct=293  beit_correct/siglip_wrong=10  beit_wrong/siglip_correct=14  both_wrong=15 (same_label=11, diff_label=4)
+  disagreement_rate=0.084 (n=28)  beit_acc_given_disagree=0.357  siglip_acc_given_disagree=0.500
+    dense_tabular_rows   n=97   disagree_rate=0.041
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.286
+    mixed_text_image     n=3    disagree_rate=0.333  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.333
+    printed_document     n=175  disagree_rate=0.063
+    website_screenshot   n=26   disagree_rate=0.077
+
+-- beit vs vit21k (n=332) --
+  both_correct=288  beit_correct/vit21k_wrong=15  beit_wrong/vit21k_correct=10  both_wrong=19 (same_label=16, diff_label=3)
+  disagreement_rate=0.084 (n=28)  beit_acc_given_disagree=0.536  vit21k_acc_given_disagree=0.357
+    dense_tabular_rows   n=97   disagree_rate=0.052
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.750  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.286
+    mixed_text_image     n=3    disagree_rate=0.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.080
+    website_screenshot   n=26   disagree_rate=0.000
+
+-- swin vs siglip (n=332) --
+  both_correct=290  swin_correct/siglip_wrong=8  swin_wrong/siglip_correct=17  both_wrong=17 (same_label=15, diff_label=2)
+  disagreement_rate=0.081 (n=27)  swin_acc_given_disagree=0.296  siglip_acc_given_disagree=0.630
+    dense_tabular_rows   n=97   disagree_rate=0.021
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.500  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.143
+    mixed_text_image     n=3    disagree_rate=0.333  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.333
+    printed_document     n=175  disagree_rate=0.080
+    website_screenshot   n=26   disagree_rate=0.077
+
+-- swin vs vit21k (n=332) --
+  both_correct=286  swin_correct/vit21k_wrong=12  swin_wrong/vit21k_correct=12  both_wrong=22 (same_label=19, diff_label=3)
+  disagreement_rate=0.081 (n=27)  swin_acc_given_disagree=0.444  vit21k_acc_given_disagree=0.444
+    dense_tabular_rows   n=97   disagree_rate=0.041
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.250  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.214
+    mixed_text_image     n=3    disagree_rate=0.000  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.097
+    website_screenshot   n=26   disagree_rate=0.000
+
+-- siglip vs vit21k (n=332) --
+  both_correct=290  siglip_correct/vit21k_wrong=17  siglip_wrong/vit21k_correct=8  both_wrong=17 (same_label=15, diff_label=2)
+  disagreement_rate=0.081 (n=27)  siglip_acc_given_disagree=0.630  vit21k_acc_given_disagree=0.296
+    dense_tabular_rows   n=97   disagree_rate=0.041
+    genealogy_chart      n=1    disagree_rate=0.000  [UNRELIABLE - n<5]
+    handwritten_ledger   n=4    disagree_rate=0.250  [UNRELIABLE - n<5]
+    map_land_record      n=14   disagree_rate=0.071
+    mixed_text_image     n=3    disagree_rate=0.333  [UNRELIABLE - n<5]
+    portrait_photo       n=12   disagree_rate=0.167
+    printed_document     n=175  disagree_rate=0.091
+    website_screenshot   n=26   disagree_rate=0.077
+
+
+====================================================================================================
+CONFIDENCE / MARGIN / ENTROPY ANALYSIS (per model)
+====================================================================================================
+Do NOT assume softmax probability is calibrated confidence - raw top1/top2 logit margin and entropy are reported alongside it, not as a replacement metric but as an independent cross-check.
+
+[convnext]
+  Margin (top1-top2 logit):
+    correct: n=301  mean=6.351  median=6.863  stdev=2.863
+    incorrect: n=31  mean=1.484  median=1.343  stdev=0.958
+  Top-1 softmax probability:
+    correct: n=301  mean=0.957  median=0.998  stdev=0.105
+    incorrect: n=31  mean=0.725  median=0.736  stdev=0.139
+  Entropy:
+    correct: n=301  mean=0.133  median=0.013  stdev=0.264
+    incorrect: n=31  mean=0.713  median=0.672  stdev=0.283
+
+[mobilenetv2]
+  Margin (top1-top2 logit):
+    correct: n=254  mean=3.999  median=3.821  stdev=2.465
+    incorrect: n=78  mean=1.285  median=0.855  stdev=1.106
+  Top-1 softmax probability:
+    correct: n=254  mean=0.881  median=0.970  stdev=0.157
+    incorrect: n=78  mean=0.636  median=0.611  stdev=0.198
+  Entropy:
+    correct: n=254  mean=0.369  median=0.165  stdev=0.397
+    incorrect: n=78  mean=0.935  median=1.060  stdev=0.427
+
+[dinov2]
+  Margin (top1-top2 logit):
+    correct: n=302  mean=7.453  median=8.345  stdev=2.978
+    incorrect: n=30  mean=1.306  median=1.112  stdev=1.002
+  Top-1 softmax probability:
+    correct: n=302  mean=0.972  median=1.000  stdev=0.085
+    incorrect: n=30  mean=0.702  median=0.709  stdev=0.160
+  Entropy:
+    correct: n=302  mean=0.089  median=0.003  stdev=0.210
+    incorrect: n=30  mean=0.721  median=0.738  stdev=0.282
+
+[beit]
+  Margin (top1-top2 logit):
+    correct: n=303  mean=6.745  median=7.596  stdev=2.757
+    incorrect: n=29  mean=1.718  median=1.594  stdev=1.238
+  Top-1 softmax probability:
+    correct: n=303  mean=0.967  median=0.999  stdev=0.086
+    incorrect: n=29  mean=0.727  median=0.754  stdev=0.201
+  Entropy:
+    correct: n=303  mean=0.106  median=0.007  stdev=0.218
+    incorrect: n=29  mean=0.684  median=0.751  stdev=0.374
+
+[swin]
+  Margin (top1-top2 logit):
+    correct: n=298  mean=5.948  median=6.285  stdev=2.733
+    incorrect: n=34  mean=1.769  median=1.784  stdev=1.245
+  Top-1 softmax probability:
+    correct: n=298  mean=0.955  median=0.997  stdev=0.103
+    incorrect: n=34  mean=0.753  median=0.814  stdev=0.184
+  Entropy:
+    correct: n=298  mean=0.137  median=0.020  stdev=0.245
+    incorrect: n=34  mean=0.624  median=0.599  stdev=0.320
+
+[siglip]
+  Margin (top1-top2 logit):
+    correct: n=307  mean=8.192  median=9.123  stdev=3.224
+    incorrect: n=25  mean=1.936  median=1.826  stdev=1.790
+  Top-1 softmax probability:
+    correct: n=307  mean=0.967  median=1.000  stdev=0.110
+    incorrect: n=25  mean=0.726  median=0.748  stdev=0.227
+  Entropy:
+    correct: n=307  mean=0.087  median=0.002  stdev=0.243
+    incorrect: n=25  mean=0.629  median=0.705  stdev=0.431
+
+[vit21k]
+  Margin (top1-top2 logit):
+    correct: n=298  mean=4.655  median=5.138  stdev=1.984
+    incorrect: n=34  mean=1.392  median=1.330  stdev=0.964
+  Top-1 softmax probability:
+    correct: n=298  mean=0.927  median=0.990  stdev=0.132
+    incorrect: n=34  mean=0.687  median=0.704  stdev=0.161
+  Entropy:
+    correct: n=298  mean=0.252  median=0.064  stdev=0.366
+    incorrect: n=34  mean=0.830  median=0.835  stdev=0.296
+
+
+
+====================================================================================================
+DETAILED SIGLIP <-> MOBILENETV2 ANALYSIS
+====================================================================================================
+
+MobileNet correct / SigLIP wrong: 8 cases
+SigLIP correct / MobileNet wrong: 61 cases
+
+Full per-case listing written to: J:\Genealogy\genealogy_pipeline\data\logs\reviewed\siglip_vs_mobilenet_disagreement_cases.txt
+
+MobileNet-right/SigLIP-wrong, by ground-truth category: {'printed_document': 3, 'dense_tabular_rows': 2, 'mixed_text_image': 1, 'handwritten_ledger': 1, 'website_screenshot': 1}
+SigLIP-right/MobileNet-wrong, by ground-truth category: {'printed_document': 38, 'dense_tabular_rows': 7, 'genealogy_chart': 1, 'website_screenshot': 6, 'map_land_record': 5, 'portrait_photo': 4}
+
+When SigLIP is wrong but MobileNet is right, SigLIP's mistaken predictions: {'handwritten_ledger': 1, 'printed_document': 2, 'website_screenshot': 2, 'portrait_photo': 1, 'map_land_record': 1, 'dense_tabular_rows': 1}
+When MobileNet is wrong but SigLIP is right, MobileNet's mistaken predictions: {'mixed_text_image': 11, 'dense_tabular_rows': 14, 'printed_document': 11, 'handwritten_ledger': 15, 'website_screenshot': 5, 'portrait_photo': 2, 'map_land_record': 3}
+
+-- Does MobileNet's own margin/confidence distinguish its RARE-CORRECT-OVERRIDE cases from its ORDINARY WRONG cases? --
+  MobileNet margin when it's the correct override (n=8): mean=2.463  median=2.065
+  MobileNet margin on its OTHER wrong predictions (n=78): mean=1.285  median=0.855
+  MobileNet margin on ALL its correct predictions (n=254, includes override cases): mean=3.999  median=3.821
+
+  Simple threshold check at margin=1.460 (midpoint of the two medians):
+    override cases above threshold: 6/8
+    ordinary-wrong cases above threshold: 28/78
+    -> [B] some separability visible at this small n - worth a larger-scale check

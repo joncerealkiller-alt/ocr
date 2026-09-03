@@ -1,0 +1,86 @@
+======================================================================
+DISAGREEMENT REVIEW ANALYSIS
+======================================================================
+Cases analyzed: 48 (classified verdicts only)
+Excluded: 2 needs_bucket verdict(s), 0 missing record.json
+
+-- Accuracy against human ground truth --
+Gemma correct:            23/48 (47.9%)
+Tower consensus (flat 8): 11/48 (22.9%)
+Family consensus (5-way): 11/48 (22.9%)
+
+-- Where they diverge --
+Both right:         0
+Both wrong:         14
+Only Gemma right:   23
+Only towers right:  11
+
+-- Per-tower individual accuracy --
+  convnext        16/48 (33.3%)
+  beit            10/48 (20.8%)
+  swin            12/48 (25.0%)
+  naflex_siglip   7/48 (14.6%)
+  siglip_fixed    7/48 (14.6%)
+  dinov2          10/48 (20.8%)
+  eva02           14/48 (29.2%)
+  mae             5/48 (10.4%)
+
+-- MAE specifically --
+Cases where family-collapsed consensus (excl. MAE) was WRONG: 37
+Of those, MAE alone was CORRECT: 0
+  -> MAE uniquely rescued 0/37 (0.0%) of the cases where the correlated majority missed.
+
+-- consensus_category distribution (from original audit) --
+  majority: 30
+  split: 17
+  complete_disagreement: 1
+
+-- Per-case detail --
+  disagreement_001: human='handwritten_ledger' | gemma='printed_document'[MISS] | tower_flat='handwritten_ledger'[OK] | family='handwritten_ledger'[OK]
+  disagreement_004: human='printed_document' | gemma='dense_tabular_rows'[MISS] | tower_flat='printed_document'[OK] | family='printed_document'[OK]
+  disagreement_005: human='printed_document' | gemma='dense_tabular_rows'[MISS] | tower_flat='printed_document'[OK] | family='printed_document'[OK]
+  disagreement_006: human='handwritten_ledger' | gemma='printed_document'[MISS] | tower_flat='handwritten_ledger'[OK] | family='handwritten_ledger'[OK]
+  disagreement_007: human='handwritten_ledger' | gemma='dense_tabular_rows'[MISS] | tower_flat='handwritten_ledger'[OK] | family='handwritten_ledger'[OK]
+  disagreement_008: human='website_screenshot' | gemma='dense_tabular_rows'[MISS] | tower_flat='website_screenshot'[OK] | family='website_screenshot'[OK]
+  disagreement_009: human='website_screenshot' | gemma='dense_tabular_rows'[MISS] | tower_flat='website_screenshot'[OK] | family='website_screenshot'[OK]
+  disagreement_011: human='casual_photo' | gemma='map_land_record'[MISS] | tower_flat='printed_document'[MISS] | family='printed_document'[MISS]
+  disagreement_012: human='map_land_record' | gemma='portrait_photo'[MISS] | tower_flat='map_land_record'[OK] | family='map_land_record'[OK]
+  disagreement_013: human='map_land_record' | gemma='map_land_record'[OK] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]
+  disagreement_014: human='map_land_record' | gemma='map_land_record'[OK] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]
+  disagreement_015: human='map_land_record' | gemma='map_land_record'[OK] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]
+  disagreement_016: human='map_land_record' | gemma='map_land_record'[OK] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]
+  disagreement_017: human='map_land_record' | gemma='map_land_record'[OK] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]
+  disagreement_018: human='map_land_record' | gemma='map_land_record'[OK] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]
+  disagreement_019: human='map_land_record' | gemma='printed_document'[MISS] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]
+  disagreement_020: human='map_land_record' | gemma='map_land_record'[OK] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]
+  disagreement_022: human='genealogy_chart' | gemma='genealogy_chart'[OK] | tower_flat='handwritten_ledger'[MISS] | family='handwritten_ledger'[MISS]
+  disagreement_024: human='casual_photo' | gemma='portrait_photo'[MISS] | tower_flat='printed_document'[MISS] | family='printed_document'[MISS]
+  disagreement_025: human='photo_collage' | gemma='portrait_photo'[MISS] | tower_flat='printed_document'[MISS] | family='printed_document'[MISS]
+  disagreement_026: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='printed_document'[MISS] | family='handwritten_ledger'[MISS]
+  disagreement_027: human='website_screenshot' | gemma='website_screenshot'[OK] | tower_flat='genealogy_chart'[MISS] | family='genealogy_chart'[MISS]
+  disagreement_028: human='mixed_text_image' | gemma='portrait_photo'[MISS] | tower_flat='website_screenshot'[MISS] | family='website_screenshot'[MISS]
+  disagreement_029: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='mixed_text_image'[MISS] | family='mixed_text_image'[MISS]
+  disagreement_030: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='map_land_record'[MISS] | family='genealogy_chart'[MISS]
+  disagreement_031: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='genealogy_chart'[MISS] | family='genealogy_chart'[MISS]
+  disagreement_032: human='casual_photo' | gemma='printed_document'[MISS] | tower_flat='mixed_text_image'[MISS] | family='mixed_text_image'[MISS]
+  disagreement_033: human='mixed_text_image' | gemma='mixed_text_image'[OK] | tower_flat='portrait_photo'[MISS] | family='portrait_photo'[MISS]
+  disagreement_034: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='genealogy_chart'[MISS] | family='genealogy_chart'[MISS]
+  disagreement_035: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='map_land_record'[MISS] | family='map_land_record'[MISS]
+  disagreement_036: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='mixed_text_image'[MISS] | family='mixed_text_image'[MISS]
+  disagreement_037: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='handwritten_ledger'[MISS] | family='portrait_photo'[OK]
+  disagreement_038: human='portrait_photo' | gemma='portrait_photo'[OK] | tower_flat='genealogy_chart'[MISS] | family='genealogy_chart'[MISS]
+  disagreement_039: human='photo_collage' | gemma='portrait_photo'[MISS] | tower_flat='genealogy_chart'[MISS] | family='genealogy_chart'[MISS]
+  disagreement_040: human='website_screenshot' | gemma='portrait_photo'[MISS] | tower_flat='mixed_text_image'[MISS] | family='mixed_text_image'[MISS]
+  disagreement_041: human='mixed_text_image' | gemma='printed_document'[MISS] | tower_flat='mixed_text_image'[OK] | family='mixed_text_image'[OK]
+  disagreement_042: human='mixed_text_image' | gemma='mixed_text_image'[OK] | tower_flat='website_screenshot'[MISS] | family='website_screenshot'[MISS]
+  disagreement_043: human='mixed_text_image' | gemma='mixed_text_image'[OK] | tower_flat='website_screenshot'[MISS] | family='website_screenshot'[MISS]
+  disagreement_044: human='mixed_text_image' | gemma='printed_document'[MISS] | tower_flat='portrait_photo'[MISS] | family='portrait_photo'[MISS]
+  disagreement_045: human='mixed_text_image' | gemma='printed_document'[MISS] | tower_flat='website_screenshot'[MISS] | family='website_screenshot'[MISS]
+  disagreement_046: human='mixed_text_image' | gemma='printed_document'[MISS] | tower_flat='portrait_photo'[MISS] | family='portrait_photo'[MISS]
+  disagreement_047: human='mixed_text_image' | gemma='portrait_photo'[MISS] | tower_flat='website_screenshot'[MISS] | family='website_screenshot'[MISS]
+  disagreement_048: human='mixed_text_image' | gemma='map_land_record'[MISS] | tower_flat='printed_document'[MISS] | family='printed_document'[MISS]
+  disagreement_049: human='mixed_text_image' | gemma='portrait_photo'[MISS] | tower_flat='mixed_text_image'[OK] | family='portrait_photo'[MISS]
+  disagreement_050: human='mixed_text_image' | gemma='mixed_text_image'[OK] | tower_flat='portrait_photo'[MISS] | family='portrait_photo'[MISS]
+  disagreement_053: human='website_screenshot' | gemma='printed_document'[MISS] | tower_flat='website_screenshot'[OK] | family='website_screenshot'[OK]
+  disagreement_054: human='printed_document' | gemma='printed_document'[OK] | tower_flat='website_screenshot'[MISS] | family='website_screenshot'[MISS]
+  disagreement_055: human='casual_photo' | gemma='printed_document'[MISS] | tower_flat='dense_tabular_rows'[MISS] | family='dense_tabular_rows'[MISS]

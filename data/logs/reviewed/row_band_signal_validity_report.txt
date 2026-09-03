@@ -1,0 +1,36 @@
+Validating the clustered-row-band signal across a balanced 8-category sample (10/category) - is it real discriminating evidence, or an artifact of the 2 images that motivated it?
+
+Hypothesis group (expected HIGH substantial_coverage_fraction): ['dense_tabular_rows', 'handwritten_ledger']
+
+Loading census-bootstrap checkpoint from J:\Genealogy\genealogy_workspace\datasets\bootstrap\layout_bootstrap_train\runs\census_bootstrap_v4\weights\best.pt...
+Loaded.
+
+Processing dense_tabular_rows (10 images)...
+Processing genealogy_chart (6 images)...
+Processing handwritten_ledger (10 images)...
+Processing map_land_record (10 images)...
+Processing mixed_text_image (10 images)...
+Processing portrait_photo (10 images)...
+Processing printed_document (10 images)...
+Processing website_screenshot (10 images)...
+
+====================================================================================================
+PER-CATEGORY SUMMARY (mean over N images)
+====================================================================================================
+category               n   n_bands   n_subst  total_boxes   coverage  subst_coverage
+dense_tabular_rows    10      1.10      0.10          3.1      0.047           0.017 <- hypothesis group
+genealogy_chart        6      0.17      0.00          0.3      0.003           0.000
+handwritten_ledger    10      0.70      0.40         31.8      0.135           0.128 <- hypothesis group
+map_land_record       10      0.80      0.10          2.1      0.021           0.010
+mixed_text_image      10      0.70      0.30          2.7      0.030           0.023
+portrait_photo        10      0.40      0.10          3.6      0.027           0.021
+printed_document      10      1.80      1.00         63.4      0.374           0.361
+website_screenshot    10      0.60      0.40          9.7      0.056           0.052
+
+====================================================================================================
+SEPARABILITY CHECK
+====================================================================================================
+Hypothesis group (dense_tabular_rows/handwritten_ledger) mean substantial_coverage_fraction: 0.073
+Other 6 categories mean: 0.078  (highest single other category: 0.361)
+
+RESULT: no clear separation at the category-mean level - this signal, at least in this simple form, does NOT look like a valid discriminator on this sample. Do not integrate without a different feature formulation or larger sample.

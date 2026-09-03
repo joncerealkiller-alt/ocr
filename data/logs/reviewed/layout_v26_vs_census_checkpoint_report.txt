@@ -1,0 +1,52 @@
+Loading vanilla pretrained YOLOv26-small (DocLayNet, 11-class)...
+Loading census-bootstrap fine-tuned checkpoint (table/row/header) from J:\Genealogy\genealogy_workspace\datasets\bootstrap\layout_bootstrap_train\runs\census_bootstrap_v4\weights\best.pt...
+Both models loaded.
+
+
+================================================================================
+handwritten_ledger (5 sample images)
+================================================================================
+
+  oocihm.lac_reel_c10610.344
+    vanilla v26  (2): Picture(0.61), Picture(0.36)
+    census ckpt  (1): table(0.83)
+
+  oocihm.lac_reel_c7302.823
+    vanilla v26  (2): Picture(0.50), Picture(0.25)
+    census ckpt  (94): table(0.89), table(0.68), table(0.25), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), header(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20)
+
+  oocihm.lac_reel_t2185.798
+    vanilla v26  (2): Picture(0.35), Text(0.28)
+    census ckpt  (208): table(0.30), row(0.29), row(0.28), row(0.28), row(0.28), header(0.28), row(0.28), row(0.28), row(0.28), row(0.28), row(0.28), row(0.28), row(0.28), row(0.28), row(0.28), row(0.27), row(0.27), row(0.27), row(0.27), row(0.27), row(0.27), row(0.27), row(0.27), row(0.27), row(0.26), row(0.26), row(0.25), row(0.25), row(0.25), row(0.25), row(0.25), row(0.25), row(0.25), row(0.25), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.24), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.23), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.22), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.21), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20)
+
+  Screenshot 2026-05-05 221717
+    vanilla v26  (3): Text(0.32), Section-header(0.32), Picture(0.31)
+    census ckpt  (1): table(0.70)
+
+  Screenshot 2026-05-05 231902
+    vanilla v26  (1): Picture(0.80)
+    census ckpt  (1): table(0.91)
+
+================================================================================
+dense_tabular_rows (5 sample images)
+================================================================================
+
+  e001926997
+    vanilla v26  (1): Picture(0.26)
+    census ckpt  (12): table(0.93), header(0.86), row(0.24), row(0.23), row(0.23), row(0.22), row(0.22), row(0.22), row(0.21), row(0.21), row(0.21), row(0.20)
+
+  e001928017
+    vanilla v26  (1): Picture(0.33)
+    census ckpt  (10): table(0.92), header(0.82), row(0.22), row(0.21), row(0.21), row(0.20), row(0.20), row(0.20), row(0.20), row(0.20)
+
+  e001943201
+    vanilla v26  (1): Picture(0.46)
+    census ckpt  (5): table(0.89), header(0.84), row(0.21), row(0.20), row(0.20)
+
+  e001946014
+    vanilla v26  (1): Picture(0.22)
+    census ckpt  (5): table(0.93), header(0.27), row(0.21), row(0.20), header(0.20)
+
+  e001946614
+    vanilla v26  (1): Picture(0.21)
+    census ckpt  (2): table(0.91), header(0.65)
