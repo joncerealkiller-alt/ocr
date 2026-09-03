@@ -11,3 +11,6 @@ scripts/_phase2_checksum_baseline.json
 # Generated sensor data - workspace-owned per docs/RUN_ARCHITECTURE.md,
 # and >100MB (GitHub hard-rejects it; removed from history 2026-08-14)
 data/baseline_embeddings.json
+
+# Windows desktop shortcuts (machine-specific, not portable)
+*.lnk
