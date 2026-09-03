@@ -14,3 +14,9 @@ data/baseline_embeddings.json
 
 # Windows desktop shortcuts (machine-specific, not portable)
 *.lnk
+
+# Archive/reference baseline data - too large for git (GB-scale),
+# not portable to other clones. See feedback_archive_exclusion_rule
+# memory note - these are archival, not active project inputs.
+data/reference_prerefactor/
+data/archive_census_only_run/
