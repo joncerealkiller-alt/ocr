@@ -350,8 +350,53 @@ def _resolve_deskew_angle(image_path: Path) -> tuple[float, str, float | None]:
     return angle, "no_sidecar_fresh_estimate", None
 
 
+def _find_matching_sidecar_json(image_path: Path) -> Path | None:
+    """
+    Looks for a JSON file that already documents image_path as
+    processed (2026-08-09, per Jon: pointing manifest_pipeline at an
+    already-corrected working folder - e.g. ui/column_calibration_ui.py's
+    calibration workspace, split/deskewed/bake-on-save already applied -
+    shouldn't blindly re-deskew/re-preprocess those images on top of
+    work already done). Checks, in order:
+
+    1. Same directory, {stem}.json or {stem}_sidecar.json - the
+       simplest/most generic convention, for any caller that just drops
+       a same-named JSON next to an image to mark it done.
+    2. A SIBLING "sidecars" directory next to the image's own directory
+       ({image_dir}/../sidecars/{stem}_sidecar.json or
+       {stem}_merged_sidecar.json) - matches core/calibration_
+       workspace.py's own real on-disk layout exactly
+       (<workspace>/images/{stem}.jpg + <workspace>/sidecars/
+       {stem}_sidecar.json), so pointing this pipeline directly at a
+       calibration workspace's images/ folder works without any manual
+       reorganization first.
+
+    Returns the first match found, or None - existence alone is the
+    whole signal, contents are never read here (see preprocess_for_
+    manifest()'s own skip_if_sidecar_exists docstring for why).
+    """
+    stem = image_path.stem
+    same_dir_candidates = [
+        image_path.with_suffix(".json"),
+        image_path.parent / f"{stem}_sidecar.json",
+    ]
+    for c in same_dir_candidates:
+        if c.exists():
+            return c
+    sidecars_dir = image_path.parent.parent / "sidecars"
+    sibling_candidates = [
+        sidecars_dir / f"{stem}_sidecar.json",
+        sidecars_dir / f"{stem}_merged_sidecar.json",
+    ]
+    for c in sibling_candidates:
+        if c.exists():
+            return c
+    return None
+
+
 def preprocess_for_manifest(
     image_path: Path, profile_name: str = DEFAULT_PREPROCESSING_PROFILE,
+    skip_if_sidecar_exists: bool = False,
 ) -> tuple[float, str]:
     """
     Deskews + preprocesses the image AT image_path IN PLACE (this is a
@@ -366,7 +411,38 @@ def preprocess_for_manifest(
     preprocess_sidecar_path(image_path) as a side effect instead
     (2026-08-05, alongside the deskew_angle_clamped telemetry request),
     not threaded through the return value.
+
+    skip_if_sidecar_exists (2026-08-09, per Jon - see _find_matching_
+    sidecar_json()'s own docstring for the full motivation): when True
+    and a matching JSON is found next to image_path, this function does
+    NOTHING to the pixels - no deskew, no profile - and returns
+    (0.0, "skipped_already_processed"). Existence-only check, same
+    "don't second-guess a real prior result" discipline this project
+    already uses elsewhere (core.calibration_workspace's own processed_
+    sources.json state file) - it deliberately does NOT try to read the
+    matched JSON's own deskew_angle/profile fields and reapply them, or
+    verify they're semantically compatible with this function's own
+    profile_name; the file being ALREADY-PROCESSED PIXELS is the whole
+    point, and this function's job on such a file is to leave them
+    alone. False by default - existing callers (stage3_preprocess_
+    manifest() against a genuinely raw working copy) are completely
+    unaffected unless they explicitly opt in.
     """
+    if skip_if_sidecar_exists:
+        matched = _find_matching_sidecar_json(image_path)
+        if matched is not None:
+            preprocess_sidecar_path(image_path).write_text(
+                json.dumps({
+                    "deskew_angle_applied": 0.0,
+                    "deskew_status": "skipped_already_processed",
+                    "raw_deskew_estimate_deg": None,
+                    "profile_applied": None,
+                    "matched_sidecar": str(matched),
+                }, indent=2),
+                encoding="utf-8",
+            )
+            return 0.0, "skipped_already_processed"
+
     angle, status, raw_estimate = _resolve_deskew_angle(image_path)
     with Image.open(image_path) as original:
         image = original.convert("RGB")
@@ -676,11 +752,39 @@ def stage3_preprocess_manifest(
     preprocessing_profile: str = DEFAULT_PREPROCESSING_PROFILE,
     db_path: Path = DEFAULT_DB_PATH,
     ctx: Optional[RunContext] = None,
+    skip_if_sidecar_exists: bool = False,
+    skip_if_sidecar_exists_names: set[str] | None = None,
 ) -> Path:
     """
     ctx: same DB-identity-normalization override as stage1_capture_
     baseline_embeddings() - lookups AND the sidecar_path written into
     stage_outputs both go through ctx.to_relative()/ctx.run_id when set.
+
+    skip_if_sidecar_exists (2026-08-09): applies to EVERY image in this
+    manifest uniformly - passed straight through to preprocess_for_
+    manifest() per-image, see that function's own docstring. Lets this
+    whole pipeline be pointed at an already-processed folder (e.g. a
+    calibration workspace's images/) without re-deskewing/re-
+    preprocessing files that already have a matching JSON sidecar next
+    to them.
+
+    skip_if_sidecar_exists_names (2026-08-09, same day - per Jon: "the
+    bypass becomes a property of the selected input item, not the whole
+    batch"): a set of working-copy FILENAMES (Path.name, not full paths
+    - copy_to_working_dir() preserves the original basename except on a
+    real collision, so matching by name is correct for the common case;
+    a source-filename collision could misattribute this flag, same
+    existing caveat copy_to_working_dir()'s own collision-suffix
+    behavior already has) that should skip preprocessing, INDEPENDENT of
+    skip_if_sidecar_exists - a file matches if EITHER the global bool is
+    True OR its name is in this set. This is how ui/build_manifest_ui.py
+    tags individual queued files (its "Trust matching sidecars / bypass
+    preprocessing" checkbox) rather than making the whole run behave
+    differently - a manifest can freely mix bypassed and normal files.
+    Each name here still only actually skips if preprocess_for_
+    manifest()'s own _find_matching_sidecar_json() check finds a real
+    sidecar at execution time - being in this set is a REQUEST, not a
+    guarantee, same safety property the global bool already has.
 
     Stage 3 (Image Processing) ONLY. Reads manifest_path's "file_path"
     column and deskews + preprocesses each listed image IN PLACE (see
@@ -728,7 +832,10 @@ def stage3_preprocess_manifest(
             skipped += 1
 
         try:
-            angle, profile = preprocess_for_manifest(working_path, preprocessing_profile)
+            this_skip = skip_if_sidecar_exists or (
+                skip_if_sidecar_exists_names is not None and working_path.name in skip_if_sidecar_exists_names)
+            angle, profile = preprocess_for_manifest(
+                working_path, preprocessing_profile, skip_if_sidecar_exists=this_skip)
             print(f"  deskew_angle={angle:+.2f}  profile={profile!r}")
             if image is not None:
                 new_hash = hash_file(working_path)
@@ -918,6 +1025,8 @@ def build_working_manifest_from_paths(
     run_decision_engine: bool = True,
     db_path: Path = DEFAULT_DB_PATH,
     ctx: Optional[RunContext] = None,
+    skip_preprocess_if_sidecar_exists: bool = False,
+    skip_preprocess_if_sidecar_exists_names: set[str] | None = None,
 ) -> Path:
     """
     ctx (hashed-run migration - see docs/RUN_ARCHITECTURE.md): when
@@ -950,6 +1059,25 @@ def build_working_manifest_from_paths(
     between Stage 0 and Stage 3 - i.e. on the raw working copy, before
     deskew/autocontrast ever touches it. Set False to skip (e.g. a quick
     throwaway test run where the extra ~8-model pass isn't wanted).
+
+    skip_preprocess_if_sidecar_exists (2026-08-09): passed straight
+    through to stage3_preprocess_manifest() - see preprocess_for_
+    manifest()'s own docstring for the full mechanism. Lets this whole
+    Stage 0-3 entry point be pointed at a folder of ALREADY-corrected
+    images (e.g. ui/column_calibration_ui.py's calibration workspace,
+    already split/deskewed/bake-on-save applied) without blindly
+    re-deskewing/re-preprocessing them on top of work already done -
+    Stage 0's copy still happens as normal, only Stage 3's per-image
+    pixel work is conditionally skipped, per-image, based on whether a
+    matching JSON sidecar exists next to it.
+
+    skip_preprocess_if_sidecar_exists_names (2026-08-09, same day): PER-
+    FILE version of the above - see stage3_preprocess_manifest()'s own
+    docstring for the full mechanism (matches by working-copy filename,
+    a file bypasses only if a real sidecar match is found at execution
+    time). This is what ui/build_manifest_ui.py's per-queued-file
+    "Bypass" tagging actually drives, letting one manifest build mix
+    bypassed and normally-preprocessed files.
 
     capture_physical_sensors (2026-08-04): if True (default), runs Stage
     1's physical half (core/image_analysis.py's analyze_manifest())
@@ -1034,7 +1162,10 @@ def build_working_manifest_from_paths(
         from core.decision_engine import stage2_decide_profiles
         stage2_decide_profiles(manifest_path, db_path, preprocessing_profile, ctx=ctx)
 
-    stage3_preprocess_manifest(manifest_path, preprocessing_profile, db_path, ctx=ctx)
+    stage3_preprocess_manifest(
+        manifest_path, preprocessing_profile, db_path, ctx=ctx,
+        skip_if_sidecar_exists=skip_preprocess_if_sidecar_exists,
+        skip_if_sidecar_exists_names=skip_preprocess_if_sidecar_exists_names)
 
     print("Next step (unchanged):")
     print(f"  python -m core.classifier {manifest_path}")
@@ -1047,6 +1178,7 @@ def build_working_manifest(
     manifest_path: Path = DEFAULT_MANIFEST_PATH,
     preprocessing_profile: str = DEFAULT_PREPROCESSING_PROFILE,
     ctx: Optional[RunContext] = None,
+    skip_preprocess_if_sidecar_exists: bool = False,
 ) -> Path:
     """
     Stage 0 from a FOLDER - a thin adapter over
@@ -1058,7 +1190,8 @@ def build_working_manifest(
     from_paths() doesn't already do.
 
     ctx: passed straight through to build_working_manifest_from_paths()
-    - see that function's own docstring.
+    - see that function's own docstring. skip_preprocess_if_sidecar_
+    exists: same, see that function's own docstring.
     """
     source_paths = collect_image_paths(source_folder)
     if not source_paths:
@@ -1072,6 +1205,7 @@ def build_working_manifest(
     return build_working_manifest_from_paths(
         source_paths, working_dir=working_dir, manifest_path=manifest_path,
         preprocessing_profile=preprocessing_profile, ctx=ctx,
+        skip_preprocess_if_sidecar_exists=skip_preprocess_if_sidecar_exists,
     )
 
 
@@ -1296,6 +1430,14 @@ def _cli_main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument(
         "--preprocessing-profile", default=DEFAULT_PREPROCESSING_PROFILE,
     )
+    parser.add_argument(
+        "--skip-preprocess-if-sidecar-exists", action="store_true",
+        help="Don't deskew/preprocess an image if a matching JSON sidecar already exists next "
+             "to it (same-dir {stem}.json/{stem}_sidecar.json, or a sibling sidecars/ dir - see "
+             "core.manifest_pipeline._find_matching_sidecar_json()). For pointing this pipeline "
+             "at an already-corrected folder (e.g. a column-calibration workspace's images/) "
+             "without redoing work already done.",
+    )
     args = parser.parse_args(argv)
 
     run_name = args.run_name
@@ -1313,10 +1455,12 @@ def _cli_main(argv: Optional[list[str]] = None) -> int:
         if args.source.is_dir():
             build_working_manifest(
                 args.source, preprocessing_profile=args.preprocessing_profile, ctx=ctx,
+                skip_preprocess_if_sidecar_exists=args.skip_preprocess_if_sidecar_exists,
             )
         else:
             build_working_manifest_from_paths(
                 [args.source], preprocessing_profile=args.preprocessing_profile, ctx=ctx,
+                skip_preprocess_if_sidecar_exists=args.skip_preprocess_if_sidecar_exists,
             )
     except Exception as e:
         ctx.mark_failed(str(e))

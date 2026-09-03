@@ -96,21 +96,45 @@ class Lfm2VlLoader(BaseLoader):
             )
         return self.config.prompt_text
 
+    @staticmethod
+    def _build_user_message(raw_image: Any, prompt: str) -> dict:
+        user_content = []
+        if raw_image is not None:
+            user_content.append({"type": "image", "image": raw_image})
+        user_content.append({"type": "text", "text": prompt})
+        return {"role": "user", "content": user_content}
+
     def _run_generate(self, raw_image: Any, prompt: str) -> str:
-        if not isinstance(raw_image, Image.Image):
-            raise TypeError(f"Expected PIL Image, got {type(raw_image)}")
-
-        if raw_image.mode != "RGB":
+        """
+        raw_image=None path added 2026-08-10 for model_console (see
+        base_loader.py's GenerationConfig.text_only_supported) - the
+        model card states plainly that images aren't technically
+        required, LFM2-VL can process text-only inputs. Confirmed
+        2026-08-10 via real generation calls - see
+        config/models/lfm2_vl_1_6b.yaml's text_only_supported flag.
+        """
+        if raw_image is not None and not isinstance(raw_image, Image.Image):
+            raise TypeError(f"Expected PIL Image or None, got {type(raw_image)}")
+        if raw_image is not None and raw_image.mode != "RGB":
             raw_image = raw_image.convert("RGB")
+        conversation = [self._build_user_message(raw_image, prompt)]
+        return self._generate_from_messages(conversation)
 
-        conversation = [{
-            "role": "user",
-            "content": [
-                {"type": "image", "image": raw_image},
-                {"type": "text", "text": prompt},
-            ],
-        }]
+    def _run_generate_with_history(self, history: list[dict], raw_image: Any, prompt: str) -> str:
+        """
+        2026-08-11, model_console conversation context (see base_loader.py's
+        _run_generate_with_history docstring). No system message support
+        exists in this loader today - `history` is inserted directly
+        before the current turn with no system entry.
+        """
+        if raw_image is not None and not isinstance(raw_image, Image.Image):
+            raise TypeError(f"Expected PIL Image or None, got {type(raw_image)}")
+        if raw_image is not None and raw_image.mode != "RGB":
+            raw_image = raw_image.convert("RGB")
+        conversation = list(history) + [self._build_user_message(raw_image, prompt)]
+        return self._generate_from_messages(conversation)
 
+    def _generate_from_messages(self, conversation: list[dict]) -> str:
         inputs = self.processor.apply_chat_template(
             conversation,
             add_generation_prompt=True,

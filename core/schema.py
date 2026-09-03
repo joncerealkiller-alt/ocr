@@ -47,6 +47,31 @@ class DocumentCategory(str, Enum):
     # digitally-rendered webpage text), not that the classifier is
     # unsure what they are.
     WEBSITE_SCREENSHOT = "website_screenshot"
+    # Added 2026-08-04 after manually ground-truthing the 77-image
+    # gained/lost-agreement flagged set (docs/STAGE1_STAGE4_
+    # INVESTIGATION_CONCLUSION.md) - two real, recurring content types
+    # that didn't fit any existing category, both confirmed as
+    # genuinely relevant (kept, not pruned):
+    #   PHOTO_COLLAGE - multiple photos shown together as one image,
+    #     either a physical scrapbook/album page with mounted photos and
+    #     handwritten captions, OR a digital screenshot of a photo
+    #     gallery/grid UI - deliberately ONE category for both, per
+    #     Jon's direction, since the defining trait is "multiple photos
+    #     in one frame," not the physical-vs-digital origin.
+    #   CASUAL_PHOTO - a personal/candid photograph that isn't a
+    #     portrait (no person as the primary subject) and isn't a
+    #     document (food, objects, scenery). Distinct from PORTRAIT_PHOTO
+    #     rather than folded into it, per Jon's direction.
+    # Extraction routing (config/pipeline.yaml's model: null pattern,
+    # used for WEBSITE_SCREENSHOT/UNCERTAIN) is a separate question, not
+    # decided here - these are taxonomy additions only.
+    PHOTO_COLLAGE = "photo_collage"
+    CASUAL_PHOTO = "casual_photo"
+    # Added 2026-08-04, same ground-truthing pass as the two above - two
+    # independent images (a close-up headstone marker and a wider
+    # cemetery scene with grave crosses) both needed this and neither
+    # fit CASUAL_PHOTO cleanly enough to fold in, per Jon's direction.
+    CEMETERY_PHOTO = "cemetery_photo"
 
 
 class ClassificationResult(BaseModel):
@@ -164,6 +189,44 @@ class ExtractionResult(BaseModel):
                 f"{len(confirmed)} CONFIRMED names in a single record exceeds "
                 "the sanity ceiling. Route to uncertain_review for manual check "
                 "rather than accepting as-is."
+            )
+        return v
+
+    @field_validator("place_names")
+    @classmethod
+    def flag_suspicious_place_count(cls, v: list[PlaceName]) -> list[PlaceName]:
+        # Same principle as flag_suspicious_name_count above, added
+        # 2026-08-13 after a live, confirmed instance: qwen3vl4b
+        # extracted 86 place_names (max_length=60) from a real map with
+        # ~16 actual labels, ALL tagged CONFIRMED, ending in a long run
+        # of real but unrelated US military forts (Fort Knox, Fort
+        # Bragg, Fort Apache, Fort Sumner...) that have nothing to do
+        # with the image - unmistakable pattern-completion from training
+        # data, not perception, once the model lost its grounding.
+        #
+        # An earlier fix attempt for this SAME failure just truncated
+        # the list to fit max_length and let it through as
+        # "successful" - that was WORSE than crashing, since it wrote
+        # 60 fabricated place names into core/genealogy_memory.py as
+        # confirmed genealogy facts, silently corrupting the discovery
+        # store. Jon's framing, directly applied here: "don't merely cap
+        # output to satisfy Pydantic - treat an unexpectedly large
+        # extraction count as a grounding failure." This raises (routes
+        # to uncertain_review / failed_extraction, matching
+        # personal_names' own established handling) instead of
+        # truncating-and-accepting.
+        #
+        # Threshold 30, not 80 like personal_names - place_names'
+        # max_length is 60 (vs. personal_names' 200), and the real test
+        # map that exposed this had ~16 true labels; 30 gives real
+        # headroom for a genuinely dense/detailed map while still
+        # decisively catching an 86-entry fabrication run.
+        confirmed = [p for p in v if p.confidence == ConfidenceLevel.CONFIRMED]
+        if len(confirmed) > 30:
+            raise ValueError(
+                f"{len(confirmed)} CONFIRMED place names in a single record "
+                "exceeds the sanity ceiling. Route to uncertain_review for "
+                "manual check rather than accepting as-is."
             )
         return v
 

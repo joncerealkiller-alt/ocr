@@ -22,7 +22,7 @@ Requires transformers >= 4.57.0 (or dev build):
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from PIL import Image
@@ -183,11 +183,17 @@ class Qwen3VLLoader(BaseLoader):
 
         Non-extraction prompts (no subject_keywords marker) fall through to
         a single generate() call, unaffected by any of this.
-        """
-        if not isinstance(raw_image, Image.Image):
-            raise TypeError(f"Expected PIL Image, got {type(raw_image)}")
 
-        if raw_image.mode != "RGB":
+        raw_image=None path added 2026-08-10 for model_console (see
+        base_loader.py's GenerationConfig.text_only_supported) - NOT yet
+        empirically confirmed for this loader/model, so
+        config/models/qwen3vl4b.yaml's text_only_supported stays False
+        until a real generation call is run and checked.
+        """
+        if raw_image is not None and not isinstance(raw_image, Image.Image):
+            raise TypeError(f"Expected PIL Image or None, got {type(raw_image)}")
+
+        if raw_image is not None and raw_image.mode != "RGB":
             raw_image = raw_image.convert("RGB")
 
         if not self._SUBJECT_KEYWORDS_MARKER.search(prompt):
@@ -214,22 +220,55 @@ class Qwen3VLLoader(BaseLoader):
 
         return f"{core_output}\n{keyword_output}"
 
-    def _generate_once(self, raw_image: Image.Image, prompt: str, max_new_tokens: int) -> str:
+    def _run_generate_with_history(self, history: list[dict], raw_image: Any, prompt: str) -> str:
+        """
+        2026-08-11, model_console conversation context (see base_loader.py's
+        _run_generate_with_history docstring). Mirrors _run_generate()'s own
+        subject_keywords two-call split for consistency, though chat prompts
+        won't normally trigger it. `history` is only prepended to the core-
+        fields call, NOT the isolated keyword-only re-ask - that call is
+        deliberately isolated from full context by design already (see
+        _run_generate()'s own docstring), unrelated to this change.
+        """
+        if raw_image is not None and not isinstance(raw_image, Image.Image):
+            raise TypeError(f"Expected PIL Image or None, got {type(raw_image)}")
+        if raw_image is not None and raw_image.mode != "RGB":
+            raw_image = raw_image.convert("RGB")
+
+        if not self._SUBJECT_KEYWORDS_MARKER.search(prompt):
+            return self._generate_once(raw_image, prompt, self.config.max_new_tokens, history=history)
+
+        core_prompt = self._SUBJECT_KEYWORDS_MARKER.split(prompt, maxsplit=1)[0].rstrip()
+        core_prompt += (
+            "\n\nDo NOT output a subject_keywords line in this response. "
+            "Stop immediately after the place_names line."
+        )
+        core_output = self._generate_once(raw_image, core_prompt, self.config.max_new_tokens, history=history)
+        keyword_output = self._generate_once(
+            raw_image, self._KEYWORD_ONLY_PROMPT, self.config.keywords_max_new_tokens
+        )
+        if ":" not in keyword_output.split("\n", 1)[0]:
+            keyword_output = f"subject_keywords: {keyword_output}"
+        return f"{core_output}\n{keyword_output}"
+
+    def _generate_once(self, raw_image: Optional[Image.Image], prompt: str, max_new_tokens: int,
+                        history: Optional[list[dict]] = None) -> str:
         """
         Single generate() call. Shared by both the core-fields call and the
         isolated keywords call in _run_generate, so generation-parameter
         handling (sampling gate, repetition_penalty, stop_strings, the
         presence_penalty fallback) isn't duplicated between them.
+
+        history=None (default) preserves EXACT prior behavior - both
+        existing call sites in _run_generate() don't pass it. When given
+        (model_console conversation context), it's prepended before the
+        current turn's message.
         """
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": raw_image},
-                    {"type": "text", "text": prompt},
-                ],
-            }
-        ]
+        user_content = []
+        if raw_image is not None:
+            user_content.append({"type": "image", "image": raw_image})
+        user_content.append({"type": "text", "text": prompt})
+        messages = list(history or []) + [{"role": "user", "content": user_content}]
 
         inputs = self.processor.apply_chat_template(
             messages,
@@ -324,6 +363,17 @@ class Qwen3VLLoader(BaseLoader):
                 f"{file_path}. Raw output: {raw_output[:200]!r}."
             )
 
+        # personal_names/place_names deliberately NOT truncated here
+        # (2026-08-13, reverted after a live finding) - truncating to
+        # fit max_length before schema validation runs would hide the
+        # TRUE overflow count from core/schema.py's
+        # flag_suspicious_place_count validator, which needs to see it
+        # to correctly quarantine (raise) an implausible run instead of
+        # silently accepting a truncated slice of fabricated entries as
+        # "successful". See that validator's own docstring for the full
+        # story - an 86-entry qwen3vl4b hallucination run (real US
+        # forts unrelated to a Canadian map, all tagged CONFIRMED) is
+        # exactly the case this must NOT truncate-and-accept.
         personal_names = [
             PersonalName(value=v[:120], confidence=c)
             for v, c in parse_pipe_entries(fields.get("personal_names", ""))
@@ -334,7 +384,7 @@ class Qwen3VLLoader(BaseLoader):
         ]
         visible_dates = [
             VisibleDate(value=v[:60], confidence=c)
-            for v, c in parse_pipe_entries(fields.get("visible_dates", ""))
+            for v, c in parse_pipe_entries(fields.get("visible_dates", ""), max_count=20)
         ]
         keywords_raw = fields.get("subject_keywords", "")
         subject_keywords = parse_keyword_list(keywords_raw)

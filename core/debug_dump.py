@@ -61,17 +61,74 @@ class DebugModelInputRecorder:
     def __init__(
         self,
         enabled: bool,
-        base_dir: str | Path = "data/debug_model_inputs",
+        base_dir: str | Path | None = None,
         run_id: str | None = None,
+        source_input: str | None = None,
+        run_name: str | None = None,
     ):
+        """
+        base_dir=None (the default): captures live PER RUN under the
+        real run/workspace architecture (docs/RUN_ARCHITECTURE.md) - a
+        genuine RunContext is created with run_type="diagnostic"
+        (already an enumerated valid type for exactly this) and output
+        goes to ctx.diagnostics/debug_model_inputs/, so a debug capture
+        is kept with the run it was actually for instead of piling up
+        in one flat directory every invocation dumps into side by side
+        (2026-08-08 - this project's whole data layout moved to a
+        run-owned model; a debug_model_inputs/ directory sitting loose
+        at the repo root was the exact kind of thing that migration
+        exists to fix, confirmed via a real find - an earlier session's
+        captures had drifted into being swept up as a "research
+        baseline" snapshot rather than staying with the run they were
+        actually diagnosing).
+
+        base_dir=<path> (explicit override): reverts to the OLD flat
+        behavior - a plain timestamped subdirectory under that path, no
+        RunContext involved. Useful for standalone/test use without a
+        full workspace, or when a caller genuinely wants output outside
+        the run system. self.run_id in this mode is still timestamp-
+        based so concurrent/repeated calls never collide.
+
+        source_input / run_name: passed straight through to
+        RunContext.create() when RunContext-backed - identifies what
+        this diagnostic run was actually for (e.g. the sidecar path)
+        rather than every diagnostic run's metadata.json looking
+        identical.
+        """
         self.enabled = enabled
         if not enabled:
             return
 
-        # Timestamp-based by default so concurrent/repeated runs never
-        # collide and silently overwrite an earlier run's captures.
-        self.run_id = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-        self.run_dir = Path(base_dir) / self.run_id
+        self._run_ctx = None
+        if base_dir is None:
+            try:
+                from core.workspace_context import WorkspaceContext
+                from core.run_context import RunContext
+                workspace = WorkspaceContext.resolve()
+                self._run_ctx = RunContext.create(
+                    workspace, run_type="diagnostic",
+                    source_input=source_input or "debug_model_inputs",
+                    run_name=run_name,
+                )
+                self.run_id = self._run_ctx.run_id
+                self.run_dir = self._run_ctx.diagnostics / "debug_model_inputs"
+            except Exception as e:
+                # A diagnostic aid failing to set up its OWN preferred
+                # storage must not block the real extraction it's meant
+                # to be diagnosing - fall back to the old flat directory
+                # rather than disabling capture entirely.
+                print(f"[DebugModelInputRecorder] WARNING: could not create "
+                      f"a RunContext-based run ({type(e).__name__}: {e}) - "
+                      f"falling back to a flat data/debug_model_inputs/ "
+                      f"directory instead.")
+                base_dir = "data/debug_model_inputs"
+
+        if self._run_ctx is None:
+            # Timestamp-based so concurrent/repeated runs never collide
+            # and silently overwrite an earlier run's captures.
+            self.run_id = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            self.run_dir = Path(base_dir) / self.run_id
+
         self._run_meta_path = self.run_dir / "run_metadata.json"
         self._run_meta: dict[str, Any] = {
             "run_id": self.run_id,
@@ -99,6 +156,28 @@ class DebugModelInputRecorder:
         except Exception as e:
             print(f"[DebugModelInputRecorder] WARNING: failed to write "
                   f"run_metadata.json: {type(e).__name__}: {e}")
+
+    def close(self) -> None:
+        """
+        Marks the underlying RunContext (if this recorder created one -
+        see __init__) as completed, so its metadata.json's status
+        reflects reality for anyone browsing genealogy_workspace/runs/
+        rather than sitting at "in_progress" forever. No-op when
+        disabled or when base_dir was given explicitly (no RunContext
+        to mark). Not required for correctness - an in-progress
+        diagnostic run is harmless, capture data is already flushed to
+        disk per-item as it happens - call it once after the CLI's
+        extraction call returns, same as the pattern every CLI in this
+        project already follows for its own success/failure reporting.
+        """
+        if not self.enabled or self._run_ctx is None:
+            return
+        try:
+            self._run_ctx.mark_completed()
+        except Exception as e:
+            print(f"[DebugModelInputRecorder] WARNING: failed to mark "
+                  f"diagnostic run {self.run_id!r} completed: "
+                  f"{type(e).__name__}: {e}")
 
     def new_item(self, item_id: str) -> "DebugItemRecorder":
         """

@@ -647,15 +647,45 @@ def refine_boundary_position(
     ruling_line_rows,
     expected_y: int,
     search_radius: int,
-) -> int:
+    left_number_candidates=None,
+    right_number_candidates=None,
+    agreement_tolerance: int = 5,
+) -> tuple[int, str]:
     """
     Locally searches a small window around an EXPECTED boundary position
     (from periodic spacing, not blind whole-page search) for the best
-    actual cut point: prefers a detected ruling line within the window
-    if one exists (strong structural signal), otherwise falls back to
-    the local density minimum (best available gap). This is the core of
-    "refine 50 expected boundaries" rather than "find 50 unknown rows" -
-    confined to a narrow window around a periodic estimate, so it's far
+    actual cut point. Returns (position, source) - source is one of
+    "both_number_columns", "number_columns_disagree", "left_number_column",
+    "right_number_column", "ruling_line", "density_minimum" - kept as real
+    telemetry, not silently discarded (2026-08-05, per direct instruction:
+    "agreement itself is useful telemetry... disagreement becomes
+    measurable instead of silently hidden").
+
+    Priority order, per boundary independently:
+      1. Left and right printed row-number columns (2026-08-05) - kept as
+         SEPARATE candidate pools, not concatenated-and-pick-nearest (a
+         locally noisy candidate from one side could otherwise outrank a
+         genuinely correct one from the other side just by sitting
+         fractionally closer to the periodic estimate - confirmed as a
+         real regression on a real page before this fix). Each side's
+         nearest in-window candidate is found independently:
+           - both found, agree within agreement_tolerance -> their
+             average, source="both_number_columns" (highest confidence -
+             two independent signals corroborate).
+           - both found, disagree -> whichever is closer to the periodic
+             expected position, source="number_columns_disagree" (a real,
+             flagged uncertainty - e.g. one side has a printed defect -
+             not silently resolved).
+           - only one side found -> use it, source="left_number_column"/
+             "right_number_column" (the other side rescues a printed
+             defect - confirmed real cause: an ink blot obscuring one
+             row's number on the opposite margin).
+      2. A detected ruling line within the window (strong structural
+         signal), source="ruling_line".
+      3. Local density minimum (best available gap) - final fallback,
+         source="density_minimum".
+
+    Confined to a narrow window around a periodic estimate, so it's far
     less sensitive to whatever caused global ruling-line detection to
     fail to engage at all on a real scan (2026-07-12) than the general
     detector was.
@@ -663,17 +693,601 @@ def refine_boundary_position(
     lo = max(0, expected_y - search_radius)
     hi = min(len(density), expected_y + search_radius + 1)
 
+    def nearest_in_window(candidates):
+        if not candidates:
+            return None
+        in_window = [c for c in candidates if lo <= c <= hi]
+        if not in_window:
+            return None
+        return min(in_window, key=lambda y: abs(y - expected_y))
+
+    left = nearest_in_window(left_number_candidates)
+    right = nearest_in_window(right_number_candidates)
+
+    if left is not None and right is not None:
+        if abs(left - right) <= agreement_tolerance:
+            return round((left + right) / 2), "both_number_columns"
+        if abs(left - expected_y) <= abs(right - expected_y):
+            return int(round(left)), "number_columns_disagree"
+        return int(round(right)), "number_columns_disagree"
+    if left is not None:
+        return int(round(left)), "left_number_column"
+    if right is not None:
+        return int(round(right)), "right_number_column"
+
     ruling_set = set(int(y) for y in ruling_line_rows) if ruling_line_rows is not None else set()
     ruling_in_window = [y for y in range(lo, hi) if y in ruling_set]
     if ruling_in_window:
         # If multiple, take the one closest to the expected position.
-        return min(ruling_in_window, key=lambda y: abs(y - expected_y))
+        return min(ruling_in_window, key=lambda y: abs(y - expected_y)), "ruling_line"
 
     window = density[lo:hi]
     if len(window) == 0:
-        return expected_y
+        return expected_y, "density_minimum"
     local_min_offset = int(np.argmin(window))
-    return lo + local_min_offset
+    return lo + local_min_offset, "density_minimum"
+
+
+def detect_row_number_centers(
+    image: Image.Image,
+    number_column_left: int,
+    number_column_right: int,
+    y0: int,
+    y1: int,
+    close_gap_px: int = 3,
+    max_digit_run_px: int | None = None,
+) -> list[float]:
+    """
+    Detects the vertical center of each printed row-number in a narrow
+    column strip (the "1, 2, 3..." row-number column many census forms
+    print at the left edge of the table) - a far stronger row anchor
+    than ruling-line detection on forms with thin/faint/interrupted
+    printed lines, since printed numerals are bold, isolated, and high-
+    contrast by comparison. Confirmed 2026-08-05 on a real 1901 census
+    page where ruling-line detection couldn't clear even a heavily
+    gap-bridged 0.3 run-ratio threshold, but row-number centers matched
+    the true (non-uniform) row spacing cleanly - 50/50 rows found,
+    heights 34.8-41.3px vs segment_rows_uniform_tile's 36.84px single-
+    row measurement on the same page.
+
+    The column typically also contains one continuous vertical RULE LINE
+    (the printed border to the right of the numbers), excluded before
+    computing row density - via VERTICAL RUN LENGTH (the same longest-
+    continuous-run technique detect_row_bands() already uses for
+    horizontal ruling lines, transposed to the vertical axis), NOT total
+    per-column ink coverage. Coverage alone was tried first and confirmed
+    insufficient on a real page: page warp made the line drift gradually
+    across ~5 columns (49-53 in one real strip) rather than sit in a
+    single fixed column, so its PER-COLUMN coverage (0.22-0.70) never
+    cleared even a generous 80% threshold, while digit columns (which
+    repeat 50x down the page) independently reached up to 0.23 coverage
+    too - the two overlap in raw coverage and can't be told apart that
+    way. Run LENGTH separates them cleanly instead: the tallest
+    continuous vertical run any real digit produced was 47px; the
+    drifting line's least-covered column still ran 216px continuous -
+    a 4.6x gap. max_digit_run_px defaults to None, which falls back to a
+    fixed 60px (safely above any single glyph's height, safely below a
+    real printed line's continuous run in any column it touches).
+
+    A two-digit number's two digits (e.g. "1" and "0" of "10") don't need
+    explicit clustering - summing ink density ACROSS the column's width
+    naturally merges same-row content regardless of how many digit-glyphs
+    produced it, so this needs no connected-component analysis, staying
+    within this module's PIL+numpy-only, no-OpenCV/scipy design (see this
+    file's own top-of-module docstring).
+
+    Returns row-number vertical centers in the SAME y-coordinate space as
+    y0/y1 (i.e. already offset by y0 - NOT relative-to-crop). Empty list
+    if the column contains no detectable digits (e.g. wrong x-range, or
+    this form doesn't print row numbers at all - callers should fall back
+    to another detection strategy in that case, not treat [] as an error).
+    """
+    gray = image.convert("L")
+    arr = np.array(gray)[y0:y1, number_column_left:number_column_right]
+    if arr.size == 0:
+        return []
+    thresh = _otsu_threshold(arr)
+    binary = (arr <= thresh).astype(np.uint8)
+
+    threshold_px = max_digit_run_px if max_digit_run_px is not None else 60
+    vertical_run = _longest_run_per_row(binary.T, close_gap_px=4)
+    digit_only = binary[:, vertical_run <= threshold_px]
+    if digit_only.shape[1] == 0:
+        return []
+
+    is_ink = digit_only.sum(axis=1) > 0
+    closed = _close_1d(is_ink, close_gap_px)
+
+    runs = []
+    start = None
+    for y, val in enumerate(closed):
+        if val and start is None:
+            start = y
+        elif not val and start is not None:
+            runs.append((start, y - 1))
+            start = None
+    if start is not None:
+        runs.append((start, len(closed) - 1))
+
+    # NOTE (2026-08-05): earlier revisions tried to force this list down
+    # to exactly row_count runs here (merging any anomalously-small gap,
+    # e.g. a printed period after a row number registering as its own
+    # tiny run) - abandoned after confirming on a real page that widening
+    # the merge threshold enough to catch that also merged two genuinely
+    # separate ADJACENT rows elsewhere. Getting the COUNT exactly right
+    # here isn't actually necessary: callers use these as boundary
+    # CANDIDATES for a per-expected-position nearest-match search (see
+    # refine_boundary_position()'s number_boundary_candidates parameter),
+    # not as a directly-trusted final list - a spurious extra candidate
+    # (like the period) simply never wins the "closest to this expected
+    # row" comparison for any real row, and a missing one just means that
+    # one boundary falls through to the ruling-line/density fallback
+    # instead. Precision here would be nice but isn't load-bearing.
+    centers = [(a + b) / 2 + y0 for a, b in runs]
+    return centers
+
+
+def row_boundaries_from_number_centers(
+    centers: list[float],
+    table_top: float,
+    table_bottom: float,
+    alignment: str = "center",
+) -> list[float]:
+    """
+    Converts detected row-number centers (detect_row_number_centers) into
+    row BOUNDARIES (row_count+1 values, index i separating row i from row
+    i+1). alignment describes where the printed number sits relative to
+    its row's true content span - CONFIRMED to vary by census year/form
+    (per direct instruction, 2026-08-05: some forms center the row number
+    within its row, others print it nearer the row's bottom edge) - a
+    per-template calibration choice, never a hardcoded assumption.
+
+    "center" (default): boundary[i] = midpoint(center[i], center[i+1]) -
+    correct when the number sits at the visual center of its row. Visually
+    confirmed correct for the 1901 form this was built against (digit
+    centers landed equidistant from the ruling lines above/below).
+    "bottom": boundary[i] = center[i] directly - correct when the number
+    sits at (or very near) the row's bottom edge, so its own position
+    already approximates the boundary rather than the row's midpoint.
+
+    First/last boundaries always come from table_top/table_bottom (the
+    already visually-confirmed table extent) rather than extrapolated
+    from spacing or trusted from the first/last detected center - those
+    two values are the one part of this measurement with independent,
+    directly-confirmed ground truth, so they should never be overridden
+    by a detection result.
+    """
+    if not centers:
+        return [table_top, table_bottom]
+    if alignment == "bottom":
+        boundaries = [table_top] + list(centers)
+        boundaries[-1] = table_bottom
+        return boundaries
+    boundaries = [table_top]
+    for i in range(len(centers) - 1):
+        boundaries.append((centers[i] + centers[i + 1]) / 2)
+    boundaries.append(table_bottom)
+    return boundaries
+
+
+def detect_column_number_centers(
+    image: Image.Image,
+    x0: int,
+    x1: int,
+    y0: int,
+    y1: int,
+    close_gap_px: int = 1,
+    min_blob_width_px: int = 3,
+    line_run_threshold_frac: float = 0.85,
+) -> list[tuple[float, int]]:
+    """
+    Detects individual printed-number blobs along a HORIZONTAL band -
+    the printed column-number row many census forms print near the top
+    of the table (e.g. "1 2 3 4 5 6..." each centered over its own
+    column). Column-axis counterpart to detect_row_number_centers(),
+    same underlying technique transposed: exclude tall/continuous
+    structure (here, VERTICAL divider lines crossing the band) via
+    longest-run-length rather than raw coverage, then group remaining
+    ink into blobs.
+
+    PURE MEASUREMENT - same "Stage A: emit numbers, decide nothing"
+    principle as core/image_analysis.py's physical sensors. This
+    function does NOT know which column any blob belongs to, does NOT
+    filter by a template's expected position, and does NOT feed into
+    any boundary-refinement decision - it just reports what it found.
+    Matching a blob to a specific expected column (using a template's
+    approximate x_frac as a prior + a search-window tolerance) is the
+    caller's job, same separation as row-number centers vs. row-
+    boundary derivation. See nearest_number_candidate() below for that
+    step, and docs/COLUMN_NUMBER_ANCHOR_RESEARCH.md for the full
+    research history this function is built from.
+
+    Research findings this implementation reflects (2026-08-06, tested
+    against a real 1911 reference page with independently-confirmed
+    column positions - e078_e001946617):
+      - The underlying geometric principle holds: printed numbers land
+        within 2-5px of their column's true center.
+      - Raw whole-row blob detection is genuinely noisy - NOT primarily
+        from gap-bridging (falsified directly: close_gap_px=0 barely
+        changed the worst merges) but from real touching/near-touching
+        ink in the source print that no threshold tuning resolves.
+      - A dashed sub-header guide-line sometimes sits just above the
+        true number row and must be excluded from y0/y1, not just the
+        vertical divider lines - confirmed on the same reference page
+        (a section-specific "Citizenship, Nationality and Religion"
+        category underline at y=583-590, well above the actual digits
+        at y=592-604). Callers should calibrate y0/y1 per template by
+        direct visual check, the same discipline as everywhere else in
+        this pipeline - never assumed generic.
+      - Reliability comes from FILTERING (nearest_number_candidate()
+        below, scoped to each column's own known approximate position),
+        not from perfecting raw detection - this mirrors the "prior
+        narrows the search window, existing detector stays authoritative"
+        principle the whole column-anchor idea is built on.
+
+    Prior art, explicitly NOT repeated here: an earlier, cruder column-
+    number attempt (_detect_header_number_blobs() in core/auto_sidecar.py,
+    2026-07-27) used simple density-relative-to-peak with no line
+    exclusion and no filtering step, was found to worsen already-accurate
+    pages, and was removed. This function exists specifically because
+    the underlying idea wasn't re-tested with the techniques the row-
+    number work later proved necessary - see this function's own research
+    history above for what's different.
+
+    Returns [(center_x, width_px), ...] sorted left to right, in FULL-
+    IMAGE x-coordinates - NOT filtered, NOT deduplicated against a
+    template, exactly what was found in the given band.
+    """
+    gray = image.convert("L")
+    arr = np.array(gray)[y0:y1, x0:x1]
+    if arr.size == 0:
+        return []
+    thresh = _otsu_threshold(arr)
+    binary = (arr <= thresh).astype(np.uint8)
+    band_h = binary.shape[0]
+
+    # Exclude vertical divider lines crossing the band - per-column
+    # longest VERTICAL run within this (short) band, not raw coverage
+    # (confirmed necessary: coverage alone can't separate a line from
+    # digit columns that also accumulate real ink across many numbers -
+    # same lesson as the row-axis case, see detect_row_number_centers()).
+    vertical_run = _longest_run_per_row(binary.T, close_gap_px=1)
+    threshold_px = int(band_h * line_run_threshold_frac)
+    keep_mask = vertical_run <= threshold_px
+    digit_only = binary[:, keep_mask]
+    if digit_only.shape[1] == 0:
+        return []
+    orig_x = np.where(keep_mask)[0]
+
+    col_ink = digit_only.sum(axis=0) > 0
+    closed = _close_1d(col_ink, close_gap_px)
+
+    blobs = []
+    start = None
+    for i, v in enumerate(closed):
+        if v and start is None:
+            start = i
+        elif not v and start is not None:
+            blobs.append((orig_x[start], orig_x[i - 1]))
+            start = None
+    if start is not None:
+        blobs.append((orig_x[start], orig_x[-1]))
+
+    blobs = [(b0, b1) for b0, b1 in blobs if (b1 - b0) >= min_blob_width_px]
+    return sorted((x0 + (b0 + b1) / 2, b1 - b0) for b0, b1 in blobs)
+
+
+def nearest_number_candidate(
+    candidates: list[float], expected_position: float, max_distance: float,
+) -> float | None:
+    """
+    Generic "is there a plausible anchor near where I expect one" lookup
+    - the filtering step that made column-number detection reliable
+    despite noisy raw blobs elsewhere on the page (confirmed 2026-08-06:
+    scoping to each column's own known approximate x_frac position found
+    the correct candidate for every one of 5 known columns on a real
+    reference page, while raw whole-row parsing alone was too noisy to
+    trust blindly - the SAME distinction refine_boundary_position()
+    already draws between a candidate list and blindly trusting every
+    detection). Shared by both row-number and column-number anchoring -
+    not duplicated per axis.
+
+    Returns the candidate closest to expected_position if one exists
+    within max_distance, else None (never guesses when nothing plausible
+    is nearby - same "no signal" contract as detect_row_number_centers()
+    returning an empty list).
+    """
+    if not candidates:
+        return None
+    in_window = [c for c in candidates if abs(c - expected_position) <= max_distance]
+    if not in_window:
+        return None
+    return min(in_window, key=lambda c: abs(c - expected_position))
+
+
+def _score_number_row_band(blobs: list[tuple[float, int]], table_width: float) -> float:
+    """
+    Plausibility score for a candidate number-row band - HOW clean does
+    detect_column_number_centers()'s output look, not WHICH column
+    anything is. Same "score, don't just accept" principle
+    core/auto_sidecar.py's row-detection preset ladder already uses
+    (_assess_band_detection_quality()), applied here to calibration
+    instead of detection strategy.
+
+    Rewards: a plausible blob count (real forms run ~25-50 printed
+    numbers; too few means most of the row was missed, implausibly many
+    means noise is dominating) and blobs mostly falling in a digit-like
+    width range (3-30px, calibrated against real detections on two
+    different census years). Penalizes: one blob spanning more than 5%
+    of the table width - a strong sign the band caught a continuous
+    structural feature (a ruling line, a dashed guide) rather than
+    isolated digits, confirmed as the exact failure mode found by hand
+    on a real 1911 page before this scoring function existed.
+
+    TRIED AND REVERTED (docs/COLUMN_NUMBER_ANCHOR_RESEARCH.md's
+    "Round 12"): scaling count_score's cap by search width instead of
+    this fixed 70, to fix Round 10's noisy piecewise/narrow-zone sweep.
+    Two calibrations of the scaling constant were tried; the first was
+    calibrated against the wrong quantity (real column density instead
+    of raw blob density) and clearly regressed the piecewise task; the
+    corrected version improved the piecewise task somewhat but NEVER
+    beat this fixed-70 baseline's own best case, AND silently broke the
+    already-validated global-band results for 1911 and 1926 (shifted by
+    91px and 210px respectively, landing on handwriting noise instead
+    of the real number row) - a real regression, not an improvement,
+    confirmed by directly re-running Round 2's validated samples. Kept
+    as fixed 70 pending a genuinely better-founded fix; see Round 12 for
+    the full data and the "plausible_width_frac quantization at low n"
+    hypothesis that wasn't yet tried.
+    """
+    if not blobs:
+        return -1.0
+    widths = [w for _c, w in blobs]
+    n = len(blobs)
+    max_w = max(widths)
+    merge_penalty = 3.0 if max_w > table_width * 0.05 else 0.0
+    count_score = min(n, 70) / 70.0
+    plausible_width_frac = sum(1 for w in widths if 3 <= w <= 30) / n
+    return count_score + plausible_width_frac - merge_penalty
+
+
+def find_number_row_band(
+    image: Image.Image,
+    x0: int,
+    x1: int,
+    search_y0: int,
+    search_y1: int,
+    band_height: int = 12,
+    step: int = 3,
+) -> tuple[int, int, list[tuple[float, int]], float] | None:
+    """
+    Automatically locates the printed column-number row's y-band within
+    a broader search region, instead of requiring a human to calibrate
+    it per template/per page by direct visual inspection (the manual
+    process detect_column_number_centers()'s own research history was
+    built on - see docs/COLUMN_NUMBER_ANCHOR_RESEARCH.md). Sweeps a
+    sliding window of band_height across [search_y0, search_y1], runs
+    detect_column_number_centers() on each candidate, and keeps
+    whichever scores best via _score_number_row_band().
+
+    Confirmed 2026-08-06 against three real census pages (1911, 1931,
+    and a genuinely different-year form, 1926): on the two pages a human
+    had already carefully calibrated by hand, the auto-found band landed
+    within 1-12px of the manual one and detected the same or a very
+    similar blob count. On the 1926 page - where an initial rough manual
+    guess at the band performed badly (2/12 numbers visible in one
+    section) - the auto-search found a substantially better band on its
+    own, without any human recalibration. Its SCORE also correctly
+    stayed low/negative for that page, honestly signaling reduced
+    confidence rather than reporting false certainty - this function
+    reports what it found, it does not decide whether the result is
+    "good enough" for any downstream use.
+
+    search_y0/search_y1 should still be a reasonable region to search
+    within (e.g. the gap between a template's metadata_bottom and
+    table_top, or a similarly-sized window above a measured table_top) -
+    this narrows WHERE to sweep, not WHICH exact pixels the number row
+    occupies within that region. Not validated on forms with no printed
+    column-number row at all - callers should expect a low score in
+    that case (nothing plausible to find), not silently trust a result.
+
+    Returns (band_y0, band_y1, blobs, score) for the best-scoring
+    candidate, or None if search_y1 - search_y0 < band_height.
+    """
+    table_width = x1 - x0
+    best = None
+    best_score = float("-inf")
+    y = search_y0
+    while y + band_height <= search_y1:
+        blobs = detect_column_number_centers(image, x0, x1, y, y + band_height)
+        score = _score_number_row_band(blobs, table_width)
+        if score > best_score:
+            best_score = score
+            best = (y, y + band_height, blobs, score)
+        y += step
+    return best
+
+
+def find_number_row_band_piecewise(
+    image: Image.Image,
+    x0: int,
+    x1: int,
+    search_y0: int,
+    search_y1: int,
+    n_zones: int = 3,
+    band_height: int = 12,
+    step: int = 3,
+) -> list[tuple[int, int, int, int, list[tuple[float, int]], float]]:
+    """
+    Per-zone counterpart to find_number_row_band(), built after a real
+    1901 page (docs/COLUMN_NUMBER_ANCHOR_RESEARCH.md's "Round 9") showed
+    the printed number row isn't always level: independently calibrating
+    the SAME page's left/middle/right thirds found three genuinely
+    different optimal bands (~80px apart, ~1.5deg effective tilt) - a
+    single global band ends up being a compromise that's not really
+    correct anywhere on a page like that. Root-caused as real page
+    skew/curvature, not a detection bug (visually confirmed by cropping
+    each zone) - see the research doc for the full writeup, including
+    what was ruled out first (filter thresholds, touching digits).
+
+    Splits [x0, x1] into n_zones equal-width slices and runs
+    find_number_row_band() independently on each. On a page whose
+    header IS level, expect each zone to land on nearly the same band
+    anyway - this isn't a form-specific special case, just a strictly
+    more general calibration that degrades gracefully to the global
+    case when there's no real drift to find.
+
+    Returns [(zone_x0, zone_x1, band_y0, band_y1, blobs, score), ...],
+    one entry per zone (a zone is skipped if find_number_row_band()
+    returns None for it, e.g. search_y1-search_y0 < band_height).
+    """
+    zone_width = (x1 - x0) / n_zones
+    zones = []
+    for i in range(n_zones):
+        zx0 = int(round(x0 + i * zone_width))
+        zx1 = x1 if i == n_zones - 1 else int(round(x0 + (i + 1) * zone_width))
+        band = find_number_row_band(image, zx0, zx1, search_y0, search_y1, band_height, step)
+        if band is None:
+            continue
+        by0, by1, blobs, score = band
+        zones.append((zx0, zx1, by0, by1, blobs, score))
+    return zones
+
+
+def detect_column_number_centers_piecewise(
+    image: Image.Image,
+    x0: int,
+    x1: int,
+    search_y0: int,
+    search_y1: int,
+    n_zones: int = 3,
+    band_height: int = 12,
+    step: int = 3,
+) -> list[tuple[float, int]]:
+    """
+    Drop-in replacement for "calibrate one global band, then detect
+    column-number centres once over the full table width" - calibrates
+    a separate band PER ZONE via find_number_row_band_piecewise() first,
+    then merges each zone's own blobs (each zone's blobs are already
+    x-scoped to that zone by construction, so no de-duplication needed).
+    See find_number_row_band_piecewise()'s docstring for why this
+    exists (a real, visually-confirmed non-level header row on a 1901
+    page) and docs/COLUMN_NUMBER_ANCHOR_RESEARCH.md's "Round 9"/"Round
+    10" for validated before/after match-rate numbers.
+    """
+    zones = find_number_row_band_piecewise(image, x0, x1, search_y0, search_y1, n_zones, band_height, step)
+    merged: list[tuple[float, int]] = []
+    for _zx0, _zx1, _by0, _by1, blobs, _score in zones:
+        merged.extend(blobs)
+    return sorted(merged, key=lambda t: t[0])
+
+
+def _find_number_row_band_anchors(
+    image: Image.Image,
+    x0: int,
+    x1: int,
+    search_y0: int,
+    search_y1: int,
+    n_anchors: int,
+    band_height: int,
+    step: int,
+) -> list[tuple[float, float]]:
+    """
+    Runs find_number_row_band() at n_anchors WIDE, roughly-equal slices
+    of [x0, x1] - deliberately coarse (Round 9's left/middle/right-
+    thirds check confirmed zones at this scale score cleanly, 1.31-1.40,
+    with no sign of the narrow-window scorer instability Round 10/12
+    hit trying to search many NARROW zones directly). Returns
+    [(anchor_x_center, anchor_band_y_center), ...], sorted by x, for
+    anchors where a band was actually found.
+    """
+    zone_width = (x1 - x0) / n_anchors
+    anchors = []
+    for i in range(n_anchors):
+        zx0 = int(round(x0 + i * zone_width))
+        zx1 = x1 if i == n_anchors - 1 else int(round(x0 + (i + 1) * zone_width))
+        band = find_number_row_band(image, zx0, zx1, search_y0, search_y1, band_height, step)
+        if band is None:
+            continue
+        by0, by1, _blobs, _score = band
+        anchors.append(((zx0 + zx1) / 2.0, (by0 + by1) / 2.0))
+    return sorted(anchors, key=lambda a: a[0])
+
+
+def _interpolate_band_center(anchors: list[tuple[float, float]], x: float) -> float:
+    """
+    Linear interpolation (or nearest-segment-slope extrapolation past
+    the outermost anchors) of the expected band CENTER y at position x,
+    from a small set of (x_center, y_center) anchor measurements. A
+    single anchor degenerates to a flat line (same as the old global-
+    band behaviour). No scoring happens here - this is pure arithmetic
+    over already-trusted wide-scale measurements, which is the whole
+    point: it never re-invokes the unstable narrow-window scorer.
+    """
+    if len(anchors) == 1:
+        return anchors[0][1]
+    xs = [a[0] for a in anchors]
+    ys = [a[1] for a in anchors]
+    if x <= xs[0]:
+        i0, i1 = 0, 1
+    elif x >= xs[-1]:
+        i0, i1 = len(xs) - 2, len(xs) - 1
+    else:
+        i0, i1 = 0, 1
+        for i in range(len(xs) - 1):
+            if xs[i] <= x <= xs[i + 1]:
+                i0, i1 = i, i + 1
+                break
+    dx = xs[i1] - xs[i0]
+    slope = (ys[i1] - ys[i0]) / dx if dx else 0.0
+    return ys[i0] + slope * (x - xs[i0])
+
+
+def detect_column_number_centers_trend(
+    image: Image.Image,
+    x0: int,
+    x1: int,
+    search_y0: int,
+    search_y1: int,
+    n_anchors: int = 3,
+    n_slices: int = 10,
+    band_height: int = 12,
+    step: int = 3,
+) -> list[tuple[float, int]]:
+    """
+    Third calibration strategy for a header row that isn't level (see
+    find_number_row_band_piecewise()'s docstring for the original 1901
+    finding). Round 10/12's piecewise approach re-ran the full search-
+    and-SCORE sweep independently in each of up to 16 zones, which hit
+    real instability in _score_number_row_band() at narrow scale
+    (confirmed and documented, not just suspected - see docs/COLUMN_
+    NUMBER_ANCHOR_RESEARCH.md's "Round 12" for the regression that
+    resulted from trying to fix the scorer instead of avoiding it).
+
+    This strategy sidesteps that entirely: take only `n_anchors` WIDE
+    measurements (reliable at that scale, per Round 9), fit a simple
+    linear trend through them, then INTERPOLATE (pure arithmetic, no
+    search, no scoring) the expected band for `n_slices` finer x-slices
+    from that trend. `n_slices` controls detection resolution; `n_anchors`
+    controls how many real (reliable) measurements the trend is built
+    from - these are independent knobs, unlike the piecewise approach
+    where more zones meant more narrow (unreliable) searches.
+    """
+    anchors = _find_number_row_band_anchors(image, x0, x1, search_y0, search_y1, n_anchors, band_height, step)
+    if not anchors:
+        return []
+
+    slice_width = (x1 - x0) / n_slices
+    merged: list[tuple[float, int]] = []
+    for i in range(n_slices):
+        sx0 = int(round(x0 + i * slice_width))
+        sx1 = x1 if i == n_slices - 1 else int(round(x0 + (i + 1) * slice_width))
+        yc = _interpolate_band_center(anchors, (sx0 + sx1) / 2.0)
+        sy0 = int(round(yc - band_height / 2))
+        sy1 = sy0 + band_height
+        blobs = detect_column_number_centers(image, sx0, sx1, sy0, sy1)
+        merged.extend(blobs)
+    return sorted(merged, key=lambda t: t[0])
 
 
 def segment_rows_uniform_tile(
@@ -841,6 +1455,11 @@ def segment_rows_periodic(
     metadata_bottom: int | None = None,
     header_box_top: int | None = None,
     header_box_bottom: int | None = None,
+    number_column_left: int | None = None,
+    number_column_right: int | None = None,
+    number_column2_left: int | None = None,
+    number_column2_right: int | None = None,
+    row_number_alignment: str = "center",
 ) -> tuple[RowDetectionResult, list[Image.Image], Image.Image, Image.Image]:
     """
     Alternate segmentation strategy for document types with a KNOWN,
@@ -891,6 +1510,24 @@ def segment_rows_periodic(
     wide enough to absorb real form irregularity, narrow enough to
     stay anchored to the correct row rather than drifting into a
     neighbor.
+
+    number_column_left/number_column_right (and the optional
+    number_column2_left/number_column2_right for a SECOND printed
+    row-number column - many census forms print numbers down both the
+    left AND right margins, e.g. confirmed on a real 1901 page)/
+    row_number_alignment (2026-08-05): when a column's bounds are given,
+    detect_row_number_centers() runs against it and the resulting
+    boundary candidates feed into refine_boundary_position() as its
+    highest-priority signal PER BOUNDARY (see that function's own
+    docstring - not a whole-page trust-or-reject switch). Candidates from
+    both columns, when both are configured, are pooled together - the
+    nearest one within a boundary's search window wins regardless of
+    which side it came from, so a printed defect on one side (an ink
+    blot obscuring a digit, confirmed as a real cause on a real page) is
+    covered by the other side rather than losing that boundary's anchor
+    entirely. A boundary with no number-column candidate nearby (or none
+    configured at all) falls through to ruling-line detection, then
+    local density minimum, same as before this signal existed.
     """
     if deskew_angle is not None:
         deskewed = apply_deskew_angle(image, deskew_angle)
@@ -899,30 +1536,159 @@ def segment_rows_periodic(
         deskewed, angle = deskew(image)
 
     x0, x1 = table_left, table_right
-    density, _ = _row_density_profile(deskewed, x0=x0, x1=x1)
 
     if table_top is None or table_bottom is None:
         auto_top, auto_bottom = estimate_table_extent(deskewed, x0=x0, x1=x1)
         table_top = table_top if table_top is not None else auto_top
         table_bottom = table_bottom if table_bottom is not None else auto_bottom
 
+    # Scope density/ruling-line detection to the actual DATA-ROW region -
+    # header_box_bottom if a header box is confirmed, else table_top -
+    # down to table_bottom, NOT the whole page (2026-08-05, per Jon's
+    # direction, confirmed on a real 1901 census page: table_top/
+    # table_bottom exactly on the true first/last row borders still
+    # produced misaligned intermediate rows). A header block above the
+    # table has its own print density/ruling-line characteristics
+    # (titles, multi-tier column labels) that pollute the Otsu threshold
+    # and ruling-line classification computed over the whole page,
+    # throwing off refinement even when the table's own top/bottom are
+    # exactly right. Detection runs entirely in ROI-LOCAL coordinates
+    # (0 = data_top); only the final refined boundary is shifted back to
+    # full-image coordinates - density/ruling_line_rows/expected_boundaries
+    # must never mix local and full-image coordinate spaces.
+    data_top = header_box_bottom if header_box_bottom is not None else table_top
+
     total_span = table_bottom - table_top
     expected_row_height = total_span / row_count if row_count > 0 else total_span
     search_radius = max(2, int(expected_row_height * search_radius_ratio))
 
-    _, _, ruling_line_rows = detect_row_bands(deskewed, x0=x0, x1=x1)
+    # Row-number-column signal (2026-08-05): left and right columns are
+    # kept as SEPARATE candidate pools, deliberately not concatenated -
+    # refine_boundary_position() finds each side's nearest in-window
+    # candidate independently and only THEN compares them (agree/
+    # disagree/only-one-found), so a locally noisy candidate on one side
+    # can never silently outrank a genuinely correct one on the other
+    # side just by sitting fractionally closer to the periodic estimate
+    # (confirmed as a real regression on a real page when both sides were
+    # blindly pooled together first). A missing or spurious candidate on
+    # either side only affects that ONE boundary's search, falling
+    # through the priority cascade rather than discarding the signal for
+    # the whole page. table_top/table_bottom themselves are excluded from
+    # both candidate pools - those come from row_boundaries_from_number_
+    # centers() as already-trusted endpoints, not something to re-search
+    # for.
+    def _local_candidates(col_left, col_right) -> list[float]:
+        if col_left is None or col_right is None:
+            return []
+        number_centers = detect_row_number_centers(
+            deskewed, col_left, col_right, data_top, table_bottom,
+        )
+        if not number_centers:
+            return []
+        raw_candidates = row_boundaries_from_number_centers(
+            number_centers, table_top, table_bottom, alignment=row_number_alignment,
+        )
+        return [c - data_top for c in raw_candidates[1:-1]]
 
-    expected_boundaries = [
-        table_top + round(i * expected_row_height) for i in range(row_count + 1)
+    left_candidates_local = _local_candidates(number_column_left, number_column_right)
+    right_candidates_local = _local_candidates(number_column2_left, number_column2_right)
+    number_centers_found = len(left_candidates_local) + len(right_candidates_local)
+
+    roi = deskewed.crop((
+        x0 or 0, data_top,
+        x1 if x1 is not None else deskewed.width, table_bottom,
+    ))
+    density, _ = _row_density_profile(roi)
+    _, _, ruling_line_rows = detect_row_bands(roi)
+
+    expected_boundaries_local = [
+        (table_top - data_top) + round(i * expected_row_height) for i in range(row_count + 1)
     ]
-    refined_boundaries = [
-        refine_boundary_position(density, ruling_line_rows, y, search_radius)
-        for y in expected_boundaries
+    boundary_results = [
+        refine_boundary_position(
+            density, ruling_line_rows, y, search_radius,
+            left_number_candidates=left_candidates_local,
+            right_number_candidates=right_candidates_local,
+        )
+        for y in expected_boundaries_local
     ]
-    # Guarantee monotonic ordering - local refinement could in principle
-    # push two adjacent boundaries out of order on a badly degraded
-    # scan; enforce a minimum 1px separation rather than let that
-    # silently produce a zero/negative-height band downstream.
+    positions_local = [pos for pos, _source in boundary_results]
+    sources = [source for _pos, source in boundary_results]
+    reconstructed_runs = 0  # telemetry: how many multi-row anomalous runs needed interpolation
+
+    # Row-trust anomaly recovery (2026-08-05, per direct instruction - the
+    # validation unit is the ROW, not the boundary): each row i (spanning
+    # positions_local[i] to positions_local[i+1]) is trusted if its height
+    # is plausible relative to the page's own median, untrusted otherwise.
+    # An untrusted row's OWN measurement is discarded entirely, NOT
+    # repaired with a weaker signal (ruling-line/density) - the row
+    # immediately above and below have ALREADY established their own
+    # trusted top/bottom, and those boundaries already define this row's
+    # geometry. Concretely: boundary[i] already equals row(i-1)'s bottom,
+    # and boundary[i+1] already equals row(i+1)'s top - if BOTH neighbors
+    # are trusted, there is nothing to recompute (both endpoints are
+    # already validated via the trusted neighbor that produced them), so
+    # an isolated single anomalous row is left exactly as-is - its odd
+    # height is accepted as real page variation, not an error to chase.
+    #
+    # Only a RUN of two or more CONSECUTIVE untrusted rows lacks this
+    # direct inheritance on at least one interior boundary (confirmed as
+    # the real failure shape on an actual page: one bad printed digit
+    # corrupts the boundary on both sides of it via the center-alignment
+    # midpoint, producing exactly two consecutive untrusted rows - one
+    # too short, the next too long). For that case, the two OUTER
+    # boundaries flanking the whole run (each already validated by a
+    # trusted row on its far side, or table_top/table_bottom at the very
+    # ends) are trustworthy anchors; the interior boundaries within the
+    # run are reconstructed by simple even interpolation across that
+    # confirmed span - a "secondary recovery method," per direct
+    # instruction, not another attempt to re-detect the same row's own
+    # (already-shown-unreliable) signal.
+    if row_count > 1:
+        heights = [positions_local[i + 1] - positions_local[i] for i in range(row_count)]
+        sorted_heights = sorted(heights)
+        median_height = sorted_heights[len(sorted_heights) // 2]
+        anomaly_ratio = 0.20  # deviation beyond this fraction of the median is untrusted
+        row_trusted = [
+            median_height <= 0 or abs(h - median_height) <= anomaly_ratio * median_height
+            for h in heights
+        ]
+
+        i = 0
+        while i < row_count:
+            if row_trusted[i]:
+                i += 1
+                continue
+            run_start = i  # first untrusted row in this run
+            while i < row_count and not row_trusted[i]:
+                i += 1
+            run_end = i - 1  # last untrusted row in this run (inclusive)
+            run_length = run_end - run_start + 1
+
+            if run_length == 1:
+                # Isolated untrusted row with trusted (or page-edge)
+                # neighbors on both sides - its boundaries are already
+                # inherited from them. Nothing to change.
+                continue
+
+            # Multi-row run: reconstruct the (run_length - 1) INTERIOR
+            # boundaries by even interpolation between the two outer,
+            # already-trusted anchor boundaries.
+            reconstructed_runs += 1
+            left_anchor = positions_local[run_start]       # = trusted row above's bottom (or table_top)
+            right_anchor = positions_local[run_end + 1]     # = trusted row below's top (or table_bottom)
+            span = right_anchor - left_anchor
+            for k in range(1, run_length):
+                idx = run_start + k
+                positions_local[idx] = left_anchor + round(span * k / run_length)
+                sources[idx] = "interpolated_multi_row_run"
+
+    refined_boundaries = [pos + data_top for pos in positions_local]
+    boundary_sources = sources
+    # Guarantee monotonic ordering - local refinement (ruling-line/density
+    # path or number-column candidates alike) could in principle push two
+    # adjacent boundaries out of order; enforce a minimum 1px separation
+    # rather than let that silently produce a zero/negative-height band.
     for i in range(1, len(refined_boundaries)):
         if refined_boundaries[i] <= refined_boundaries[i - 1]:
             refined_boundaries[i] = refined_boundaries[i - 1] + 1
@@ -975,10 +1741,44 @@ def segment_rows_periodic(
         f"{x1 if x1 is not None else deskewed.width}), "
         f"row_count={row_count}, expected_row_height={expected_row_height:.1f}px, "
         f"search_radius={search_radius}px.",
+    ]
+    if left_candidates_local or right_candidates_local:
+        source_counts = {}
+        for s in boundary_sources:
+            source_counts[s] = source_counts.get(s, 0) + 1
+        source_summary = ", ".join(f"{v} {k}" for k, v in source_counts.items())
+        warnings.append(
+            f"Row-number-column signal: {number_centers_found} digit-group(s) found "
+            f"({len(left_candidates_local)} left, {len(right_candidates_local)} right), "
+            f"alignment={row_number_alignment!r}. Per-boundary source breakdown: "
+            f"{source_summary}."
+        )
+        n_interpolated = source_counts.get("interpolated_multi_row_run", 0)
+        if n_interpolated:
+            warnings.append(
+                f"{n_interpolated} interior boundary(-ies) across {reconstructed_runs} "
+                f"run(s) of 2+ consecutive rows with implausible heights (>20% off the "
+                f"page's own median) were reconstructed by even interpolation between "
+                f"the nearest trusted boundaries flanking each run, discarding those "
+                f"rows' own unreliable measurements entirely rather than re-deriving "
+                f"them from a weaker signal. Isolated single-row anomalies (trusted "
+                f"neighbors on both sides) are left as-is - their boundaries are "
+                f"already inherited from those neighbors, so an odd height there is "
+                f"treated as real page variation, not an error."
+            )
+        n_disagree = source_counts.get("number_columns_disagree", 0)
+        if n_disagree:
+            warnings.append(
+                f"{n_disagree} boundary(-ies) had left/right number-column candidates "
+                f"that DISAGREED (beyond the agreement tolerance) - resolved by picking "
+                f"whichever was closer to the periodic estimate, not silently averaged. "
+                f"Worth a visual spot-check on this page."
+            )
+    warnings.append(
         f"{len(ruling_line_rows)} ruling-line row(s) available as a refinement "
         f"signal within local search windows "
-        f"({'used where found' if len(ruling_line_rows) > 0 else 'none found - every boundary fell back to local density minimum'}).",
-    ]
+        f"({'used where found' if len(ruling_line_rows) > 0 else 'none found - every boundary fell back to local density minimum'})."
+    )
 
     row_crops, header_crop = crop_rows(
         deskewed, data_bands, header_band=header_band, x0=x0, x1=x1,
@@ -1697,6 +2497,14 @@ def segment_rows(
     padding_pct: float | None = None,
     padding_top: int | None = None,
     padding_bottom: int | None = None,
+    table_top: int | None = None,
+    table_bottom: int | None = None,
+    table_left: int | None = None,
+    table_right: int | None = None,
+    metadata_bottom: int | None = None,
+    header_box_top: int | None = None,
+    header_box_bottom: int | None = None,
+    deskew_angle: float | None = None,
 ) -> tuple[RowDetectionResult, list[Image.Image], Image.Image, Image.Image]:
     """
     Full pipeline through the agreed build order: deskew -> detect ->
@@ -1705,36 +2513,79 @@ def segment_rows(
     the agreed scope ("prove the segmentation layer before adding
     model-call complexity").
 
-    header_row_count: how many of the FIRST detected bands (after
-    merging/sanity-checking) to treat as the header block, merged into
-    one header region prepended to every data row crop. First-prototype
-    approach per the agreed plan - automatic header-region detection
-    (distinguishing it from data rows structurally) is a harder, later
-    problem, not in scope here.
+    table_top/table_bottom/table_left/table_right/metadata_bottom/
+    header_box_top/header_box_bottom/deskew_angle (2026-08-05, same
+    parameters and reasoning as segment_rows_periodic(); previously this
+    function accepted NONE of these and ran detect_row_bands() blind
+    against the WHOLE page - confirmed on a real 1901 census page that
+    a header block's own print density/ruling lines pollute detection
+    even when the table's own extent is exactly right). Detection is
+    now scoped to the actual DATA-ROW region - header_box_bottom (or
+    table_top if no header box is confirmed) down to table_bottom - the
+    same ROI-local-then-shift-back approach segment_rows_periodic() uses.
+    table_top/table_bottom fall back to estimate_table_extent() if not
+    given, matching that function's own fallback.
+
+    header_row_count: legacy meaning ("treat the first N detected bands
+    as the header") no longer applies once detection is scoped to
+    exclude the header entirely - header_box_top/header_box_bottom (or
+    metadata_bottom+table_top) now define the header region explicitly,
+    same mechanism segment_rows_periodic() already uses. If NONE of
+    those are given, header_band stays None rather than guessing (safer
+    than the old first-N-bands heuristic, which could silently consume
+    a real data row as fake "header" - see segment_rows_periodic()'s own
+    2026-07-13 comment about exactly that failure mode).
 
     Returns (result, row_crops, header_crop, debug_overlay_image) -
     the deskewed image is available via result if needed, but callers
     mainly want row_crops (to inspect) and debug_overlay_image (to see
     what was detected and why).
     """
-    deskewed, angle = deskew(image)
-    raw_bands, ruling_line_count, ruling_line_rows = detect_row_bands(deskewed)
-    merged_bands = merge_wrapped_bands(raw_bands, ruling_line_rows=ruling_line_rows)
-    kept_bands, dropped_bands, warnings = sanity_check_bands(merged_bands)
+    if deskew_angle is not None:
+        deskewed = apply_deskew_angle(image, deskew_angle)
+        angle = deskew_angle
+    else:
+        deskewed, angle = deskew(image)
 
-    warnings.insert(0, f"Deskew angle applied: {angle:.2f} degrees.")
+    x0, x1 = table_left, table_right
+    if table_top is None or table_bottom is None:
+        auto_top, auto_bottom = estimate_table_extent(deskewed, x0=x0, x1=x1)
+        table_top = table_top if table_top is not None else auto_top
+        table_bottom = table_bottom if table_bottom is not None else auto_bottom
+
+    data_top = header_box_bottom if header_box_bottom is not None else table_top
+    roi = deskewed.crop((
+        x0 or 0, data_top,
+        x1 if x1 is not None else deskewed.width, table_bottom,
+    ))
+
+    raw_bands_local, ruling_line_count, ruling_line_rows_local = detect_row_bands(roi)
+    merged_bands_local = merge_wrapped_bands(raw_bands_local, ruling_line_rows=ruling_line_rows_local)
+    kept_bands_local, dropped_bands_local, warnings = sanity_check_bands(merged_bands_local)
+
+    # Shift ROI-local bands back to full-image y-coordinates - the only
+    # point in this function where the two coordinate spaces meet.
+    kept_bands = [(a + data_top, b + data_top) for a, b in kept_bands_local]
+    dropped_bands = [(a + data_top, b + data_top) for a, b in dropped_bands_local]
+
+    warnings.insert(
+        0,
+        f"Deskew angle applied: {angle:.2f} degrees."
+        + (" (user-confirmed, not auto-estimated)" if deskew_angle is not None else " (auto-estimated)"),
+    )
     warnings.insert(
         1,
-        f"Detected {ruling_line_count} ruling-line row(s), excluded from "
-        f"content bands. {'This confirms the ruling-line exclusion engaged - ' if ruling_line_count > 0 else 'Zero detected - check ruling_line_run_ratio if this page has a ruled table and rows still look merged. '}"
+        f"Detected {ruling_line_count} ruling-line row(s) within the data region "
+        f"({data_top}-{table_bottom}), excluded from content bands. "
+        f"{'This confirms the ruling-line exclusion engaged - ' if ruling_line_count > 0 else 'Zero detected - check ruling_line_run_ratio if this page has a ruled table and rows still look merged. '}"
     )
 
     header_band = None
     data_bands = kept_bands
-    if header_row_count > 0 and len(kept_bands) > header_row_count:
-        header_bands = kept_bands[:header_row_count]
-        header_band = (header_bands[0][0], header_bands[-1][1])
-        data_bands = kept_bands[header_row_count:]
+    if header_box_top is not None and header_box_bottom is not None:
+        header_band = (header_box_top, header_box_bottom)
+    elif header_row_count > 0 and metadata_bottom is not None:
+        header_band = (metadata_bottom, table_top)
 
     row_crops, header_crop = crop_rows(
         deskewed, data_bands, header_band=header_band,

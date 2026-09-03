@@ -115,7 +115,44 @@ class QwenLoader(BaseLoader):
             )
         return self.config.prompt_text
 
-    def _run_generate(self, raw_image: Image.Image, prompt: str) -> str:
+    @staticmethod
+    def _build_user_message(raw_image: Any, prompt: str) -> dict:
+        user_content = []
+        if raw_image is not None:
+            user_content.append({"type": "image", "image": raw_image})
+        user_content.append({"type": "text", "text": prompt})
+        return {"role": "user", "content": user_content}
+
+    def _run_generate(self, raw_image: Any, prompt: str) -> str:
+        """
+        raw_image=None path added 2026-08-10 for model_console (see
+        base_loader.py's GenerationConfig.text_only_supported) - Qwen2.5-VL
+        is a fine-tune of the Qwen2.5 text LLM with a standard chat
+        template supporting text-only turns (Qwen's own documented
+        default usage across the 2.5-VL line). NOT yet empirically
+        confirmed for THIS loader, so config/models/qwen25_vl_7b.yaml's
+        (and qwen2b/qwen3b's) text_only_supported stays False until a
+        real generation call is run and checked.
+        """
+        if raw_image is not None and raw_image.mode != "RGB":
+            raw_image = raw_image.convert("RGB")
+        messages = [self._build_user_message(raw_image, prompt)]
+        return self._generate_from_messages(messages)
+
+    def _run_generate_with_history(self, history: list[dict], raw_image: Any, prompt: str) -> str:
+        """
+        2026-08-11, model_console conversation context (see base_loader.py's
+        _run_generate_with_history docstring). No system message support
+        exists in this loader today (none did before this change either -
+        not something this task adds), so `history` is inserted directly
+        before the current turn with no system entry.
+        """
+        if raw_image is not None and raw_image.mode != "RGB":
+            raw_image = raw_image.convert("RGB")
+        messages = list(history) + [self._build_user_message(raw_image, prompt)]
+        return self._generate_from_messages(messages)
+
+    def _generate_from_messages(self, messages: list[dict]) -> str:
         try:
             from qwen_vl_utils import process_vision_info
         except ImportError as e:
@@ -124,30 +161,21 @@ class QwenLoader(BaseLoader):
                 "pip install qwen-vl-utils"
             ) from e
 
-        if raw_image.mode != "RGB":
-            raw_image = raw_image.convert("RGB")
-
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": raw_image},
-                    {"type": "text", "text": prompt},
-                ],
-            }
-        ]
-
         text = self.processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
+        # process_vision_info scans `messages` for vision content itself -
+        # with no image entry present it returns (None, None), so only
+        # pass images=/videos= when there's actually something to pass;
+        # an explicit empty list/None mismatch has caused real processor
+        # errors in this library before, safer to omit the kwargs entirely.
         image_inputs, video_inputs = process_vision_info(messages)
-        inputs = self.processor(
-            text=[text],
-            images=image_inputs,
-            videos=video_inputs,
-            padding=True,
-            return_tensors="pt",
-        ).to(self.model.device)
+        processor_kwargs = dict(text=[text], padding=True, return_tensors="pt")
+        if image_inputs:
+            processor_kwargs["images"] = image_inputs
+        if video_inputs:
+            processor_kwargs["videos"] = video_inputs
+        inputs = self.processor(**processor_kwargs).to(self.model.device)
 
         gen_kwargs = dict(
             max_new_tokens=self.config.max_new_tokens,
@@ -207,6 +235,17 @@ class QwenLoader(BaseLoader):
                 f"{file_path}. Raw output: {raw_output[:200]!r}."
             )
 
+        # personal_names/place_names deliberately NOT truncated here
+        # (2026-08-13, reverted after a live finding) - truncating to
+        # fit max_length before schema validation runs would hide the
+        # TRUE overflow count from core/schema.py's
+        # flag_suspicious_place_count validator, which needs to see it
+        # to correctly quarantine (raise) an implausible run instead of
+        # silently accepting a truncated slice of fabricated entries as
+        # "successful". See that validator's own docstring for the full
+        # story - an 86-entry qwen3vl4b hallucination run (real US
+        # forts unrelated to a Canadian map, all tagged CONFIRMED) is
+        # exactly the case this must NOT truncate-and-accept.
         personal_names = [
             PersonalName(value=v[:120], confidence=c)
             for v, c in parse_pipe_entries(fields.get("personal_names", ""))
@@ -217,7 +256,7 @@ class QwenLoader(BaseLoader):
         ]
         visible_dates = [
             VisibleDate(value=v[:60], confidence=c)
-            for v, c in parse_pipe_entries(fields.get("visible_dates", ""))
+            for v, c in parse_pipe_entries(fields.get("visible_dates", ""), max_count=20)
         ]
         keywords_raw = fields.get("subject_keywords", "")
         subject_keywords = parse_keyword_list(keywords_raw)
