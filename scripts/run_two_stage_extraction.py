@@ -126,14 +126,16 @@ def main():
                          help="Output directory. Default: same directory as the sidecar.")
     parser.add_argument("--debug-model-inputs", action="store_true",
                          help="Save the exact image crop, prompt, and raw output for "
-                              "every stage-1/stage-2 model call to "
-                              "data/debug_model_inputs/<run_id>/ - see "
+                              "every stage-1/stage-2 model call - see "
                               "scripts/run_row_extraction.py --help for the full "
-                              "explanation. Off by default; has no effect on "
-                              "extraction results when omitted.")
-    parser.add_argument("--debug-dir", type=str, default="data/debug_model_inputs",
-                         help="Base directory for --debug-model-inputs output "
-                              "(default: data/debug_model_inputs/).")
+                              "explanation, including the default per-run diagnostic "
+                              "destination under genealogy_workspace/runs/. Off by "
+                              "default; has no effect on extraction results when "
+                              "omitted.")
+    parser.add_argument("--debug-dir", type=str, default=None,
+                         help="Overrides the default per-run diagnostic destination "
+                              "with a plain flat directory instead (no RunContext "
+                              "involved).")
     parser.add_argument("--ocr-checkpoint", type=str, default=None,
                          help="Optional path to a saved LoRA adapter dir (data/outputs/"
                               "<model>_lora_checkpoints/epoch_N/, see training/train_lora.py) "
@@ -174,6 +176,7 @@ def main():
 
     debug_recorder = DebugModelInputRecorder(
         enabled=args.debug_model_inputs, base_dir=args.debug_dir,
+        source_input=str(sidecar_path),
     )
     if debug_recorder.enabled:
         print(f"Debug model-input capture: ON -> {debug_recorder.run_dir}")
@@ -215,6 +218,7 @@ def main():
     print(f"Done: {len(results)} rows processed, {passed}/{len(results)} fully complete")
     print(f"CSV:  {csv_path}")
     print(f"JSON: {json_path}")
+    debug_recorder.close()
 
 
 if __name__ == "__main__":

@@ -30,7 +30,15 @@ Usage:
     python scripts/run_batch_auto_sidecar.py \\
         [--input data/buckets/dense_tabular_rows_subtype.csv] \\
         [--out-dir data/outputs/auto_row_segmentation] \\
-        [--debug] [--force]
+        [--run-id <hashed_run_id>] [--debug] [--force]
+
+--input/--out-dir default to the legacy_pre_run_system run's paths once
+docs/RUN_ARCHITECTURE.md's workspace migration has run, else the
+pre-migration data/ layout - see the module-level DEFAULT_INPUT/
+DEFAULT_OUT_DIR resolution below. --run-id resumes a real hashed run
+explicitly (overriding --out-dir to ctx.outputs/'auto_row_segmentation'
+and scoping DB lookups by that run); omitted, it's auto-detected from
+--input/--out-dir when either already points inside a run directory.
 """
 
 from __future__ import annotations
@@ -45,11 +53,25 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.auto_sidecar import generate_auto_sidecar
 from core.row_segmentation import save_sidecar
-from core.manifest_pipeline import IMAGE_EXTENSIONS
+from core.pipeline_db import PipelineDatabase, DEFAULT_DB_PATH
+from core.workspace_context import WorkspaceContext
+from core.run_context import RunContext
 
-DEWARPED_DIR = PROJECT_ROOT / "data" / "outputs" / "dewarped"
-DEFAULT_INPUT = PROJECT_ROOT / "data" / "buckets" / "dense_tabular_rows_subtype.csv"
-DEFAULT_OUT_DIR = PROJECT_ROOT / "data" / "outputs" / "auto_row_segmentation"
+# Legacy fallback - see core/manifest_pipeline.py's identical comment
+# and core/classifier.py's BUCKET_DIR for the same pattern. Resolves
+# into the legacy_pre_run_system run once the workspace migration has
+# run (docs/RUN_ARCHITECTURE.md); falls back to the pre-migration
+# data/ layout until then. Real hashed runs should pass --run-id (or
+# have it auto-detected, see _ctx_from_paths() below) instead of
+# relying on these module-level constants - they exist ONLY so this
+# script still does something sensible when invoked without a run.
+_legacy_root = WorkspaceContext.resolve().runs_root / "legacy_pre_run_system"
+if _legacy_root.exists():
+    DEFAULT_INPUT = _legacy_root / "outputs" / "buckets" / "dense_tabular_rows_subtype.csv"
+    DEFAULT_OUT_DIR = _legacy_root / "outputs" / "auto_row_segmentation"
+else:
+    DEFAULT_INPUT = PROJECT_ROOT / "data" / "buckets" / "dense_tabular_rows_subtype.csv"
+    DEFAULT_OUT_DIR = PROJECT_ROOT / "data" / "outputs" / "auto_row_segmentation"
 
 SUMMARY_FIELDS = [
     "file_path", "stem", "gemma_doc_type", "gemma_confidence",
@@ -89,23 +111,118 @@ KNOWN_DOC_TYPES = [
 ]
 
 
-def find_dewarped(stem: str) -> Path | None:
+def _resolve_image(db: PipelineDatabase, file_path: str, run_id: str | None = None) -> dict | None:
     """
-    Finds this file's dewarped output image. ui/dewarp_preprocessor_ui.py
-    writes BOTH an image (<stem>_dewarped.<ext>) and a sidecar-style
-    metadata JSON (<stem>_dewarped.json) per file - a bare `*` glob
-    matches both, and picks whichever sorts first alphabetically
-    ("json" < most image extensions), which meant this was silently
-    trying to open the metadata JSON as an image (confirmed against a
-    real batch run, 2026-07-29 - every real image was skipped this way).
-    Filtered to known image extensions only, so the JSON is never a
-    candidate.
+    Resolves the DB image row for a subtype-CSV row's file_path, whether
+    or not that image has since been dewarped. A plain get_image_by_path()
+    only matches while working_path still equals file_path (true before
+    dewarp); once dewarp happens, working_path moves to the new output
+    path and file_path (the pre-dewarp path) is only recoverable via the
+    "stage2a_dewarp" stage_outputs row's lookup_key - see find_dewarped()
+    below, which needs the identical resolution. Returns None if this
+    file was never registered in the DB at all (an older workflow, or a
+    path outside Stage 0's acquisition).
+
+    run_id (docs/RUN_ARCHITECTURE.md): passed through to
+    get_image_by_path() so two different runs' same-named files never
+    collide in the lookup - None (the pre-run-system/legacy default)
+    behaves exactly as before.
     """
-    matches = [
-        p for p in DEWARPED_DIR.glob(f"{stem}_dewarped.*")
-        if p.suffix.lower() in IMAGE_EXTENSIONS
-    ]
-    return matches[0] if matches else None
+    image = db.get_image_by_path(file_path, run_id=run_id)
+    if image is not None:
+        return image
+    stage_output = db.find_stage_output("stage2a_dewarp", file_path)
+    if stage_output is None:
+        return None
+    return db.get_image(stage_output["image_id"])
+
+
+def find_dewarped(db: PipelineDatabase, file_path: str) -> Path | None:
+    """
+    Looks up this file's dewarped output via pipeline_db instead of
+    globbing data/outputs/dewarped/ by filename convention (2026-08-03
+    consolidation pass: pipeline_db already tracks dewarp completion -
+    globbing the filesystem was reconstructing state that already has
+    an authoritative owner, and the previous filename-convention version
+    had already broken once for real, see the incident this replaced -
+    a bare `*_dewarped.*` glob matched ui/dewarp_preprocessor_ui.py's
+    OWN sidecar JSON alongside the image and picked whichever sorted
+    first alphabetically, silently skipping every real image on a
+    2026-07-29 batch run).
+
+    Deliberately does NOT use _resolve_image() above - that helper also
+    matches a NOT-YET-dewarped image (get_image_by_path() still finds it
+    via its unchanged working_path), which would be wrong here: this
+    function specifically means "has this been dewarped," not "is this
+    image known to the DB at all."
+
+    Returns None if this file hasn't been dewarped yet (or isn't known
+    to the DB at all) - same "nothing to find yet" contract as before.
+    """
+    stage_output = db.find_stage_output("stage2a_dewarp", file_path)
+    if stage_output is None:
+        return None
+    image = db.get_image(stage_output["image_id"])
+    return Path(image["working_path"]) if image is not None else None
+
+
+def _record_auto_sidecar_outcome(
+    db: PipelineDatabase, file_path: str, status: str, note: str = "", run_id: str | None = None,
+) -> None:
+    """
+    Records this run's per-image outcome as a stage_outputs event
+    (stage="stage4_auto_sidecar") - 2026-08-03 consolidation pass. This
+    module had ZERO pipeline_db wiring before this: its review-worthy
+    outcomes (a CV-fallback-guessed template, quarantined rows, an
+    unknown doc_type) were visible only inside this run's own CSV
+    outputs (batch_run_summary.csv, needs_manual_classification.csv),
+    never queryable pipeline-wide the way Stage 5's uncertain_review
+    state already is. No new decision is made here - status values
+    directly mirror outcomes this script already computes (see
+    SUMMARY_FIELDS's "status" column) plus one new value, "needs_review",
+    for an otherwise-successful sidecar (status "ok" in the CSV) that
+    still has quarantined rows or an unconfirmed CV-guessed template -
+    without this, that page reads as fully "ok" to anything querying the
+    DB alone, hiding exactly the cases this module exists to flag.
+
+    Appends one row per call (stage_outputs is append-only by design,
+    per core/pipeline_db.py's own docstring) - re-running this script
+    with --force naturally produces a second, later event rather than
+    overwriting the first, preserving the full history.
+
+    A file_path not resolvable to a DB image is skipped with a printed
+    note rather than raised - same tolerance as every other stage's DB
+    wiring in this project (a row from an older workflow Stage 0 never
+    registered should not abort the whole batch).
+    """
+    image = _resolve_image(db, file_path, run_id=run_id)
+    if image is None:
+        print(f"  (DB: {file_path!r} not registered - stage_outputs event skipped)")
+        return
+    db.record_stage_output(
+        image["id"], stage="stage4_auto_sidecar",
+        status=status, note=(note[:300] if note else None),
+    )
+
+
+def _ctx_from_path(path: Path) -> RunContext | None:
+    """Best-effort: if path sits under <runs_root>/<run_id>/..., resume
+    that run and return its RunContext - same auto-detection trick as
+    core/classifier.py's _ctx_from_manifest_path(), adapted since this
+    script's own paths (--input/--out-dir) aren't shaped like a
+    manifest.csv. Returns None (not an error) for any path outside a
+    real run directory - e.g. the legacy/flat defaults above - so this
+    script still works unchanged when no run is in play."""
+    try:
+        workspace = WorkspaceContext.resolve()
+        resolved = path.resolve()
+        runs_root = workspace.runs_root.resolve()
+        if runs_root not in resolved.parents:
+            return None
+        run_id = resolved.relative_to(runs_root).parts[0]
+        return RunContext.resume(workspace, run_id)
+    except (IndexError, FileNotFoundError, ValueError):
+        return None
 
 
 def main():
@@ -115,18 +232,39 @@ def main():
                          help="Gemma subtype-classification CSV to drive this batch from.")
     parser.add_argument("--out-dir", type=str, default=str(DEFAULT_OUT_DIR),
                          help="Where sidecars (and --debug overlays) are written.")
+    parser.add_argument("--run-id", type=str, default=None,
+                         help="Resume a real hashed run (docs/RUN_ARCHITECTURE.md) explicitly - "
+                              "overrides --out-dir to ctx.outputs/'auto_row_segmentation' and "
+                              "scopes DB lookups by this run. Auto-detected from --input/--out-dir "
+                              "when omitted, if either already points inside a run directory.")
     parser.add_argument("--debug", action="store_true",
                          help="Also write a debug overlay PNG per file.")
     parser.add_argument("--force", action="store_true",
                          help="Overwrite an existing sidecar output (refused by default, "
                               "same collision-avoidance rule scripts/auto_generate_sidecar.py uses).")
+    parser.add_argument("--db-path", default=str(DEFAULT_DB_PATH),
+                         help=f"core/pipeline_db.py database path (default: {DEFAULT_DB_PATH})")
     args = parser.parse_args()
 
     input_path = Path(args.input)
     out_dir = Path(args.out_dir)
+
+    ctx = None
+    if args.run_id:
+        ctx = RunContext.resume(WorkspaceContext.resolve(), args.run_id)
+    else:
+        ctx = _ctx_from_path(out_dir) or _ctx_from_path(input_path)
+    if ctx is not None:
+        print(f"Continuing run {ctx.run_id}")
+        if args.out_dir == str(DEFAULT_OUT_DIR):
+            out_dir = ctx.outputs / "auto_row_segmentation"
+
     if not input_path.exists():
         print(f"ERROR: input not found: {input_path}")
         sys.exit(1)
+
+    db = PipelineDatabase(Path(args.db_path))
+    run_id = ctx.run_id if ctx is not None else None
 
     with open(input_path, "r", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
@@ -174,19 +312,18 @@ def main():
             summary["status"] = "skipped_unknown_doc_type"
             print("  -> SKIP: doc_type is unknown/empty -> manual classification queue")
             skipped_unknown += 1
-            queue_for_manual(
-                summary,
-                reason=f"upstream classifier returned {doc_type!r} - no template to run against",
-                dewarped=find_dewarped(stem),
-            )
+            reason = f"upstream classifier returned {doc_type!r} - no template to run against"
+            queue_for_manual(summary, reason=reason, dewarped=find_dewarped(db, file_path))
+            _record_auto_sidecar_outcome(db, file_path, "needs_review", note=reason, run_id=run_id)
             summary_rows.append(summary)
             continue
 
-        dewarped_path = find_dewarped(stem)
+        dewarped_path = find_dewarped(db, file_path)
         if dewarped_path is None:
             summary["status"] = "skipped_not_dewarped"
             print("  -> SKIP: no dewarped image found yet")
             skipped_no_dewarp += 1
+            _record_auto_sidecar_outcome(db, file_path, "skipped_not_dewarped", run_id=run_id)
             summary_rows.append(summary)
             continue
 
@@ -213,13 +350,13 @@ def main():
                 summary["error"] = "; ".join(result.warnings)[:300]
                 print(f"  -> no sidecar produced: {summary['error']}")
                 failed += 1
+                reason = "no sidecar produced: " + "; ".join(result.warnings)[:200]
                 queue_for_manual(
-                    summary,
-                    reason="no sidecar produced: " + "; ".join(result.warnings)[:200],
-                    dewarped=dewarped_path,
+                    summary, reason=reason, dewarped=dewarped_path,
                     cv_guess=result.classification.doc_type,
                     cv_confidence=f"{result.classification.confidence:.2f}",
                 )
+                _record_auto_sidecar_outcome(db, file_path, "needs_review", note=reason, run_id=run_id)
                 summary_rows.append(summary)
                 continue
 
@@ -253,6 +390,21 @@ def main():
             })
             print(f"  -> OK: {len(result.sidecar['rows'])} row(s), {quarantined} quarantined")
             processed += 1
+
+            # DB visibility for the two review-worthy conditions above -
+            # a page can be summary["status"]=="ok" (a sidecar WAS
+            # produced) while still needing a human look, and that
+            # nuance was previously only visible by opening this run's
+            # own CSVs. "done" only when NEITHER condition applies.
+            if result.used_cv_fallback or quarantined:
+                reasons = []
+                if result.used_cv_fallback:
+                    reasons.append("template chosen by CV fallback (untrusted)")
+                if quarantined:
+                    reasons.append(f"{quarantined}/{len(result.sidecar['rows']) + quarantined} row(s) quarantined")
+                _record_auto_sidecar_outcome(db, file_path, "needs_review", note="; ".join(reasons), run_id=run_id)
+            else:
+                _record_auto_sidecar_outcome(db, file_path, "done", run_id=run_id)
         except Exception as e:
             summary["status"] = "error"
             summary["error"] = str(e)[:300]
@@ -260,6 +412,7 @@ def main():
             failed += 1
             queue_for_manual(summary, reason=f"sidecar generation failed: {str(e)[:200]}",
                              dewarped=dewarped_path)
+            _record_auto_sidecar_outcome(db, file_path, "error", note=str(e)[:200], run_id=run_id)
 
         summary_rows.append(summary)
 

@@ -6,12 +6,24 @@ candidates before anything is permanently lost. Never deletes anything
 itself, and never touches the flagged CSV.
 
 Also removes the matching row from every reference CSV that still
-points at a moved file's old data/working/ path (data/manifest.csv +
-every data/buckets/*.csv) - otherwise those files would be left
-pointing at a path that no longer exists there. All of those are
-git-tracked, so `git diff`/`git checkout` is the recovery path for a
-row removal that needs undoing - unlike the actual image files (not
-git-tracked, hence the review-folder-not-delete design for those).
+points at a moved file's old working/ path (manifest.csv + every
+bucket CSV) - otherwise those files would be left pointing at a path
+that no longer exists there. All of those are git-tracked (for the
+pre-migration data/ layout) or otherwise recoverable from the run's own
+history, so a row removal that needs undoing is not the same risk as
+the actual image files (not git-tracked, hence the review-folder-not-
+delete design for those).
+
+RunContext-aware (2026-08-08 repo/workspace restructuring, see
+docs/RUN_ARCHITECTURE.md): by default operates against the
+legacy_pre_run_system run - the one that currently holds the real
+bucket/manifest data (--run-id targets a different, real run instead).
+RunContext.resume() rejects the legacy run outright, since it's marked
+completed/immutable by design (core/run_context.py) - same situation
+core/classifier.py's BUCKET_DIR/_ctx_from_manifest_path already handle,
+mirrored here via _resolve_run_paths() rather than reinventing a
+different fallback. Falls back further to the pre-migration data/
+layout on a machine that hasn't run the migration at all yet.
 
 GATED behind a single warning + interactive y/n confirmation before
 anything is moved or removed (per Jon's direction, 2026-07-30) - shows
@@ -30,13 +42,13 @@ Usage:
     python scripts/move_flagged_for_pruning.py --dry-run   # preview first
     python scripts/move_flagged_for_pruning.py              # prompts, then moves
     python scripts/move_flagged_for_pruning.py --yes        # no prompt
+    python scripts/move_flagged_for_pruning.py --run-id 20260808T193050927883_ec3556b6
 
 To restore a file: read prune_review_manifest.csv's new_path/
 original_path columns and move it back by hand (or write a small
 restore script pointed at that manifest - not built here since nothing
 has needed restoring yet). Reference-CSV rows would need re-adding by
-hand too, or via `git checkout -- <path>` if no other change has
-touched that file since.
+hand too.
 """
 
 from __future__ import annotations
@@ -51,17 +63,57 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from core.workspace_context import WorkspaceContext
+from core.run_context import RunContext
+
 DEFAULT_CSV = PROJECT_ROOT / "data" / "flagged_for_pruning.csv"
-DEFAULT_REVIEW_DIR = PROJECT_ROOT / "data" / "pending_prune_review"
 MANIFEST_FIELDS = ["moved_at", "original_path", "bucket", "category", "reason", "new_path"]
 
-REFERENCE_CSVS = [
-    PROJECT_ROOT / "data" / "manifest.csv",
-    *sorted((PROJECT_ROOT / "data" / "buckets").glob("*.csv")),
-]
+LEGACY_RUN_ID = "legacy_pre_run_system"
 
 
-def _plan(csv_path: Path, review_dir: Path) -> tuple[list[dict], list[tuple[str, str]]]:
+def _resolve_run_paths(run_id: str | None) -> tuple[Path, Path, Path, Path]:
+    """Returns (bucket_dir, manifest_csv, quarantine_dir, working_images_dir)
+    for run_id (or the legacy run if None) - see module docstring for
+    why this doesn't just call RunContext.resume() unconditionally."""
+    workspace = WorkspaceContext.resolve()
+    target_run_id = run_id or LEGACY_RUN_ID
+    try:
+        ctx = RunContext.resume(workspace, target_run_id)
+        return ctx.buckets, ctx.manifest_csv, ctx.quarantine, ctx.working_images
+    except (FileNotFoundError, ValueError):
+        run_root = workspace.runs_root / target_run_id
+        if run_root.exists():
+            return (run_root / "outputs" / "buckets", run_root / "manifest" / "manifest.csv",
+                    run_root / "quarantine", run_root / "working" / "images")
+        return (PROJECT_ROOT / "data" / "buckets", PROJECT_ROOT / "data" / "manifest.csv",
+                PROJECT_ROOT / "data", PROJECT_ROOT / "data" / "working")
+
+
+def _resolve_source(file_path_str: str, working_images_dir: Path) -> Path | None:
+    """Resolves a flagged CSV row's file_path to a real, existing file on
+    disk. Tries the literal path first (covers both a pre-migration
+    machine and any freshly-written flagged CSV that already has an
+    up-to-date path). Falls back to rebasing a stale pre-2026-08-08
+    `.../data/working/<name>` path onto the resolved run's own
+    working_images dir (the exact rename the restructuring actually
+    performed - see docs/RUN_ARCHITECTURE.md's Phase 1) - flagged CSVs
+    written before that migration have this exact staleness baked in,
+    confirmed directly against real data (data/flagged_bad_deskew.csv).
+    Returns None if neither resolves to a real file."""
+    literal = Path(file_path_str)
+    if literal.exists():
+        return literal
+    legacy_working = PROJECT_ROOT / "data" / "working"
+    try:
+        rel = literal.resolve().relative_to(legacy_working.resolve())
+    except ValueError:
+        return None
+    rebased = working_images_dir / rel
+    return rebased if rebased.exists() else None
+
+
+def _plan(csv_path: Path, review_dir: Path, working_images_dir: Path) -> tuple[list[dict], list[tuple[str, str]]]:
     """Pure planning pass, no filesystem writes - returns (rows to move, skipped)."""
     with open(csv_path, "r", encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
@@ -78,16 +130,17 @@ def _plan(csv_path: Path, review_dir: Path) -> tuple[list[dict], list[tuple[str,
         if source_str in already_moved:
             skipped.append((source_str, "already moved (in manifest)"))
             continue
-        if not Path(source_str).exists():
-            skipped.append((source_str, "source not found"))
+        if _resolve_source(source_str, working_images_dir) is None:
+            skipped.append((source_str, "source not found (checked literal path and the "
+                                          "post-migration working/images/ rebase)"))
             continue
         to_move.append(row)
     return to_move, skipped
 
 
-def _count_reference_rows(paths: set[str]) -> dict[Path, int]:
+def _count_reference_rows(paths: set[str], reference_csvs: list[Path]) -> dict[Path, int]:
     counts = {}
-    for csv_path in REFERENCE_CSVS:
+    for csv_path in reference_csvs:
         if not csv_path.exists():
             continue
         with open(csv_path, "r", encoding="utf-8", newline="") as f:
@@ -96,9 +149,9 @@ def _count_reference_rows(paths: set[str]) -> dict[Path, int]:
     return counts
 
 
-def _remove_reference_rows(paths: set[str]) -> dict[Path, int]:
+def _remove_reference_rows(paths: set[str], reference_csvs: list[Path]) -> dict[Path, int]:
     removed_counts = {}
-    for csv_path in REFERENCE_CSVS:
+    for csv_path in reference_csvs:
         if not csv_path.exists():
             continue
         with open(csv_path, "r", encoding="utf-8", newline="") as f:
@@ -119,10 +172,11 @@ def _remove_reference_rows(paths: set[str]) -> dict[Path, int]:
     return removed_counts
 
 
-def move_flagged(csv_path: Path, review_dir: Path, dry_run: bool = False, assume_yes: bool = False) -> None:
-    to_move, skipped = _plan(csv_path, review_dir)
+def move_flagged(csv_path: Path, review_dir: Path, reference_csvs: list[Path], working_images_dir: Path,
+                  dry_run: bool = False, assume_yes: bool = False) -> None:
+    to_move, skipped = _plan(csv_path, review_dir, working_images_dir)
     flagged_paths = {row["file_path"] for row in to_move}
-    ref_counts = _count_reference_rows(flagged_paths)
+    ref_counts = _count_reference_rows(flagged_paths, reference_csvs)
     total_ref_rows = sum(ref_counts.values())
 
     print(f"Plan: {len(to_move)} file(s) to move, {len(skipped)} skipped.")
@@ -130,7 +184,7 @@ def move_flagged(csv_path: Path, review_dir: Path, dry_run: bool = False, assume
     print("Reference CSVs that will lose matching rows:")
     for csv_p, n in ref_counts.items():
         if n:
-            print(f"  {csv_p.relative_to(PROJECT_ROOT)}: {n} row(s)")
+            print(f"  {csv_p}: {n} row(s)")
     if not total_ref_rows:
         print("  (none)")
 
@@ -145,11 +199,12 @@ def move_flagged(csv_path: Path, review_dir: Path, dry_run: bool = False, assume
         return
 
     if not assume_yes:
-        print(f"\nWARNING: this will MOVE {len(to_move)} file(s) out of data/working/ into "
-              f"{review_dir} (not deleted - stays on disk, reversible by hand) AND PERMANENTLY "
-              f"REMOVE {total_ref_rows} row(s) from the {sum(1 for n in ref_counts.values() if n)} "
-              f"reference CSV(s) listed above (git-tracked, `git diff`/`git checkout` recovers "
-              f"them if needed).")
+        print(f"\nWARNING: this will MOVE {len(to_move)} file(s) out of their current working "
+              f"location into {review_dir} (not deleted - stays on disk, reversible by hand) AND "
+              f"PERMANENTLY REMOVE {total_ref_rows} row(s) from the "
+              f"{sum(1 for n in ref_counts.values() if n)} reference CSV(s) listed above (no "
+              f"file-level undo for that removal beyond the audit manifest below and, for the "
+              f"pre-migration data/ layout only, `git diff`/`git checkout`).")
         answer = input("Proceed? [y/N] ").strip().lower()
         if answer not in ("y", "yes"):
             print("Aborted - nothing changed.")
@@ -161,7 +216,14 @@ def move_flagged(csv_path: Path, review_dir: Path, dry_run: bool = False, assume
     actually_moved_paths: set[str] = set()
 
     for row in to_move:
-        source = Path(row["file_path"])
+        source = _resolve_source(row["file_path"], working_images_dir)
+        if source is None:
+            # _plan() already filtered to only resolvable rows - a race
+            # (file moved/deleted between planning and here) is the only
+            # way this triggers. Skip rather than crash shutil.move on a
+            # None path.
+            print(f"  SKIPPED (source vanished since planning): {row['file_path']}")
+            continue
         bucket_dir = review_dir / row["bucket"]
         dest = bucket_dir / source.name
         if dest.exists():
@@ -188,20 +250,26 @@ def move_flagged(csv_path: Path, review_dir: Path, dry_run: bool = False, assume
             writer.writeheader()
         writer.writerows(moved_records)
 
-    removed_counts = _remove_reference_rows(actually_moved_paths)
+    removed_counts = _remove_reference_rows(actually_moved_paths, reference_csvs)
 
     print(f"\nMoved: {len(moved_records)}")
     print(f"Audit manifest: {manifest_path}")
     print("Reference rows removed:")
     for csv_p, n in removed_counts.items():
         if n:
-            print(f"  {csv_p.relative_to(PROJECT_ROOT)}: {n} row(s)")
+            print(f"  {csv_p}: {n} row(s)")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--csv", type=str, default=str(DEFAULT_CSV))
-    parser.add_argument("--review-dir", type=str, default=str(DEFAULT_REVIEW_DIR))
+    parser.add_argument("--run-id", type=str, default=None,
+                         help=f"Operate against this run's bucket/manifest CSVs instead of the "
+                              f"default ({LEGACY_RUN_ID!r} - where the real data currently lives). "
+                              f"Must be a real, resumable (not-yet-completed) run for anything "
+                              f"other than the default.")
+    parser.add_argument("--review-dir", type=str, default=None,
+                         help="Default: <resolved run>/quarantine/pending_prune_review.")
     parser.add_argument("--dry-run", action="store_true",
                          help="Preview only - no files moved, no CSV rows removed.")
     parser.add_argument("--yes", "-y", action="store_true",
@@ -213,7 +281,15 @@ def main():
         print(f"ERROR: {csv_path} not found.")
         sys.exit(1)
 
-    move_flagged(csv_path, Path(args.review_dir), dry_run=args.dry_run, assume_yes=args.yes)
+    bucket_dir, manifest_csv, quarantine_dir, working_images_dir = _resolve_run_paths(args.run_id)
+    print(f"Bucket dir:     {bucket_dir}")
+    print(f"Manifest:       {manifest_csv}")
+    print(f"Working images: {working_images_dir}")
+    reference_csvs = [manifest_csv, *sorted(bucket_dir.glob("*.csv"))] if bucket_dir.exists() else [manifest_csv]
+    review_dir = Path(args.review_dir) if args.review_dir else quarantine_dir / "pending_prune_review"
+
+    move_flagged(csv_path, review_dir, reference_csvs, working_images_dir,
+                 dry_run=args.dry_run, assume_yes=args.yes)
 
 
 if __name__ == "__main__":

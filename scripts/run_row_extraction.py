@@ -141,18 +141,24 @@ def main():
                          help="Output directory. Default: same directory as the sidecar.")
     parser.add_argument("--debug-model-inputs", action="store_true",
                          help="Save the exact image crop, prompt, and raw output for "
-                              "every model call to data/debug_model_inputs/<run_id>/ - "
-                              "the original bbox crop AND the final preprocessed image "
-                              "actually handed to the model (after masking/tight-crop/"
-                              "upscale), plus per-item metadata. Off by default; has "
-                              "no effect on extraction results when omitted. Use this "
-                              "to answer 'what exact image did the model receive?' "
-                              "when output is blank or clearly wrong.")
-    parser.add_argument("--debug-dir", type=str, default="data/debug_model_inputs",
-                         help="Base directory for --debug-model-inputs output "
-                              "(default: data/debug_model_inputs/). Each run gets its "
-                              "own timestamped subdirectory - never overwrites a prior "
-                              "run.")
+                              "every model call - the original bbox crop AND the final "
+                              "preprocessed image actually handed to the model (after "
+                              "masking/tight-crop/upscale), plus per-item metadata. "
+                              "Default destination is a real per-run diagnostic run "
+                              "under the workspace (genealogy_workspace/runs/<run_id>/"
+                              "diagnostics/debug_model_inputs/, run_type=\"diagnostic\" - "
+                              "see docs/RUN_ARCHITECTURE.md) so captures stay with the "
+                              "run they were actually for; override with --debug-dir "
+                              "for the old flat-directory behavior instead. Off by "
+                              "default; has no effect on extraction results when "
+                              "omitted. Use this to answer 'what exact image did the "
+                              "model receive?' when output is blank or clearly wrong.")
+    parser.add_argument("--debug-dir", type=str, default=None,
+                         help="Overrides the default per-run diagnostic destination "
+                              "with a plain flat directory instead (no RunContext "
+                              "involved) - each invocation still gets its own "
+                              "timestamped subdirectory under this path, never "
+                              "overwrites a prior run.")
     parser.add_argument("--checkpoint", type=str, default=None,
                          help="Optional path to a saved LoRA adapter dir (data/outputs/"
                               "<model>_lora_checkpoints/epoch_N/, see training/"
@@ -172,6 +178,7 @@ def main():
 
     debug_recorder = DebugModelInputRecorder(
         enabled=args.debug_model_inputs, base_dir=args.debug_dir,
+        source_input=str(sidecar_path),
     )
     if debug_recorder.enabled:
         print(f"Debug model-input capture: ON -> {debug_recorder.run_dir}")
@@ -221,6 +228,7 @@ def main():
             progress = updated.get("progress", {})
             print(f"Column marked done. Progress: {progress.get('completed', '?')}/"
                   f"{progress.get('total', '?')}. Next active column: {next_active}")
+        debug_recorder.close()
         return
 
     # -- legacy multi-column mode ------------------------------------------
@@ -264,6 +272,7 @@ def main():
         print(f"Header: {'complete' if header_result.schema_pass else 'incomplete'}")
     print(f"CSV:  {csv_path}")
     print(f"JSON: {json_path}")
+    debug_recorder.close()
 
 
 if __name__ == "__main__":

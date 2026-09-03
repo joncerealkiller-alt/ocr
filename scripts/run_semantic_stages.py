@@ -27,11 +27,22 @@ below. No other code changes needed - core/semantic_stages.py's
 run_stage() is generic across any prompt/input/output combination.
 
 Usage:
-    python scripts/run_semantic_stages.py
+    python scripts/run_semantic_stages.py [--run-id <hashed_run_id>]
+
+--run-id resumes a real hashed run (docs/RUN_ARCHITECTURE.md) and reads/
+writes under ctx.outputs/'buckets' instead of the legacy/flat default
+below - needed so scripts/run_batch_auto_sidecar.py's own --run-id
+(which defaults its --input to that same ctx.outputs/'buckets'/
+dense_tabular_rows_subtype.csv) actually finds this stage's output.
+Omitted, BUCKET_DIR resolves into the legacy_pre_run_system run once
+the workspace migration has run, else the pre-migration data/ layout -
+same three-tier pattern as scripts/run_batch_auto_sidecar.py and
+core/manifest_pipeline.py.
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -39,12 +50,29 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.semantic_stages import SemanticStage, load_gemma_loader, run_stage
+from core.workspace_context import WorkspaceContext
+from core.run_context import RunContext
 
-BUCKET_DIR = PROJECT_ROOT / "data" / "buckets"
+# Legacy fallback - see scripts/run_batch_auto_sidecar.py's identical
+# pattern/comment. Overridden in main() when --run-id is passed.
+_legacy_root = WorkspaceContext.resolve().runs_root / "legacy_pre_run_system"
+if _legacy_root.exists():
+    BUCKET_DIR = _legacy_root / "outputs" / "buckets"
+else:
+    BUCKET_DIR = PROJECT_ROOT / "data" / "buckets"
 PROMPTS_DIR = PROJECT_ROOT / "config" / "prompts"
 
-STAGES = [
-    SemanticStage(
+
+def _build_stages(bucket_dir: Path) -> list[SemanticStage]:
+    """Rebuilds STAGES against whichever bucket_dir main() resolved
+    (legacy/flat default, or ctx.outputs/'buckets' for --run-id) -
+    can't be a module-level constant anymore since --run-id is only
+    known once argparse runs."""
+    return [_document_subtype_stage(bucket_dir)]
+
+
+def _document_subtype_stage(BUCKET_DIR: Path) -> SemanticStage:
+    return SemanticStage(
         name="document_subtype",
         input_csv=BUCKET_DIR / "dense_tabular_rows.csv",
         output_csv=BUCKET_DIR / "dense_tabular_rows_subtype.csv",
@@ -91,23 +119,40 @@ STAGES = [
         # < X" gate; v2's confidence could not support one.
         prompt_path=PROMPTS_DIR / "classifier_document_subtype_v3.txt",
         output_fields=["document_type", "confidence", "title_text_read", "reason"],
-    ),
-    # Future stages append here, e.g.:
+    )
+    # Future stages: add another _<name>_stage(bucket_dir) function above,
+    # following the same shape, then append its call to _build_stages()'s
+    # return list. e.g.:
     # SemanticStage(
     #     name="region_anchors",
     #     input_csv=BUCKET_DIR / "dense_tabular_rows_subtype.csv",
     #     output_csv=BUCKET_DIR / "dense_tabular_rows_regions.csv",
     #     prompt_path=PROMPTS_DIR / "classifier_region_anchors_v1.txt",
     #     output_fields=["metadata_bbox", "header_bbox", "table_bbox", "confidence", "reason"],
-    # ),
-]
+    # )
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--run-id", type=str, default=None,
+                         help="Resume a real hashed run (docs/RUN_ARCHITECTURE.md) explicitly - "
+                              "reads/writes under ctx.outputs/'buckets' instead of the "
+                              "legacy/flat default.")
+    args = parser.parse_args()
+
+    bucket_dir = BUCKET_DIR
+    if args.run_id:
+        ctx = RunContext.resume(WorkspaceContext.resolve(), args.run_id)
+        print(f"Continuing run {ctx.run_id}")
+        bucket_dir = ctx.buckets
+
+    stages = _build_stages(bucket_dir)
+
     print("Loading gemma (shared across every stage below - one load, no reload between stages)...")
     loader = load_gemma_loader()
 
-    for stage in STAGES:
+    for stage in stages:
         run_stage(loader, stage)
 
     print("\nAll stages complete.")
