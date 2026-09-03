@@ -64,7 +64,8 @@ from PIL import Image
 from benchmark.benchmark2_2_cross_validator import (
     BUCKET_PLAN, UNCERTAIN_REVIEW_TEST_COUNT, load_existing_paths,
 )
-from benchmark.vision_encoder_qualification import build_model_and_transform, embed_pooled, cosine_sim
+from benchmark.vision_encoder_qualification import build_model_and_transform, embed_pooled
+from core.vision_embeddings import predict_nearest_bucket, classify_consensus
 from core.classifier import build_classifier_loader, load_pipeline_config
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -119,37 +120,18 @@ def run_tower(tag: str, test_items, ref_paths_by_bucket) -> dict[str, dict]:
                 print(f"    reference embed failed for {p.name}: {e}")
         reference_embeddings[bucket] = embs
 
-    def predict_bucket(emb: np.ndarray, exclude_name: str | None) -> tuple[str, float]:
-        scores = {}
-        for bucket, vecs in reference_embeddings.items():
-            filtered = [v for (n, v) in vecs if n != exclude_name]
-            if filtered:
-                scores[bucket] = float(np.mean([cosine_sim(emb, v) for v in filtered]))
-        best = max(scores, key=scores.get)
-        return best, scores[best]
-
+    # predict_nearest_bucket() - promoted to core/vision_embeddings.py
+    # 2026-08-02 (Stage 2/Decision Engine needs this exact validated
+    # logic in production) - identical method, just relocated.
     results = {}
     for name, path, sample_bucket in test_items:
         emb = embed_pooled(model, transform, Image.open(path).convert("RGB"))
-        bucket, score = predict_bucket(emb, exclude_name=name)
+        bucket, score = predict_nearest_bucket(emb, reference_embeddings, exclude_key=name)
         results[name] = {"bucket": bucket, "score": score}
 
     del model, transform
     gc.collect()
     return results
-
-
-def classify_consensus(votes: list[str]) -> str:
-    counts = Counter(votes)
-    top_bucket, top_n = counts.most_common(1)[0]
-    n = len(votes)
-    if top_n == n:
-        return "unanimous"
-    if top_n >= (n // 2) + 1:
-        return "majority"
-    if top_n <= 2:
-        return "complete_disagreement"
-    return "split"
 
 
 def main():
