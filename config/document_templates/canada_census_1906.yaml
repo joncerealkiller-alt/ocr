@@ -1,0 +1,270 @@
+# Document template for the auto-sidecar-generation experiment
+# (core/auto_sidecar.py, scripts/auto_generate_sidecar.py).
+#
+# Fractions are relative to the DESKEWED page (width/height), not pixel
+# coordinates - a scan's absolute resolution varies, but a given form's
+# layout proportions don't.
+#
+# *** ASSUMES LEFT- AND TOP-EDGE-CROPPED INPUT (2026-08-09) *** - this
+# rebuild's table.x_frac[0] (left) and table.y_frac[0] (top) are
+# calibrated against images that have already been through ui/column_
+# calibration_ui.py's "Crop left edge..." AND "Crop top edge..." tools
+# (validated offsets: ~50px from table_left, ~600px from table_top -
+# see core/column_calibration.py's apply_left_crop()/apply_top_crop()
+# docstrings). TWO real, near-universal camera-mount artifacts drove
+# most of this template's historical calibration noise: a black blob
+# hugging the left edge of almost every "_L" split-half page (21/22
+# measured, ~3.5-4.4% of page width), and a damaged/torn top border on
+# almost every page (40/42 measured, ~3.5-3.9% of page height, one
+# genuine outlier - e001211831 - far larger). Feeding a RAW, un-cropped
+# image into generate_auto_sidecar() with this template will now get
+# systematically WRONG table_left AND table_top search targets, since
+# both x_frac[0]/y_frac[0] below assume that cropping already happened.
+# If this template is ever used against un-cropped images, both values
+# need recalibrating against raw geometry instead - a real, load-
+# bearing precondition, not a cosmetic detail.
+#
+# REBUILT 2026-08-09 (same day, 4th rebuild) FROM A 14-SAMPLE BATCH via
+# core/template_refinement.py's refine_template_from_calibration(),
+# after BOTH crop tools were applied across the whole batch - replaces
+# the left-crop-only version. Real, direct validation of BOTH fixes:
+# TABLE LEFT spread 0.0697->0.0015 (left crop, previous rebuild), TABLE
+# TOP spread 0.0136->0.0032 (top crop, this rebuild) - both flipped
+# REVIEW->GOOD, ~4-46x tightening, not incremental noise reduction.
+# TABLE RIGHT/BOTTOM are UNCHANGED (neither crop touches those axes)
+# and remain REVIEW - real page-to-page photography shift on those 2
+# edges, not something averaging more samples fixes; per-page
+# correction via "Mark table left/right edges"/"Mark table bottom"
+# remains the right tool for those, not a template value.
+#
+# metadata's y_frac (both edges) had to be RE-DERIVED, not just left
+# alone - the crop removes real pixels the old fractions pointed at,
+# so blindly keeping 0.0338/0.1003 would now point at the WRONG place
+# (would even go negative for the top edge on a cropped image). Derived
+# by translating the last known physical-page-boundary measurement
+# (analyze_image(), 2026-08-08, pre-crop) through each of the 14
+# samples' own REAL recorded crop amount (deskewed_image_size shrank by
+# exactly however much that page's own top-crop click removed) - top
+# edge lands at/below the new page's own top on every sample (0.0,
+# consistently - the crop already removes everything above real
+# content), bottom edge averages 0.0389 (range 0.030-0.044, n=14). This
+# is a translated estimate grounded in real per-page crop data, not a
+# fresh direct re-measurement against the cropped pixels themselves -
+# worth a real re-check later, same "out of scope for this tool by
+# design" caveat every prior version of this field already carried.
+#
+# Columns and expected_row_height_frac are ESSENTIALLY UNCHANGED from
+# the left-crop-only rebuild (differences are noise-level) - neither
+# crop affects column-relative fractions (normalized against table_
+# bbox's own span) or row geometry.
+#
+# NOT BLENDED WITH ANY OLDER BATCH deliberately, same discipline as
+# every previous rebuild of this file - each rebuild fully replaces the
+# prior numbers rather than averaging across process changes.
+
+doc_type: canada_census_1906
+display_name: "Canada Census 1906 (Northwest Provinces)"
+
+# The full 18-field 1906 schedule (family/individual identification,
+# birthplace/immigration, address/land-location, AND agricultural
+# livestock counts - this year's form is genuinely different in kind
+# from 1901/1911/1921/1931, not just a different year's edition of the
+# same population schedule - see project memory "Prairie census is a
+# different form"). Already existed as config/columns/census_1906.txt
+# before this template did.
+columns_file: census_1906.txt
+
+# expected_row_count=40, per Jon's direct confirmation. Backed by real
+# detection across this batch, zero quarantined on the samples used for
+# this rebuild.
+row_strategy: fixed_periodic
+expected_row_count: 40
+
+expected_columns:
+  - No of family in order of visitation
+  - Name of each person to family
+  - Relation to head of family
+  - Sex
+  - Marital Status
+  - Age
+  - Country of Place of Birth
+  - Year of immigration to Canada
+  - Post office address
+  - Section
+  - Township
+  - Range
+  - Meridian
+  - Horses all ages
+  - Milch Cows
+  - Other Horned
+  - Sheep and Lambs all ages
+  - Hogs all ages
+
+# x_frac is relative to the table's own left-right span (table_bbox),
+# same basis every other template here uses. Every boundary below is
+# n=14, spreads all comfortably tight (0.002-0.006) - the real per-page
+# registration noise this project has consistently seen, not a sign of
+# a problem. Essentially unchanged from the 8-sample version (column
+# fractions are table-relative, so left-cropping the table's own outer
+# edge doesn't move them).
+column_regions_approx:
+  No of family in order of visitation: {x_frac: [0.0000, 0.0435]}  # n=14
+  Name of each person to family: {x_frac: [0.0435, 0.1997]}  # n=14
+  Relation to head of family: {x_frac: [0.1997, 0.2716]}  # n=14
+  Sex: {x_frac: [0.2716, 0.3016]}  # n=14
+  Marital Status: {x_frac: [0.3016, 0.3597]}  # n=14
+  Age: {x_frac: [0.3597, 0.3898]}  # n=14
+  Country of Place of Birth: {x_frac: [0.3898, 0.5034]}  # n=14
+  Year of immigration to Canada: {x_frac: [0.5034, 0.5476]}  # n=14
+  Post office address: {x_frac: [0.5476, 0.6609]}  # n=14
+  Section: {x_frac: [0.6609, 0.6910]}  # n=14
+  Township: {x_frac: [0.6910, 0.7207]}  # n=14
+  Range: {x_frac: [0.7207, 0.7510]}  # n=14
+  Meridian: {x_frac: [0.7510, 0.7810]}  # n=14
+  Horses all ages: {x_frac: [0.7810, 0.8247]}  # n=14
+  Milch Cows: {x_frac: [0.8247, 0.8685]}  # n=14
+  Other Horned: {x_frac: [0.8685, 0.9125]}  # n=14
+  Sheep and Lambs all ages: {x_frac: [0.9125, 0.9562]}  # n=14
+  Hogs all ages: {x_frac: [0.9562, 1.0000]}  # n=14
+
+# NOT SET - same reasoning as the prior version: header_number_anchor is
+# a single manually-placed LINE (band_y only) in every sample so far,
+# not a measured band with a real top AND bottom edge. Optional field -
+# templates without it just skip the number-row anchor and rely on
+# column_regions_approx alone.
+# number_row_approx: not set
+
+# Real row height, AS A FRACTION OF PAGE HEIGHT - from ui/column_
+# calibration_ui.py's "Measure row pitch..." tool (2 direct human
+# clicks, row 1 top / row 40 top - immune to the fixed_periodic tiling
+# circularity that made sidecar-row-based measurement unusable, see
+# core/column_calibration.py's SCHEMA_VERSION=6 comment).
+#
+# CORRECTED 2026-08-09 (same day, real bug): 0.01365 -> 0.01457 - NOT
+# the true row pitch changing, but a real bug in apply_top_crop() found
+# via Jon: "the rows are being squished and not spanning the whole
+# table" (directly visible on e001211823_R's overlay). apply_top_crop()
+# correctly shifted each sample's measured_row_pitch.y_start/y_end when
+# the top-crop tool ran, but never recomputed the stored "fraction"
+# field to match the new, SHORTER post-crop page height - "pixels" (the
+# raw row1-to-row40 pitch) is translation-invariant under a uniform
+# Y-shift and stayed correct, but fraction=pixels/page_height needs the
+# new page_height as its denominator, and every one of the 12 measured
+# 1906 samples had a stale one, understating the true fraction by
+# ~7-9% across the board. Fixed at both levels: apply_top_crop() itself
+# now recomputes fraction/page_height on every future crop, and all 12
+# already-corrupted stored records were repaired directly. n=12,
+# spread 0.00060, tight, GOOD (2 samples - e001211813_R, e001211814_R -
+# still have no measured_row_pitch at all, unrelated to this bug).
+expected_row_height_frac: 0.01457
+
+# metadata/header y_frac - see this file's top-of-file "RE-DERIVED"
+# note for the real methodology (translated through each sample's own
+# recorded crop amount, not a fresh direct re-measurement). header's
+# bottom edge matches the current table TOP below, kept in sync so
+# there's no unaccounted-for gap between header and table.
+#
+# table's y_frac[1]/x_frac[1] (bottom/right) are ESSENTIALLY UNCHANGED
+# from the left-crop-only rebuild (noise-level drift, still REVIEW-
+# flagged per core/template_refinement.py - real page-to-page
+# photography shift on those 2 edges, not fixed by more samples).
+#
+# table's y_frac[0] (TOP) moved dramatically: 0.27625 -> 0.22698 - same
+# story as the earlier LEFT move: NOT because the true table position
+# changed, but because every sample behind this number is now measured
+# against a TOP-CROPPED image too (see this file's own top-of-file
+# "ASSUMES LEFT- AND TOP-EDGE-CROPPED INPUT" note). TABLE TOP's spread
+# dropped from 0.0136 (REVIEW) to 0.0032 (GOOD) once top-cropping was
+# applied uniformly - confirms the top damage border was driving a real
+# chunk of the old spread, same mechanism as the left blob.
+regions_approx:
+  metadata:
+    y_frac: [0.0000, 0.0389]
+  header:
+    y_frac: [0.0389, 0.22698]
+  table:
+    y_frac: [0.22698, 0.81179]
+    x_frac: [0.02575, 0.94996]
+
+# Per-template override of core.auto_sidecar._check_table_top_
+# plausibility()'s "row-separator, not the true divider" ratio check
+# (2026-08-09, per Jon: "have that called by the templates directly
+# instead" - was a shared module-level constant across every doc_type
+# until this real 1906-specific false positive showed narrowing it
+# there would have silently changed behavior for every other doc_type,
+# with zero real evidence either way for them). Real, direct evidence
+# for THIS template specifically, built up incrementally as more real
+# evidence accumulated (each attempt to tighten the upper bound turned
+# up MORE confirmed-correct picks it was wrongly catching, not fewer -
+# see the full history below):
+#
+#   1st attempt: 1.05 (3 confirmed-correct picks: e001211811_L/_R,
+#   e001211812_L, ratios 1.068-1.094) - still caught e001211834_L
+#   (ratio 1.046, also confirmed correct, 2px from human placement).
+#
+#   2nd attempt (after fixing a real, separate expected_row_height_frac
+#   bug - see that field's own comment above - which shifted every
+#   page's ratio downward, pushing MORE pages into the flagged band):
+#   re-ran the full 43-image batch, found 5 MORE confirmed-correct
+#   picks (e001211809_R, e001211811_R, e001211815_L, e001211821_L,
+#   e001211832_L - ratios 0.985-1.037, within 2-11px of human
+#   placement each).
+#
+# Net real evidence for 1906: 9 confirmed-correct picks spanning
+# 0.985-1.094 (nearly the entire upper half of the original shared
+# default's flagged range), ZERO confirmed-wrong picks anywhere above
+# 1.0. No known real WRONG pick has ever measured in the 1.0-1.2 range
+# for THIS doc_type - the only documented wrong case (z000017634) was a
+# different doc_type entirely, at 0.842 (lower side).
+#
+# CORRECTED (real mistake caught by re-running the full 43-image batch,
+# not just assumed fixed): a 3rd attempt RAISED the upper bound to 1.50
+# thinking that would "clear" the confirmed-correct high-ratio picks -
+# backwards. is_ambiguous = lo <= ratio <= hi, so a LARGER upper bound
+# makes the flagged window WIDER, not narrower - raising it caught
+# dramatically MORE pages (32/43 issues, worse than either prior
+# attempt), not fewer. Corrected understanding: since confirmed-correct
+# picks now span nearly the ENTIRE 0.80-1.2 range with zero confirmed-
+# wrong ones anywhere in it, there is no real evidence any narrow
+# window in this range would still catch a genuine error for 1906
+# without also catching real correct picks - so rather than keep
+# guessing at a cutoff, the upper bound is set to 0.80 (equal to the
+# lower bound), making the [lo, hi] window EMPTY - this check can never
+# fire for 1906 (ratio > lo always, since gap > 0 in every real case
+# seen), effectively disabling ONLY the upper-bound half of it. Lower
+# bound (0.80) itself is UNCHANGED and still real - it's just no longer
+# paired with an upper bound that has any demonstrated value for this
+# doc_type. If a genuine row-separator-mistaken-for-divider case is
+# ever found for 1906 with a real measured ratio, this should be
+# revisited with that real data, not guessed at again.
+table_top_row_spacing_ratio_range: [0.80, 0.80]
+
+# MOVED to explicit per-template config 2026-08-10 (previously a shared
+# hardcoded constant in ui/column_calibration_ui.py) - see
+# canada_census_1911.yaml's own crop_top_suggested_offset_px comment for
+# why these can't safely stay shared across doc_types: 1911's real
+# metadata block sits much closer to table_top than 1906's, so a value
+# safe for 1906 landed inside 1911's enumerator-name/page-number text.
+# These values are UNCHANGED from the original shared constants - real,
+# measured safe-margin evidence for 1906 specifically (table_top-to-
+# blob gap 661-701px across 14 confirmed samples; 600 chosen 50px
+# inside that range per Jon's review of the tightest-margin overlay).
+# Explicit here so 1906's validated behavior can't silently drift if the
+# shared module-level defaults ever change for some other doc_type.
+crop_left_suggested_offset_px: 50
+crop_top_suggested_offset_px: 600
+
+# Used by core/document_classification.py's rule-based scorer. UNCHANGED
+# from the prior version - still based on a single classify_document()
+# measurement (aspect_ratio 1.417, vertical_ruling_lines 5) against the
+# original e001211809 sample, not re-measured against this new batch.
+# See the git history for this file's 2026-08-07 version for the full
+# reasoning (why vertical_ruling_lines reads low relative to this form's
+# real 17 column boundaries, and why that's likely why it originally lost
+# to handwritten_manifest's score before this template existed).
+# STILL effectively one real measurement - ranges below remain a
+# generous window, not a converged calibration.
+classification:
+  aspect_ratio_range: [1.30, 1.55]
+  row_count_range: [30, 50]
+  column_count_range: [3, 10]

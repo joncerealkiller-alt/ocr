@@ -1,0 +1,212 @@
+# NEW 2026-08-11, RENAMED same day - per Jon: originally built as
+# "canada_census_1911_new_brunswick" after e001961124 (New Brunswick,
+# "Guys Ward, St John City") failed table/row lock against the standard
+# Manitoba-calibrated canada_census_1911.yaml. Renamed once a SECOND
+# sample, e002101688 (Saskatchewan, Qu'Appelle Indian Agency), was
+# checked and turned out to match the SAME geometry (real measured row
+# pitch ~62.6-63px, n=18 clean measurements - much closer to e001961124's
+# ~64px than to Western/Manitoba's ~57-58px) despite being a totally
+# different province. Two provinces sharing identical off-pattern
+# geometry rules out "New Brunswick-specific" - per Jon's own hypothesis,
+# this is more likely a distinct PRINTING RUN of blank Schedule No.1
+# forms that got distributed to enumeration districts across multiple
+# provinces, not a province-level form variant. See [[project_
+# multi_schedule_years]] memory for the running list of confirmed
+# variant-B pages and the "check dimensions/lock before assuming a
+# year's template applies" rule this discovery motivated.
+#
+# "variant_b" (not a province or region name) is deliberately generic -
+# expect MORE provinces to turn up pages matching this same geometry as
+# more real samples get checked, and possibly a variant_c/d if a THIRD
+# distinct print geometry turns up. There is no known way yet to tell
+# which variant a given page is without running it through CV and
+# checking whether table/row lock succeeds (see canada_census_1911.yaml's
+# own doc_type for the "default/first" variant this one differs from).
+#
+# Structurally the SAME form as canada_census_1911.yaml otherwise (same
+# "Fifth Census of Canada, 1911 - Schedule No.1" title, same 41-field
+# column_order confirmed via a real generate_auto_sidecar() run on
+# e001961124: 50 rows, 0 quarantined, 41 columns found) - only the print
+# scale/proportions differ:
+#   - row pitch: Jon measured 64.5px real on e001961124 (vs auto-
+#     detected 63.5px on that one sample, and vs Western's ~57-58px) -
+#     using Western's canada_census_1911's expected_row_height_frac
+#     against a variant-B page drifts rows by roughly half a row height
+#     by the bottom of a 50-row page (confirmed: ~1px/row error x 50
+#     rows ~= 48px, close to one full 64px row). e002101688's
+#     independently-measured ~62.6-63px real pitch is consistent with
+#     this, not identical - real page-to-page variance within the
+#     variant, same as Western's own real per-page spread.
+#   - columns: running Western's column_regions_approx x_fracs against
+#     e001961124 flagged 4 columns "needs_review" for implausible
+#     located width (Months at school in 1910, Can read, Deaf and Dumb,
+#     Crazy or Lunatic) - real print-run variance, not template noise
+#     (see canada_census_1911.yaml's own EXPECTED VARIANCE comment for a
+#     similar, unrelated WITHIN-Western phenomenon - this is a
+#     different, cross-variant effect, not that one recurring).
+#
+# STATUS: only TWO real variant-B samples (e001961124, e002101688) exist
+# as of this writing, and e002101688 has not yet been cropped/reviewed
+# the way e001961124 has - every page-relative value below is a
+# single-sample (e001961124-only) provisional measurement, not yet
+# averaged/validated the way Western's 6-92-sample calibration was.
+# Treat every field here as "needs more real samples," not locked in.
+# column_regions_approx is deliberately EMPTY below (not copied from
+# Western, since we already know 4 of Western's positions are wrong
+# here, and copying the other 37 unverified would just hide which ones
+# haven't actually been checked against real variant-B data) - build it
+# up from real variant-B correction records the same way Western's was
+# (core/template_refinement.py's refine_template_from_calibration()),
+# once more than one reviewed sample exists.
+
+doc_type: canada_census_1911_variant_b
+display_name: "Canada Census 1911 (print variant B)"
+
+# Same real field list as the default/Western variant - confirmed
+# structurally identical form on e001961124 (see this file's own header
+# comment). Reuses the SAME census_1911.txt the default variant uses -
+# if a future real sample turns up a genuine field difference (not just
+# a proportions difference), this should split to its own columns_
+# <doc_type>.txt override, same pattern documented in canada_census_
+# 1911.yaml's own columns_file comment history.
+columns_file: census_1911.txt
+
+row_strategy: fixed_periodic
+expected_row_count: 50
+
+expected_columns:
+  - Dwelling House
+  - Family household of habitation
+  - Name of each person in the family
+  - Place of habitation
+  - Sex
+  - Relationship to head
+  - Marital Status
+  - Month of Birth
+  - Year of Birth
+  - Age at last birthday
+  - Country or place of Birth
+  - Year of Immigration to Canada
+  - Year of naturalization if formerly an alien
+  - Racial or tribal origin
+  - Nationality
+  - Religion
+  - Chief occupation or trade
+  - Employment other than chief occupation
+  - Employer
+  - Employee
+  - Working on own account
+  - Where person is employed
+  - Weeks Employed in 1910 at Chief Occupation
+  - Weeks Employed in 1910 at Other Occupations
+  - Hours Working on Chief Occupation
+  - Hours Working Other Occupations
+  - Earnings at chief occupation
+  - Earnings at Other Occupations
+  - Wages per hour
+  - Life insurance
+  - Accident or Sickness Insurance
+  - Cost of Insurance
+  - Months at school in 1910
+  - Can read
+  - Can write
+  - Language Commonly Spoken
+  - Cost of education
+  - Blind
+  - Deaf and Dumb
+  - Crazy or Lunatic
+  - Idiotic or Silly
+
+# EMPTY - see this file's own header comment for why. Every column's
+# x_frac needs real variant-B calibration data before this should be filled in;
+# leaving it empty means locate_columns() falls back to its own generic
+# even-spacing behavior rather than silently inheriting Western's wrong
+# positions.
+column_regions_approx: {}
+
+# Single-sample provisional (e001961124, post-crop): pixels 64.5
+# (Jon's real UI measurement) / deskewed_image_size height 4872 =
+# 0.01324. Compare Western's 0.013040 - close in absolute terms but
+# this is ONE sample, not a 6-sample GOOD-status average like Western's
+# - do not treat as validated.
+expected_row_height_frac: 0.01324
+
+# Single-sample provisional, same caveat as above. Measured directly
+# from e001961124's correction record (table_bbox=[100, 1199, 6848,
+# 4249], deskewed_image_size=[7168, 4872]): left=100/7168=0.01395,
+# top=1199/4872=0.24610, right=6848/7168=0.95536, bottom=4249/4872
+# =0.87213. table_edges.left/top were human_placed (real); right/bottom
+# were auto_accepted_unreviewed (not yet human-confirmed) - trust left/
+# top more than right/bottom here.
+#
+# metadata/header split NOT yet measured for variant-B specifically - reusing
+# Western's proportional split (metadata ends at roughly a third of the
+# way to table_top) as a rough placeholder only; variant-B's real metadata
+# block (title + Province/District/Enumeration District/Enumerator/Page)
+# was directly observed to be visually larger/lower on the page than
+# Western's (see the crop_top_suggested_offset_px comment below) so this
+# split is likely wrong and needs real ruler-measurement once more variant-B
+# samples exist, the same way Western's was measured.
+regions_approx:
+  metadata:
+    y_frac: [0.0, 0.088]
+  header:
+    y_frac: [0.088, 0.24610]
+  table:
+    y_frac: [0.24610, 0.87213]
+    x_frac: [0.01395, 0.95536]
+
+# number_row_approx NOT measured for variant-B - copied verbatim from Western
+# as a rough placeholder only (see canada_census_1911.yaml's own
+# comment for that measurement's real basis, which was Western-specific
+# and never verified against an variant-B sample). Revisit once a real variant-B
+# number-row measurement exists.
+number_row_approx:
+  top_offset_frac: 0.017
+  bottom_offset_frac: 0.006
+
+# Left crop: Jon confirmed Western's 100px default already works fine
+# for variant-B ("left crop applied already ok") - no override needed, template
+# falls back to the UI's shared _CROP_LEFT_SUGGESTED_OFFSET_PX (50) plus
+# whatever canada_census_1911.yaml itself would use is NOT inherited
+# (each template is independent) - explicitly set to 100 here to match
+# what was actually confirmed working, rather than silently relying on
+# the smaller 50px shared default that's known-unsafe for this form
+# family (see canada_census_1911.yaml's own crop_left_suggested_
+# offset_px comment for why 50 clips row numbers).
+crop_left_suggested_offset_px: 100
+
+# Top crop: per Jon's explicit design intent - "1700 is the offset from
+# table_top to mark the crop point relative to the table so each page is
+# uniform." variant-B's real metadata-to-table_top gap is measurably larger
+# than Western's (observed directly: variant-B's title/province/district/
+# enumerator block sits much lower/taller on the page than Western's,
+# consistent with variant-B's overall taller page - 5366px vs Western's
+# ~4800px pre-crop), so Western's 1100px value is UNSAFE here (measured:
+# crop_point at offset=1100 on e001961124's real ~1693px pre-crop
+# table_top would land at ~593px, inside variant-B's real metadata block, which
+# spans roughly 280-900px on this sample). 1700 was verified against
+# e001961124's own real measurements to land in the blank gap between
+# the torn page border (~280px) and the "FIFTH CENSUS OF CANADA 1911"
+# title text (~520px) - comfortably safe, clearing the full metadata
+# block including the title. NOTE: the actual crop_px Jon applied to
+# e001961124 came out to 494px (not the ~0px this formula would predict
+# for THIS specific sample's own measured table_top) - unreconciled
+# discrepancy, most likely this sample's table_top as JON confirmed it
+# in the UI differs from the pre-crop CV/ruler estimate used to derive
+# 1693 here. Treat 1700 as the validated go-forward value per Jon's own
+# explicit measurement, not as arithmetically re-derived from this one
+# sample's own applied crop.
+crop_top_suggested_offset_px: 1700
+
+# Not yet measured for variant-B - Western's own aspect_ratio/row_count/
+# column_count ranges reused as a starting point only. variant-B's page is
+# visibly taller pre-crop (5366px vs Western's ~4800px) so aspect_ratio_
+# range in particular is likely wrong for classifying a raw (uncropped)
+# variant-B scan - revisit once more real variant-B samples exist and this doc_type
+# needs to participate in automatic classification rather than being
+# selected via explicit doc_type_override the way it has been so far.
+classification:
+  aspect_ratio_range: [1.40, 1.75]
+  row_count_range: [44, 56]
+  column_count_range: [16, 28]

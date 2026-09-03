@@ -281,6 +281,7 @@ def _find_vertical_ruling_line(
 def _locate_rule_bottom_edge(
     density: np.ndarray, expected_y: int, search_radius: int,
     density_ratio_threshold: float = 0.2,
+    exclude_before: int | None = None,
 ) -> tuple[int, dict]:
     """
     Finds the BOTTOM edge of a thick printed rule near an expected
@@ -344,6 +345,29 @@ def _locate_rule_bottom_edge(
 
     Falls back to expected_y if the window has no clear peak (a flat,
     empty window - nothing resembling a rule found at all).
+
+    exclude_before (2026-08-09, per Jon's direct diagnosis on real 1911
+    samples e001946628/e001946629 - he pointed at cropped overlays and
+    identified the picked line as "the bottom of the number row blobs",
+    not the true rule): on forms with a printed column-NUMBER heading
+    row directly above the true rule (see each template's own
+    number_row_approx - a row of "1 2 3 4 5..." digits sitting just
+    above table_top), that row's own ink is a second, separate elevated
+    density band inside the same search window this function scans -
+    exactly the "busy multi-tier block" case this function's own
+    docstring already flagged as a risk when it was first written, now
+    confirmed as a real miss rather than a hypothetical one. Digit ink
+    can sit closer to expected_y than the true rule itself, especially
+    on pages where the whole table has shifted a few px per the normal
+    per-page variation already tracked in table_edges' own REVIEW
+    status - so "nearest run to expected_y" alone isn't always enough
+    to skip it. When the caller knows the number row's own expected
+    bottom edge (from number_row_approx), passing it here as
+    exclude_before drops any run that ends at or before that y from
+    the candidate pool BEFORE the nearest-to-expected pick runs, so
+    digit ink can no longer win purely by proximity. Falls back to the
+    unfiltered run list if filtering would leave nothing (never worse
+    than the pre-fix behavior).
     """
     lo = max(0, expected_y - search_radius)
     hi = min(len(density), expected_y + search_radius + 1)
@@ -371,6 +395,25 @@ def _locate_rule_bottom_edge(
     if run_start is not None:
         runs.append((run_start, len(is_elevated)))
 
+    # exclude_before was tried as a hard filter (2026-08-09) and REVERTED
+    # the same day after a full 92-image regression run: on pages where
+    # the number-row digits, the true rule, and even the start of row 1
+    # merge into ONE wide contiguous elevated run (no density dip between
+    # them - confirmed on e001946712, e001946707, e001946719, e001946642),
+    # excluding everything before the estimated cutoff removed that
+    # merged run entirely and left only much-later, unrelated candidates
+    # (row 1's own text/separator line, 50-90px further down) as the
+    # nearest survivor - a real, confirmed-worse miss on real data, not
+    # a hypothetical risk. This traded 2 real fixes (e001946628,
+    # e001946629) for several new wrong picks elsewhere in the same
+    # batch. Per this function's own design philosophy (see the
+    # docstring above and _check_table_top_plausibility()'s), a fragile
+    # auto-correction that can silently produce a WORSE wrong answer is
+    # not an acceptable trade for flagging fewer ambiguous cases -
+    # reverted to plain nearest-to-expected selection; the exclude_before
+    # parameter is kept (unused by any caller currently) for a future,
+    # better-scoped attempt - e.g. only trusting it when it does NOT
+    # collapse the candidate pool to a single much-wider-than-normal run.
     local_expected = expected_y - lo
     best_run = min(runs, key=lambda r: min(abs(r[0] - local_expected), abs(r[1] - 1 - local_expected)))
     rule_bottom_local = best_run[1]  # one past the run's last elevated row
@@ -393,10 +436,30 @@ def _locate_rule_bottom_edge(
 # positive here just costs an unnecessary manual review (cheap, per
 # Jon's stated tolerance), a false negative silently ships a wrong
 # table_top.
+#
+# SHARED DEFAULT ONLY (2026-08-09) - a real false positive found via the
+# 1906 left/top-crop rebuild showed this range is NOT safely shared
+# across every doc_type: CV's table_top pick on 3 real 1906 pages
+# (e001211811_L, e001211811_R, e001211812_L) landed within 1-3px of the
+# human-confirmed value on each - genuinely correct - but got flagged
+# ambiguous anyway at ratios 1.094, 1.094, 1.068, just inside the old
+# (0.80, 1.20) upper bound. Tightening the shared default directly would
+# have silently changed behavior for every OTHER doc_type too (1921,
+# 1911, 1901, 1931) with zero real evidence either way for them. Per
+# Jon: "have that called by the templates directly instead" - each
+# DocumentTemplate now carries its own table_top_row_spacing_ratio_range
+# (core/document_templates.py), defaulting to THIS module-level tuple
+# when a template doesn't set one (every template except 1906 as of
+# this writing). See canada_census_1906.yaml's own override for the
+# real per-template evidence that justified narrowing it there
+# specifically.
 _TABLE_TOP_ROW_SPACING_RATIO_RANGE = (0.80, 1.20)
 
 
-def _check_table_top_plausibility(rule_diag: dict, expected_row_height: float) -> tuple[bool, dict]:
+def _check_table_top_plausibility(
+    rule_diag: dict, expected_row_height: float,
+    ratio_range: tuple[float, float] = _TABLE_TOP_ROW_SPACING_RATIO_RANGE,
+) -> tuple[bool, dict]:
     """
     Foundation-bug fix (2026-07-27, the real z000017634 incident - see
     _locate_rule_bottom_edge()'s "nearest to expected" selection, which
@@ -434,6 +497,13 @@ def _check_table_top_plausibility(rule_diag: dict, expected_row_height: float) -
     manual review is an acceptable outcome, preferable to a fragile
     auto-correction that risks trading one wrong answer for another.
 
+    ratio_range: (lo, hi) bounds for "looks like a row-separator, not
+    the true divider" - defaults to this module's shared
+    _TABLE_TOP_ROW_SPACING_RATIO_RANGE, but callers pass a template's
+    own table_top_row_spacing_ratio_range when it has one (see that
+    constant's own comment for why this became per-template rather than
+    a single shared value).
+
     Returns (is_ambiguous, diagnostics).
     """
     all_runs = rule_diag.get("all_runs_found")
@@ -452,7 +522,7 @@ def _check_table_top_plausibility(rule_diag: dict, expected_row_height: float) -
     predecessor = all_runs[chosen_index - 1]
     gap = rule_span[0] - predecessor[1]
     ratio = gap / expected_row_height
-    lo, hi = _TABLE_TOP_ROW_SPACING_RATIO_RANGE
+    lo, hi = ratio_range
     is_ambiguous = lo <= ratio <= hi
 
     return is_ambiguous, {
@@ -521,15 +591,31 @@ def locate_table_boundary(
     h_radius = max(2, int(h * _HORIZONTAL_SEARCH_RADIUS_FRAC))
     table_top_ambiguous = False
     if template.row_strategy == "fixed_periodic":
-        table_top, rule_diag = _locate_rule_bottom_edge(density, expected_top, h_radius)
+        # exclude_before (2026-08-09): keeps the column-NUMBER heading
+        # row's own ink out of the rule search - see
+        # _locate_rule_bottom_edge()'s exclude_before docstring for the
+        # real 1911 miss this fixes. number_row_approx's offsets are
+        # both measured as distance ABOVE table_top (see each
+        # template's own number_row_approx comment), so the number
+        # row's expected bottom edge is expected_top minus
+        # bottom_offset_frac (the SMALLER of the two offsets, since
+        # it's the edge closer to table_top).
+        exclude_before = None
+        if template.number_row_approx is not None:
+            exclude_before = expected_top - int(round(
+                template.number_row_approx["bottom_offset_frac"] * h))
+        table_top, rule_diag = _locate_rule_bottom_edge(
+            density, expected_top, h_radius, exclude_before=exclude_before)
         if template.expected_row_height_frac is not None:
+            ratio_range = (template.table_top_row_spacing_ratio_range
+                           or _TABLE_TOP_ROW_SPACING_RATIO_RANGE)
             table_top_ambiguous, ambiguity_diag = _check_table_top_plausibility(
-                rule_diag, template.expected_row_height_frac * h)
+                rule_diag, template.expected_row_height_frac * h, ratio_range=ratio_range)
             rule_diag["plausibility_check"] = ambiguity_diag
     else:
-        table_top = refine_boundary_position(density, ruling_line_rows, expected_top, h_radius)
+        table_top, _ = refine_boundary_position(density, ruling_line_rows, expected_top, h_radius)
         rule_diag = {"skipped": "row_strategy != 'fixed_periodic', no divider rule to find"}
-    table_bottom = refine_boundary_position(density, ruling_line_rows, expected_bottom, h_radius)
+    table_bottom, _ = refine_boundary_position(density, ruling_line_rows, expected_bottom, h_radius)
 
     v_radius = max(2, int(w * _VERTICAL_SEARCH_RADIUS_FRAC))
     table_left, left_found = _find_vertical_ruling_line(
@@ -573,7 +659,7 @@ def locate_header_region(
     density, _ = _row_density_profile(image, x0=table_left, x1=table_right)
     _, _, ruling_line_rows = detect_row_bands(image, x0=table_left, x1=table_right)
     h_radius = max(2, int(h * _HORIZONTAL_SEARCH_RADIUS_FRAC))
-    metadata_bottom = refine_boundary_position(
+    metadata_bottom, _ = refine_boundary_position(
         density, ruling_line_rows, expected_metadata_bottom, h_radius)
 
     warnings = []
@@ -1119,51 +1205,107 @@ def detect_data_rows(
         # be wrong, compounding into a squeeze. Pure arithmetic
         # subdivision from a single confirmed row cannot produce that
         # failure mode, by construction.
-        expected_row_height = (table_bottom - table_top) / template.expected_row_count
-        density, _ = _row_density_profile(image, x0=table_left, x1=table_right)
-        _, _, ruling_line_rows = detect_row_bands(image, x0=table_left, x1=table_right)
-        expected_row1_bottom = int(table_top + expected_row_height)
-        h_radius = max(2, int(expected_row_height * 0.3))
-        row1_bottom = refine_boundary_position(
-            density, ruling_line_rows, expected_row1_bottom, h_radius)
-        if row1_bottom <= table_top:
-            row1_bottom = table_top + max(1.0, expected_row_height)
-            warnings.append(
-                f"Row 1 bottom refinement collapsed onto/above table_top - fell back "
-                f"to the raw expected position ({expected_row1_bottom})."
-            )
-
-        # Sanity-clamp against the theoretical average row height (table
-        # span / row_count) - added after a real failure on
-        # 1921_022-E002880409: row 1's refinement landed at 35px (vs a
-        # 28.6px theoretical average), and tiling that 22%-too-tall
-        # measurement 50 times ran the last several rows 316px past the
-        # actual image bottom (this strategy trades away the OLD
-        # adjacent-boundary-pull failure, but is correspondingly more
-        # sensitive to row 1's own measurement being right, since
-        # there's no second row-scoped search left to catch a bad one -
-        # see this branch's opening comment). A single-row measurement
-        # more than 20% off the page's own structural prior is more
-        # likely a bad snap than genuine form variation, so fall back to
-        # the theoretical value rather than let a 50x multiplication of
-        # one bad number run off the end of the page.
-        measured_row_height = row1_bottom - table_top
-        if abs(measured_row_height - expected_row_height) > 0.20 * expected_row_height:
-            warnings.append(
-                f"Row 1 bottom refinement measured a {measured_row_height}px row "
-                f"(vs a {expected_row_height:.1f}px theoretical average from the table's "
-                f"own span / row_count) - more than 20% off, so falling back to the "
-                f"theoretical value rather than tiling a likely-bad measurement "
-                f"{template.expected_row_count} times."
-            )
-            # Float, NOT rounded to int - segment_rows_uniform_tile()'s own
-            # docstring is explicit about why: rounding row_height before
-            # tiling compounds a small per-row error into a large one by
-            # the last row (exactly the 16px-overrun regression this fix
-            # replaced - int(round(...)) here previously reintroduced the
-            # very rounding-compounding bug that function was built to
-            # avoid). table_top + expected_row_height stays exact.
+        # Prefer the template's own measured expected_row_height_frac
+        # (2026-08-09, real 1906 diagnosis) over the page-span-derived
+        # theoretical value, when available. table_bottom - table_top
+        # here is THIS PAGE's own locate_table_boundary() refinement,
+        # which can land wrong on a per-page basis (e.g. snapping onto
+        # page-border/margin structure below the true last row) -
+        # dividing by expected_row_count then silently bakes that
+        # per-page error into the "theoretical" anchor everything else
+        # (row1_bottom's search window AND the sanity-clamp fallback
+        # below) trusts. Confirmed real on canada_census_1906: 13/43
+        # calibration-batch pages had their tiled span overrun the
+        # image's actual bottom edge by 30-270px, every single one
+        # because a too-large table-span-derived row height got
+        # legitimized as "theoretical" and then multiplied by 40 - even
+        # though the template already carries a real, independently-
+        # measured expected_row_height_frac (0.02098, averaged directly
+        # from actual detected row bboxes across 6 hand-reviewed
+        # samples) that disagreed with it. expected_row_height_frac is
+        # already trusted for exactly this kind of cross-check
+        # elsewhere (see locate_table_boundary()'s _check_table_top_
+        # plausibility(), which gates whole-page quarantine on it) -
+        # using it here too is consistent, not a new leap of faith.
+        # Every current census template (1901/1906/1911/1921/1931) sets
+        # this field, so this is a real behavior change for all of
+        # them, not just 1906 - verified against both 1906 (fixed the
+        # overrun failures) and 1911 (unchanged: no regression) before
+        # this landed.
+        if template.expected_row_height_frac is not None:
+            # SKIP the per-page row-1 search entirely (2026-08-09, real
+            # 1906 diagnosis, part 2) - the ±20% tolerance below was
+            # ORIGINALLY meant to catch a bad snap against a page-span-
+            # derived theoretical value, but it's just as happy to
+            # accept a genuine ruling line that happens to be an
+            # ATYPICAL row-1 gap (e.g. extra spacing after a header
+            # divider) - confirmed real: even after fixing
+            # expected_row_height_frac's own miscalibration (see that
+            # field's yaml comment), pages kept measuring row1 at
+            # 60-61px against a corrected ~51px anchor, comfortably
+            # inside a ±20% band, and tiling that single atypical
+            # measurement 40 times still overran the page. A template
+            # with real, human-measured expected_row_height_frac (per-
+            # row PITCH averaged across multiple confirmed samples) is
+            # a more trustworthy number than any ONE page's single-row
+            # search result - per this module's own "once row 1 is
+            # correctly established, the rest is deterministic"
+            # philosophy, "correctly established" should mean the
+            # calibrated average, not a fresh per-page guess that a
+            # human never reviewed.
+            expected_row_height = template.expected_row_height_frac * image.height
             row1_bottom = table_top + expected_row_height
+        else:
+            expected_row_height = (table_bottom - table_top) / template.expected_row_count
+            density, _ = _row_density_profile(image, x0=table_left, x1=table_right)
+            _, _, ruling_line_rows = detect_row_bands(image, x0=table_left, x1=table_right)
+            expected_row1_bottom = int(table_top + expected_row_height)
+            h_radius = max(2, int(expected_row_height * 0.3))
+            row1_bottom, _ = refine_boundary_position(
+                density, ruling_line_rows, expected_row1_bottom, h_radius)
+            if row1_bottom <= table_top:
+                row1_bottom = table_top + max(1.0, expected_row_height)
+                warnings.append(
+                    f"Row 1 bottom refinement collapsed onto/above table_top - fell back "
+                    f"to the raw expected position ({expected_row1_bottom})."
+                )
+
+            # Sanity-clamp against the theoretical average row height (table
+            # span / row_count) - added after a real failure on
+            # 1921_022-E002880409: row 1's refinement landed at 35px (vs a
+            # 28.6px theoretical average), and tiling that 22%-too-tall
+            # measurement 50 times ran the last several rows 316px past the
+            # actual image bottom (this strategy trades away the OLD
+            # adjacent-boundary-pull failure, but is correspondingly more
+            # sensitive to row 1's own measurement being right, since
+            # there's no second row-scoped search left to catch a bad one -
+            # see this branch's opening comment). A single-row measurement
+            # more than 20% off the page's own structural prior is more
+            # likely a bad snap than genuine form variation, so fall back to
+            # the theoretical value rather than let a 50x multiplication of
+            # one bad number run off the end of the page.
+            #
+            # Only reached when expected_row_height_frac is NOT set - see
+            # the if-branch above for why a real calibrated frac skips
+            # this per-page search/tolerance path entirely instead of
+            # just tightening it.
+            measured_row_height = row1_bottom - table_top
+            if abs(measured_row_height - expected_row_height) > 0.20 * expected_row_height:
+                warnings.append(
+                    f"Row 1 bottom refinement measured a {measured_row_height}px row "
+                    f"(vs a {expected_row_height:.1f}px theoretical average from the table's "
+                    f"own span / row_count) - more than 20% off, so falling back to the "
+                    f"theoretical value rather than tiling a likely-bad measurement "
+                    f"{template.expected_row_count} times."
+                )
+                # Float, NOT rounded to int - segment_rows_uniform_tile()'s own
+                # docstring is explicit about why: rounding row_height before
+                # tiling compounds a small per-row error into a large one by
+                # the last row (exactly the 16px-overrun regression this fix
+                # replaced - int(round(...)) here previously reintroduced the
+                # very rounding-compounding bug that function was built to
+                # avoid). table_top + expected_row_height stays exact.
+                row1_bottom = table_top + expected_row_height
 
         result, _row_crops, _header_crop, _overlay = segment_rows_uniform_tile(
             original_image,
@@ -1177,7 +1319,7 @@ def detect_data_rows(
         result.warnings = warnings + result.warnings
         diagnostics = {
             "strategy": "fixed_periodic", "row_count": len(result.bands),
-            "row1_top": table_top, "expected_row1_bottom": expected_row1_bottom,
+            "row1_top": table_top, "expected_row1_bottom": int(table_top + expected_row_height),
             "refined_row1_bottom": row1_bottom, "row_height": row1_bottom - table_top,
         }
         return result, diagnostics
@@ -1490,6 +1632,7 @@ def render_auto_debug_overlay(
 def generate_auto_sidecar(
     image_path, debug: bool = False,
     doc_type_override: str | None = None, external_confidence: float | None = None,
+    deskew_angle_override: float | None = None,
 ) -> AutoSidecarResult:
     """
     Full pipeline entry point: image -> classify -> template -> table
@@ -1497,12 +1640,28 @@ def generate_auto_sidecar(
     core/row_segmentation.py's build_sidecar() schema exactly (Stage 1/2
     OCR and the manual per-column masking UI consume it unmodified).
 
-    No human confirms the deskew angle in this fully-automated path
-    (unlike the interactive UI, where estimate_deskew_angle()'s result
-    is always a starting suggestion a person confirms/overrides) -
-    auto-estimate is used directly and logged as such in the sidecar's
+    No human confirms the deskew angle in this fully-automated path BY
+    DEFAULT (unlike the interactive UI, where estimate_deskew_angle()'s
+    result is always a starting suggestion a person confirms/overrides)
+    - auto-estimate is used directly and logged as such in the sidecar's
     own warnings, the same fallback behavior segment_rows_periodic()
     already has for non-interactive/batch callers.
+
+    deskew_angle_override (2026-08-09, real bug found via ui/column_
+    calibration_ui.py's "Regenerate sidecars" flow - Jon: "these images
+    are skewed even though deskew angle was applied in the masking
+    stage"): when given, SKIPS estimate_deskew_angle() entirely and uses
+    this angle directly - same "explicit override beats auto-estimate"
+    pattern as doc_type_override above. Without this, EVERY call to
+    generate_auto_sidecar() re-estimates deskew from scratch, silently
+    discarding any human-confirmed correction recorded elsewhere (e.g.
+    core/column_calibration.py's manual_deskew_delta_deg) - there was
+    previously no way to feed a verified angle back in at all. Callers
+    that have a saved manual_deskew_delta_deg should compute the final
+    angle themselves (their own fresh auto-estimate + the saved delta)
+    and pass it here, since this function has no way to know about that
+    correction-record schema on its own (core/ has no dependency on
+    core/column_calibration.py, and shouldn't gain one just for this).
 
     doc_type_override (2026-07-27, added for the Gemma-subtype ->
     batch-CV pipeline, scripts/run_batch_auto_sidecar.py): when given,
@@ -1528,7 +1687,19 @@ def generate_auto_sidecar(
     """
     image_path = str(image_path)
     original = Image.open(image_path).convert("RGB")
-    angle = estimate_deskew_angle(original)
+    if deskew_angle_override is not None:
+        angle = deskew_angle_override
+    else:
+        # angle_range matches core/image_analysis.py's DESKEW_ANGLE_RANGE
+        # (2026-08-03 consolidation pass) - NOT reused as a value (this
+        # measures the DEWARPED image, a genuinely different physical
+        # object from whatever core/image_analysis.py measured pre-
+        # dewarp, since perspective correction can change residual skew),
+        # only the search range is shared, so this doesn't silently clamp
+        # real skew beyond 5 degrees the way estimate_deskew_angle()'s
+        # own default would.
+        from core.image_analysis import DESKEW_ANGLE_RANGE
+        angle = estimate_deskew_angle(original, angle_range=DESKEW_ANGLE_RANGE)
     deskewed = apply_deskew_angle(original, angle)
 
     if doc_type_override is not None:

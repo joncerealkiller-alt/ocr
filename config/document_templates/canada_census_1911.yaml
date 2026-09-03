@@ -9,9 +9,18 @@
 doc_type: canada_census_1911
 display_name: "Canada Census 1911"
 
-# See canada_census_1921.yaml's columns_file comment for the full
-# explanation.
-columns_file: census_core_fields.txt
+# CORRECTED 2026-08-09, per Jon: "census_1911.txt is the full 42
+# columns" - was pointing at census_core_fields.txt, a thin 5-name
+# subset (Name/Age/Sex/Relationship to Head/Birthplace) that didn't
+# even cover every name already listed in expected_columns below, let
+# alone the real full-form field list. census_1911.txt is the real,
+# complete field list matching the actual "Fifth Census of Canada,
+# 1911" form (Dwelling House through Idiotic or Silly) - see canada_
+# census_1921.yaml's columns_file comment for the general explanation
+# of this field's role. CORRECTED AGAIN same day (Jon: "i had one too
+# many") - a duplicate "Occupation" entry alongside "Chief occupation
+# or trade" was removed, 42 -> 41 real columns.
+columns_file: census_1911.txt
 
 # See canada_census_1921.yaml's row_strategy comment for why this is
 # "fixed_periodic" (row 1 located, everything else tiled arithmetically)
@@ -19,17 +28,58 @@ columns_file: census_core_fields.txt
 row_strategy: fixed_periodic
 expected_row_count: 50
 
+# EXPANDED 2026-08-09 to match columns_file's real 41-column list (see
+# that field's own comment above) - was a thin 10-name list, several of
+# which didn't even use the same names as the real form (e.g.
+# "Family Number" here vs "Family household of habitation" on the
+# actual schedule). column_regions_approx below still only has real
+# calibration data for the small subset of these that were already
+# measured against real reference samples - everything else here is
+# just the correct NAME, still needing real per-page calibration (same
+# "listed but not yet measured" status column_regions_approx entries
+# without a matching name already document via their own absence).
 expected_columns:
-  - Name
-  - Age
+  - Dwelling House
+  - Family household of habitation
+  - Name of each person in the family
+  - Place of habitation
   - Sex
-  - Relationship to Head
-  - Birthplace
-  - Occupation
-  - Family Number
+  - Relationship to head
   - Marital Status
   - Month of Birth
-  - Year
+  - Year of Birth
+  - Age at last birthday
+  - Country or place of Birth
+  - Year of Immigration to Canada
+  - Year of naturalization if formerly an alien
+  - Racial or tribal origin
+  - Nationality
+  - Religion
+  - Chief occupation or trade
+  - Employment other than chief occupation
+  - Employer
+  - Employee
+  - Working on own account
+  - Where person is employed
+  - Weeks Employed in 1910 at Chief Occupation
+  - Weeks Employed in 1910 at Other Occupations
+  - Hours Working on Chief Occupation
+  - Hours Working Other Occupations
+  - Earnings at chief occupation
+  - Earnings at Other Occupations
+  - Wages per hour
+  - Life insurance
+  - Accident or Sickness Insurance
+  - Cost of Insurance
+  - Months at school in 1910
+  - Can read
+  - Can write
+  - Language Commonly Spoken
+  - Cost of education
+  - Blind
+  - Deaf and Dumb
+  - Crazy or Lunatic
+  - Idiotic or Silly
 
 # See canada_census_1921.yaml's own column_regions_approx comment for
 # the full explanation. Calibrated as the AVERAGE of TWO real reference
@@ -71,56 +121,237 @@ expected_columns:
 # http___..._e001946617.jpg_dewarped_sidecar.json, and
 # e001926997_sidecar.json's own table_bbox + mask_keep_ranges (not
 # re-derived from old comments, to avoid compounding rounding).
+# KEYS RENAMED 2026-08-09, real bug (Jon: "auto_sidecar FAILED - 'Name'"
+# on every one of 92 real 1911 images the moment they were loaded into
+# the calibration UI, right after expected_columns/columns_file were
+# corrected to the real 42-column form). Root cause: core/auto_sidecar
+# .py's locate_columns() builds its output keyed by THESE names, but
+# sidecar["columns"] is initialized from column_order (now the new,
+# real full-form names) - "Name" (old short key) no longer matched
+# "Name of each person in the family" (real column_order entry),
+# causing a KeyError on every single page, not a rare edge case. Old
+# key -> new key mapping (x_frac VALUES themselves are UNCHANGED - same
+# real calibration data, just re-keyed to the real form's own names):
+#   Name -> Name of each person in the family
+#   Age -> Age at last birthday
+#   Sex -> Sex (unchanged)
+#   Relationship to Head -> Relationship to head (case only)
+#   Birthplace -> Country or place of Birth
+#   Family Number -> Family household of habitation
+#   Marital Status -> Marital Status (unchanged)
+#   Month of Birth -> Month of Birth (unchanged)
+#   Year -> Year of Birth
 column_regions_approx:
-  Name: {x_frac: [0.0497, 0.1351]}
-  Age: {x_frac: [0.2977, 0.3104]}
-  Sex: {x_frac: [0.1828, 0.1958]}
-  Relationship to Head: {x_frac: [0.1960, 0.2335]}
-  Birthplace: {x_frac: [0.3103, 0.3479]}
-  # Family Number/Marital Status/Month of Birth/Year: added 2026-07-29,
-  # calibrated from ONE real reference so far (e001926997, table-
-  # relative fractions per the basis fix above) - treat as provisional
-  # until a second real reference confirms or disagrees, same
-  # 2-of-3-agreeing discipline the others above follow. NOTE: this same
-  # reference's own column_order uses "#Address" (not "Occupation") for
-  # the physical column between Name and Sex - Occupation still has no
-  # real calibration data, left for manual masking as before.
-  Family Number: {x_frac: [0.0345, 0.0504]}
-  Marital Status: {x_frac: [0.2353, 0.2486]}
-  Month of Birth: {x_frac: [0.2486, 0.2858]}
-  Year: {x_frac: [0.2858, 0.2990]}
+  # REBUILT 2026-08-09 from core/template_refinement.py's
+  # refine_template_from_calibration('canada_census_1911') run against
+  # the first 6 real completed correction records (e001946625,
+  # e001946626, e001946627, e001946628, e001946629, e001946630) - this
+  # REPLACES the old sparse 9-name/single-3rd-reference calibration
+  # above with real, table-relative x_frac ranges for all 41 real
+  # columns, derived from the tool's own 40 divider positions (mean of
+  # the 6 samples) plus the implicit table left/right edges (0.0/1.0 in
+  # table-relative terms). Columns 0-16 (Dwelling House through Chief
+  # occupation or trade) and column 40 (Idiotic or Silly, closed off by
+  # divider 39) are GOOD status (spread 0.0006-0.0029) - solid, trust
+  # these. Columns 17-38 (Employer through Deaf and Dumb) are REVIEW
+  # status (spread 0.011-0.042) - see the "EXPECTED VARIANCE" comment
+  # block below column_order for why: a real printing-master
+  # divider-spacing defect plus an undetectable binding gutter in this
+  # section of the physical page, confirmed directly by Jon, not a
+  # calibration or tooling problem. These x_fracs are still the best
+  # available real measurement (mean of 6 real placements) even though
+  # the spread won't tighten to GOOD with more samples the way an
+  # artifact-driven spread would.
+  Dwelling House: {x_frac: [0.0, 0.0162]}
+  Family household of habitation: {x_frac: [0.0162, 0.0328]}
+  Name of each person in the family: {x_frac: [0.0328, 0.1220]}
+  Place of habitation: {x_frac: [0.1220, 0.1705]}
+  Sex: {x_frac: [0.1705, 0.1843]}
+  Relationship to head: {x_frac: [0.1843, 0.2230]}
+  Marital Status: {x_frac: [0.2230, 0.2367]}
+  Month of Birth: {x_frac: [0.2367, 0.2756]}
+  Year of Birth: {x_frac: [0.2756, 0.2893]}
+  Age at last birthday: {x_frac: [0.2893, 0.3029]}
+  Country or place of Birth: {x_frac: [0.3029, 0.3421]}
+  Year of Immigration to Canada: {x_frac: [0.3421, 0.3590]}
+  Year of naturalization if formerly an alien: {x_frac: [0.3590, 0.3757]}
+  Racial or tribal origin: {x_frac: [0.3757, 0.4146]}
+  Nationality: {x_frac: [0.4146, 0.4534]}
+  Religion: {x_frac: [0.4534, 0.4922]}
+  Chief occupation or trade: {x_frac: [0.4922, 0.5406]}
+  # --- REVIEW-status block starts here (see EXPECTED VARIANCE comment
+  # below) - real gutter/printing-defect spread, not a tooling issue.
+  Employment other than chief occupation: {x_frac: [0.5406, 0.5810]}
+  Employer: {x_frac: [0.5810, 0.5916]}
+  Employee: {x_frac: [0.5916, 0.6020]}
+  Working on own account: {x_frac: [0.6020, 0.6175]}
+  Where person is employed: {x_frac: [0.6175, 0.6554]}
+  Weeks Employed in 1910 at Chief Occupation: {x_frac: [0.6554, 0.6754]}
+  Weeks Employed in 1910 at Other Occupations: {x_frac: [0.6754, 0.6944]}
+  Hours Working on Chief Occupation: {x_frac: [0.6944, 0.7082]}
+  Hours Working Other Occupations: {x_frac: [0.7082, 0.7220]}
+  Earnings at chief occupation: {x_frac: [0.7220, 0.7367]}
+  Earnings at Other Occupations: {x_frac: [0.7367, 0.7556]}
+  Wages per hour: {x_frac: [0.7556, 0.7714]}
+  Life insurance: {x_frac: [0.7714, 0.7976]}
+  Accident or Sickness Insurance: {x_frac: [0.7976, 0.8238]}
+  Cost of Insurance: {x_frac: [0.8238, 0.8478]}
+  Months at school in 1910: {x_frac: [0.8478, 0.8617]}
+  Can read: {x_frac: [0.8617, 0.8755]}
+  Can write: {x_frac: [0.8755, 0.8913]}
+  Language Commonly Spoken: {x_frac: [0.8913, 0.9165]}
+  Cost of education: {x_frac: [0.9165, 0.9360]}
+  Blind: {x_frac: [0.9360, 0.9529]}
+  Deaf and Dumb: {x_frac: [0.9529, 0.9697]}
+  # --- REVIEW-status block ends here.
+  Crazy or Lunatic: {x_frac: [0.9697, 0.9834]}
+  Idiotic or Silly: {x_frac: [0.9834, 1.0]}
 
-# See canada_census_1921.yaml's number_row_approx comment for the full
-# explanation. Measured on e078_e001946617: number row y=612-629
-# (top_offset=637-612=25px, bottom_offset=637-629=8px from
-# table_top=637), then the thick rule at y=630-638 leading into
-# table_top. Fractions on a 2190px-tall page: 0.0114/0.0037. This is
-# also this template's own motivating case: z000017634 (a third real
-# 1911 sample, already flagged in this file's column_regions_approx
-# comment as disagreeing on Sex/Relationship to Head by 50-175px from
-# the other two references) is exactly the kind of per-page shift this
-# number-row anchor is meant to catch and correct.
+# EXPECTED VARIANCE, confirmed by Jon (2026-08-09), NOT a bug to chase:
+# core/template_refinement.py's refinement preview against the first
+# real 6-sample 1911 batch showed a real, contiguous block of columns -
+# "Employer" through "Deaf and Dumb" (roughly columns 17-38 in
+# column_order, the entire employment/insurance/education section of
+# the form) - with meaningfully higher spread (0.01-0.04) than every
+# other column on the page (0.0006-0.003) or the columns immediately
+# before/after that block (column 39, "Crazy or Lunatic | Idiotic or
+# Silly", drops right back to 0.0018). Per Jon's direct explanation:
+# "when the draftsman made up the master for printing, the column
+# dividers dont quite line up" - the ORIGINAL PRINTED MASTER for this
+# section of the 1911 form has genuinely inconsistent column-divider
+# spacing, not a scan/dewarp/registration artifact. Jon further
+# identified (2026-08-09, with a real crop showing the ruling lines
+# visibly kinking column-to-column) a physical book-binding GUTTER
+# running through this section of the page that has no detectable
+# signature of its own (no rule line, no shading break) - the page
+# warps slightly around it, and that warp is what carries through as
+# the divider-to-divider drift in this specific column block, on top
+# of the master-print misalignment itself. Both causes are properties
+# of the real physical page, not of scanning/dewarp/calibration - there
+# is no clean automatic fix to chase here. He's placing each divider by
+# best judgment against the real (slightly crooked, gutter-warped)
+# printed ruling line each time - the resulting spread reflects the
+# true physical document, not measurement error or a tool problem. Future
+# refinement passes on this doc_type should expect this specific
+# column range to stay wider-spread than the rest of the page - more
+# samples will average toward the real (imperfect) printed positions,
+# not tighten toward some "should be GOOD" target the way an artifact-
+# driven spread (e.g. 1906's camera-mask blob) eventually did once
+# fixed. TABLE LEFT/RIGHT's own mild spread (~0.011, still REVIEW as of
+# the same 6-sample check) may or may not be related - unlike 1906,
+# Jon's own visual inspection of this batch found page position stays
+# consistent frame-to-frame ("only very minor, few mm movement"), so
+# that one hasn't been explained by a printing-master defect the same
+# way and is still worth a normal look if it doesn't tighten with more
+# samples.
+
+# REBASED 2026-08-11, real bug (not just imprecision) - per Jon: all 92
+# real 1911 images have now been permanently cropped via the "Crop left
+# edge.../Crop top edge..." tools (see crop_left_suggested_offset_px/
+# crop_top_suggested_offset_px below - 100px/1100px, applied per-page
+# from each page's own human-confirmed table_left/table_top anchor).
+# EVERY page-relative fraction below (number_row_approx, expected_row_
+# height_frac, regions_approx) was calibrated against the OLD, uncropped
+# page geometry - after a permanent crop, those same fractions now
+# multiply against a SMALLER page height/width and land in the wrong
+# absolute pixel position (confirmed directly: fresh generate_auto_
+# sidecar() runs against several now-cropped images landed table_top
+# 200-250px into the table body, not at the real rule, because the old
+# 0.30183 fraction of the new ~4440px-tall cropped height search window
+# no longer overlaps where the real rule is). column_regions_approx
+# above is UNCHANGED and correct as-is - those x_fracs are relative to
+# table_bbox's own width, not the page, so a page-level crop (which
+# doesn't touch anything INSIDE the table) doesn't affect them -
+# confirmed by re-running refine_template_from_calibration() post-crop:
+# identical column x_fracs to the pre-crop calibration, real to 4
+# decimal places.
+#
+# New values below are measured directly against the real cropped
+# images (not derived by formula from the old fractions + a single
+# crop_px, since crop_px varies slightly per page - each was clicked
+# individually): table edges from refine_template_from_calibration()
+# against the 6 "done" real samples (e001946625-e001946630, all now
+# cropped); metadata/header split and number_row_approx from direct
+# ruler-measurement against e001946625's own cropped image.
+#
+# See canada_census_1921.yaml's number_row_approx comment for the field's
+# general explanation. z000017634 (this template's own original
+# motivating case for having a number-row anchor at all - a per-page
+# shift this anchor is meant to catch) predates this crop-normalization
+# work and was never itself cropped - if it's re-processed later, expect
+# its own real per-page shift to look different from this batch's now-
+# tightly-normalized ~0px spread.
 number_row_approx:
-  top_offset_frac: 0.0114
-  bottom_offset_frac: 0.0037
+  top_offset_frac: 0.017
+  bottom_offset_frac: 0.006
 
-# Real row height (28.0px on a 2190px-tall page, from e078) - see
-# canada_census_1921.yaml's expected_row_height_frac comment. This is
-# the exact check that catches z000017634 (this template's own known
-# outlier): its wrong table_top=725 was chosen because it sits almost
-# exactly 1 row-height (27px, ratio 0.96) below the PREVIOUS candidate
-# rule found in the search window - a strong sign the algorithm picked
-# a row-separator line, not the true header/table divider.
-expected_row_height_frac: 0.01279
+# row_pitch mean=0.013040 (page-height-relative), GOOD status (spread
+# 0.00014, n=6, from refine_template_from_calibration() against the 6
+# real cropped "done" samples) - replaces the pre-crop 0.012106 value.
+# Real, not just rescaled: the OLD page height included ~1100px of now-
+# removed top margin, so the row-height FRACTION necessarily grows once
+# that dead space is cropped away, even though the real physical row
+# height in pixels is unchanged (confirmed: measured_row_pitch.pixels in
+# each of the 6 records is the same real value from before the crop -
+# only page_height/fraction were recomputed by apply_top_crop(), exactly
+# as that function is supposed to do).
+expected_row_height_frac: 0.013040
 
+# Table edges from the same 6-sample real post-crop refinement run.
+# top=0.2471 and bottom=0.9048 are GOOD (spread 0.0022/0.0093, n=6).
+# left=0.0139 is GOOD (spread 0.0002, n=6 - much tighter than pre-crop,
+# since the whole point of the crop-from-table_left-anchor design is
+# exactly this normalization). right=0.9497 is still REVIEW (spread
+# 0.0106, n=6, essentially unchanged from the pre-crop value) - real,
+# NOT fixed by this crop pass (the crop tools only normalize left/top,
+# per Jon's own design - see apply_left_crop()/apply_top_crop()'s
+# docstrings), still the same unexplained per-page right-edge shift
+# flagged before, worth a normal look separately from this rebuild.
+# metadata/header split measured directly (not from refine_template_
+# from_calibration, which doesn't track this boundary): the province/
+# district/enumerator/page-number block now ends around y=390px on a
+# ~4440px-tall cropped page (frac ~0.088) - see e001946625's own cropped
+# image for the reference measurement.
 regions_approx:
   metadata:
-    y_frac: [0.0, 0.124]
+    y_frac: [0.0, 0.088]
   header:
-    y_frac: [0.124, 0.285]
+    y_frac: [0.088, 0.2471]
   table:
-    y_frac: [0.285, 0.944]
-    x_frac: [0.015, 0.981]
+    y_frac: [0.2471, 0.9048]
+    x_frac: [0.0139, 0.9497]
+
+# Per-template crop-suggestion offset override (2026-08-10, per Jon:
+# "config driven per year so I can adjust the offset without digging
+# through lines of code" - see DocumentTemplate.crop_top_suggested_
+# offset_px's own docstring in core/document_templates.py). 1906's
+# validated 600px top offset (the previous shared default) is NOT safe
+# here: measured directly against 3 real samples (e001946625,
+# e001946695, e001946655), 1911's real essential metadata (enumerator
+# name + page number, the last line before the bilingual column-header
+# block starts) sits at y~650-700px regardless of table_top's own
+# per-page position (which itself ranges ~1437-1490px across the
+# batch) - a 600px offset lands the crop line at roughly table_top-600
+# = 837-890px, squarely inside that metadata line, cutting it off. 750
+# clears it with real margin (~530-600px, vs 1906's tighter offset
+# which was itself deliberately trimmed to sit just inside its own
+# validated safe range). Not yet visually confirmed against a full
+# rendered suggestion-line overlay (Jon asked for the measurement first,
+# to verify visually later) - if that check finds 750 wrong, update
+# here only, not in code.
+crop_top_suggested_offset_px: 1100
+
+# crop_left_suggested_offset_px (2026-08-10, per Jon: "no 50px cuts off
+# half of the row numbers" - the shared 50px default, validated for
+# 1906, is unsafe here). Measured directly on e001946628: the vertical
+# "Ligne" row-number digits sit close against table_left, not 50px
+# clear of it the way 1906's blob-margin case was - single-digit rows
+# (5-9) reach to about table_left-66px, and two-digit rows (10+, up to
+# 50) are wider glyphs that reach at least as far, likely a few px
+# more. 100 clears the measured worst case with real margin. Not yet
+# checked against a two-digit row near 50 specifically - if a future
+# sample shows digits reaching past table_left-90px or so, revisit.
+crop_left_suggested_offset_px: 100
 
 # aspect_ratio: 1911 sample measured 1.622-1.637
 # vertical_ruling_lines: 1911 sample measured ~21 (vs 1921's ~11 and
